@@ -56,7 +56,7 @@ Result: passed
 
 ### Spec compliance
 
-These checks validate conformance with the [Agent Skills specification](https://agentskills.io/specification.md):
+These checks validate conformance with the [Agent Skills specification](https://agentskills.io/specification):
 
 - **Structure**: `SKILL.md` exists; only recognized directories (`scripts/`, `references/`, `assets/`); no deep nesting
 - **Frontmatter**: required fields (`name`, `description`) are present and valid; `name` is lowercase alphanumeric with hyphens (1-64 chars) and matches the directory name; optional fields (`license`, `compatibility`, `metadata`, `allowed-tools`) conform to expected types and lengths; unrecognized fields are flagged
@@ -75,7 +75,7 @@ These checks go beyond the spec. A skill can be spec-compliant and still perform
 - `AGENTS.md` gets a specific warning: it's for repo-level agent configuration, not skill content, and should live outside the skill directory
 - Unknown files suggest moving content into `references/` or `assets/` as appropriate
 - Unknown directories report how many files they contain and suggest standard alternatives (when applicable)
-- Based on [Anthropic best practices](https://github.com/anthropics/skills): *"A skill should only contain essential files that directly support its functionality"*
+- Based on Anthropic's [skill-creator](https://github.com/anthropics/skills/blob/main/skills/skill-creator/SKILL.md): *"A skill should only contain essential files that directly support its functionality"*
 
 **Keyword stuffing detection**
 - Descriptions with 5+ quoted strings are flagged as likely trigger-phrase stuffing
