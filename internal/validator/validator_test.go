@@ -1,0 +1,81 @@
+package validator
+
+import (
+	"testing"
+)
+
+func TestValidate(t *testing.T) {
+	t.Run("valid skill", func(t *testing.T) {
+		dir := t.TempDir()
+		writeSkill(t, dir, "---\nname: "+dirName(dir)+"\ndescription: A valid skill\n---\n# Body\n")
+		report := Validate(dir)
+		if report.Errors != 0 {
+			t.Errorf("expected 0 errors, got %d", report.Errors)
+			for _, r := range report.Results {
+				if r.Level == Error {
+					t.Logf("  error: %s: %s", r.Category, r.Message)
+				}
+			}
+		}
+	})
+
+	t.Run("missing SKILL.md stops early", func(t *testing.T) {
+		dir := t.TempDir()
+		report := Validate(dir)
+		if report.Errors != 1 {
+			t.Errorf("expected 1 error, got %d", report.Errors)
+		}
+		requireResult(t, report.Results, Error, "SKILL.md not found")
+		// Should not have any frontmatter/link/token results
+		for _, r := range report.Results {
+			if r.Category != "Structure" {
+				t.Errorf("unexpected category %q when SKILL.md missing", r.Category)
+			}
+		}
+	})
+
+	t.Run("multiple validation errors", func(t *testing.T) {
+		dir := t.TempDir()
+		// Invalid name, missing description, broken link
+		writeSkill(t, dir, "---\nname: BAD\ndescription: \"\"\n---\n[broken](references/nope.md)\n")
+		report := Validate(dir)
+		if report.Errors < 3 {
+			t.Errorf("expected at least 3 errors, got %d", report.Errors)
+			for _, r := range report.Results {
+				if r.Level == Error {
+					t.Logf("  error: %s: %s", r.Category, r.Message)
+				}
+			}
+		}
+	})
+
+	t.Run("tally counts errors and warnings", func(t *testing.T) {
+		dir := t.TempDir()
+		writeSkill(t, dir, "---\nname: "+dirName(dir)+"\ndescription: desc\ncustom: field\n---\n# Body\n")
+		writeFile(t, dir, "extras/file.txt", "content")
+		report := Validate(dir)
+		if report.Warnings < 1 {
+			t.Errorf("expected at least 1 warning, got %d", report.Warnings)
+		}
+	})
+
+	t.Run("token counts populated", func(t *testing.T) {
+		dir := t.TempDir()
+		writeSkill(t, dir, "---\nname: "+dirName(dir)+"\ndescription: desc\n---\n# Body content\n")
+		writeFile(t, dir, "references/ref.md", "Reference text.")
+		report := Validate(dir)
+		if len(report.TokenCounts) != 2 {
+			t.Errorf("expected 2 token counts, got %d", len(report.TokenCounts))
+		}
+	})
+
+	t.Run("unparseable frontmatter", func(t *testing.T) {
+		dir := t.TempDir()
+		writeSkill(t, dir, "---\n: invalid: yaml: [broken\n---\nBody\n")
+		report := Validate(dir)
+		if report.Errors != 1 {
+			t.Errorf("expected 1 error, got %d", report.Errors)
+		}
+		requireResultContaining(t, report.Results, Error, "parsing frontmatter YAML")
+	})
+}
