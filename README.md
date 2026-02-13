@@ -82,6 +82,10 @@ These checks go beyond the spec. A skill can be spec-compliant and still perform
 - Descriptions with 8+ comma-separated short segments are flagged as keyword lists
 - Per the spec, the description should concisely describe what the skill does and when to use it
 
+**Markdown validation**
+- Checks SKILL.md and reference files for unclosed code fences (`` ``` `` or `~~~`)
+- An unclosed fence causes agents to misinterpret everything after it as code, which can silently break comprehension of the rest of the file
+
 **Token counting and limits**
 - Reports per-file and total token counts (using `o200k_base` encoding)
 - SKILL.md body: warns if over 5,000 tokens or 500 lines (per spec recommendation)

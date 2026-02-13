@@ -67,6 +67,9 @@ func Validate(dir string) *Report {
 	// Link checks
 	report.Results = append(report.Results, checkLinks(dir, s.Body)...)
 
+	// Markdown checks
+	report.Results = append(report.Results, checkMarkdown(dir, s.Body)...)
+
 	// Token checks
 	tokenResults, tokenCounts, otherCounts := checkTokens(dir, s.Body)
 	report.Results = append(report.Results, tokenResults...)
