@@ -72,16 +72,30 @@ These checks go beyond the spec. A skill can be spec-compliant and still perform
 
 **Extraneous file detection**
 - Files like `README.md`, `CHANGELOG.md`, and `LICENSE` are flagged at the skill root -- these are for human readers, not agents, and may be loaded into the context window unnecessarily
-- Unknown files get a softer warning in case they are intentional
+- `AGENTS.md` gets a specific warning: it's for repo-level agent configuration, not skill content, and should live outside the skill directory
+- Unknown files suggest moving content into `references/` or `assets/` as appropriate
+- Unknown directories report how many files they contain and suggest standard alternatives (when applicable)
 - Based on [Anthropic best practices](https://github.com/anthropics/skills): *"A skill should only contain essential files that directly support its functionality"*
+
+**Keyword stuffing detection**
+- Descriptions with 5+ quoted strings are flagged as likely trigger-phrase stuffing
+- Descriptions with 8+ comma-separated short segments are flagged as keyword lists
+- Per the spec, the description should concisely describe what the skill does and when to use it
 
 **Token counting and limits**
 - Reports per-file and total token counts (using `o200k_base` encoding)
 - SKILL.md body: warns if over 5,000 tokens or 500 lines (per spec recommendation)
 - Per reference file: warns at 10,000 tokens, errors at 25,000 tokens
 - Total references: warns at 25,000 tokens, errors at 50,000 tokens
+- Non-standard files (anything outside SKILL.md, references/, scripts/, assets/) are scanned separately and reported in an "Other files" section with per-file and total token counts
+- Other files total: warns at 25,000 tokens, errors at 100,000 tokens
+- Individual other-file counts are color-coded: yellow over 10k tokens, red over 25k
 
 The reference file limits reflect practical context window budgets. A single 25,000-token reference consumes 12-20% of a typical context window (128k-200k). At 50,000 tokens across all references, you're using 25-40% of the window before the agent has even started working on the actual task. The context window is shared with the system prompt, conversation history, tool output, and the agent's own reasoning -- large reference files crowd all of that out and degrade tool performance.
+
+**Holistic structure check**
+- If non-standard content exceeds 10x the standard structure content (and is over 25,000 tokens), the validator errors with a clear message that the directory doesn't appear to be structured as a skill
+- This catches build pipeline issues, documentation repos with a SKILL.md tacked on, and other cases where the content fundamentally isn't a skill
 
 ## Development
 
