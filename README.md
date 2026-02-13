@@ -1,5 +1,8 @@
 # skill-validator
 
+[![CI](https://github.com/dacharyc/skill-validator/actions/workflows/ci.yml/badge.svg)](https://github.com/dacharyc/skill-validator/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 A CLI tool that validates [Agent Skill](https://agentskills.io) packages.
 
 Spec compliance is table stakes. `skill-validator` goes further: it checks that links actually resolve, flags files that shouldn't be in a skill directory, and reports token counts so you can see how much of an agent's context window your skill will consume. A spec-compliant skill that has broken links or a 60k-token reference file will technically pass the spec but perform poorly in practice.
