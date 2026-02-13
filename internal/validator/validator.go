@@ -1,6 +1,8 @@
 package validator
 
 import (
+	"fmt"
+
 	"github.com/dacharyc/skill-validator/internal/skill"
 )
 
@@ -71,8 +73,55 @@ func Validate(dir string) *Report {
 	report.TokenCounts = tokenCounts
 	report.OtherTokenCounts = otherCounts
 
+	// Holistic structure check: is this actually a skill?
+	report.Results = append(report.Results, checkSkillRatio(report.TokenCounts, report.OtherTokenCounts)...)
+
 	report.tally()
 	return report
+}
+
+func checkSkillRatio(standard []TokenCount, other []TokenCount) []Result {
+	standardTotal := 0
+	for _, tc := range standard {
+		standardTotal += tc.Tokens
+	}
+	otherTotal := 0
+	for _, tc := range other {
+		otherTotal += tc.Tokens
+	}
+
+	if otherTotal > 25_000 && standardTotal > 0 && otherTotal > standardTotal*10 {
+		return []Result{{
+			Level:    Error,
+			Category: "Overall",
+			Message: fmt.Sprintf(
+				"this content doesn't appear to be structured as a skill — "+
+					"there are %s tokens of non-standard content but only %s tokens in the "+
+					"standard skill structure (SKILL.md + references). This ratio suggests a "+
+					"build pipeline issue or content that belongs in a different format, not a skill. "+
+					"Per the spec, a skill should contain a focused SKILL.md with optional references, "+
+					"scripts, and assets.",
+				formatTokenCount(otherTotal), formatTokenCount(standardTotal),
+			),
+		}}
+	}
+
+	return nil
+}
+
+func formatTokenCount(n int) string {
+	s := fmt.Sprintf("%d", n)
+	if n < 1000 {
+		return s
+	}
+	var result []byte
+	for i, c := range s {
+		if i > 0 && (len(s)-i)%3 == 0 {
+			result = append(result, ',')
+		}
+		result = append(result, byte(c))
+	}
+	return string(result)
 }
 
 func (r *Report) tally() {

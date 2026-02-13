@@ -93,6 +93,24 @@ func TestValidate(t *testing.T) {
 		}
 	})
 
+	t.Run("not structured as a skill error", func(t *testing.T) {
+		dir := t.TempDir()
+		writeSkill(t, dir, "---\nname: "+dirName(dir)+"\ndescription: desc\n---\n# Body\n")
+		// Add a massive amount of non-standard content
+		writeFile(t, dir, "AGENTS.md", generateContent(30_000))
+		report := Validate(dir)
+		requireResultContaining(t, report.Results, Error, "doesn't appear to be structured as a skill")
+		requireResultContaining(t, report.Results, Error, "build pipeline issue")
+	})
+
+	t.Run("no skill ratio error when other content is small", func(t *testing.T) {
+		dir := t.TempDir()
+		writeSkill(t, dir, "---\nname: "+dirName(dir)+"\ndescription: desc\n---\n# Body\n")
+		writeFile(t, dir, "extra.md", "A small extra file.")
+		report := Validate(dir)
+		requireNoResultContaining(t, report.Results, Error, "doesn't appear to be structured as a skill")
+	})
+
 	t.Run("unparseable frontmatter", func(t *testing.T) {
 		dir := t.TempDir()
 		writeSkill(t, dir, "---\n: invalid: yaml: [broken\n---\nBody\n")
