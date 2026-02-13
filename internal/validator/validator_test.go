@@ -69,6 +69,30 @@ func TestValidate(t *testing.T) {
 		}
 	})
 
+	t.Run("other token counts populated", func(t *testing.T) {
+		dir := t.TempDir()
+		writeSkill(t, dir, "---\nname: "+dirName(dir)+"\ndescription: desc\n---\n# Body content\n")
+		writeFile(t, dir, "AGENTS.md", "Some agent content here.")
+		writeFile(t, dir, "rules/rule1.md", "Rule one.")
+		report := Validate(dir)
+		if len(report.OtherTokenCounts) != 2 {
+			t.Errorf("expected 2 other token counts, got %d", len(report.OtherTokenCounts))
+			for _, c := range report.OtherTokenCounts {
+				t.Logf("  %s: %d tokens", c.File, c.Tokens)
+			}
+		}
+	})
+
+	t.Run("no other token counts for standard structure", func(t *testing.T) {
+		dir := t.TempDir()
+		writeSkill(t, dir, "---\nname: "+dirName(dir)+"\ndescription: desc\n---\n# Body content\n")
+		writeFile(t, dir, "references/ref.md", "Reference text.")
+		report := Validate(dir)
+		if len(report.OtherTokenCounts) != 0 {
+			t.Errorf("expected 0 other token counts, got %d", len(report.OtherTokenCounts))
+		}
+	})
+
 	t.Run("unparseable frontmatter", func(t *testing.T) {
 		dir := t.TempDir()
 		writeSkill(t, dir, "---\n: invalid: yaml: [broken\n---\nBody\n")

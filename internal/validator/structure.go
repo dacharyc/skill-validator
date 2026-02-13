@@ -63,7 +63,23 @@ func checkStructure(dir string) []Result {
 			continue
 		}
 		if !recognizedDirs[name] {
-			results = append(results, Result{Level: Warning, Category: "Structure", Message: fmt.Sprintf("unknown directory: %s/", name)})
+			msg := fmt.Sprintf("unknown directory: %s/", name)
+			if subEntries, err := os.ReadDir(filepath.Join(dir, name)); err == nil {
+				fileCount := 0
+				for _, se := range subEntries {
+					if !strings.HasPrefix(se.Name(), ".") {
+						fileCount++
+					}
+				}
+				if fileCount > 0 {
+					hint := unknownDirHint(dir)
+					msg = fmt.Sprintf(
+						"unknown directory: %s/ (contains %d file%s) — agents using the standard skill structure won't discover these files%s",
+						name, fileCount, pluralS(fileCount), hint,
+					)
+				}
+			}
+			results = append(results, Result{Level: Warning, Category: "Structure", Message: msg})
 		}
 	}
 
@@ -84,6 +100,18 @@ func checkStructure(dir string) []Result {
 
 func extraneousFileResult(name string) Result {
 	lower := strings.ToLower(name)
+	if lower == "agents.md" {
+		return Result{
+			Level:    Warning,
+			Category: "Structure",
+			Message: fmt.Sprintf(
+				"%s is for repo-level agent configuration, not skill content — "+
+					"move it outside the skill directory (e.g. to the repository root) "+
+					"where agents discover it automatically",
+				name,
+			),
+		}
+	}
 	if _, known := knownExtraneousFiles[lower]; known {
 		return Result{
 			Level:    Warning,
@@ -100,11 +128,33 @@ func extraneousFileResult(name string) Result {
 		Level:    Warning,
 		Category: "Structure",
 		Message: fmt.Sprintf(
-			"unexpected file at root: %s — if agents don't need this file, "+
-				"remove it to avoid unnecessary context window usage",
+			"unexpected file at root: %s — if agents need this file, move it into "+
+				"references/ or assets/ as appropriate; otherwise remove it to avoid "+
+				"unnecessary context window usage",
 			name,
 		),
 	}
+}
+
+func unknownDirHint(dir string) string {
+	var candidates []string
+	if _, err := os.Stat(filepath.Join(dir, "references")); os.IsNotExist(err) {
+		candidates = append(candidates, "references/")
+	}
+	if _, err := os.Stat(filepath.Join(dir, "assets")); os.IsNotExist(err) {
+		candidates = append(candidates, "assets/")
+	}
+	if len(candidates) == 0 {
+		return ""
+	}
+	return fmt.Sprintf("; should this be %s?", strings.Join(candidates, " or "))
+}
+
+func pluralS(n int) string {
+	if n == 1 {
+		return ""
+	}
+	return "s"
 }
 
 func checkNesting(dir string, prefix string) []Result {

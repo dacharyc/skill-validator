@@ -62,6 +62,31 @@ func Print(w io.Writer, r *validator.Report) {
 		fmt.Fprintf(w, "  %sTotal:%s%s%s tokens\n", colorBold, colorReset, strings.Repeat(" ", padding), formatNumber(total))
 	}
 
+	// Other files token counts
+	if len(r.OtherTokenCounts) > 0 {
+		fmt.Fprintf(w, "\n%sOther files (outside standard structure)%s\n", colorBold, colorReset)
+
+		maxFileLen := 0
+		for _, tc := range r.OtherTokenCounts {
+			if len(tc.File) > maxFileLen {
+				maxFileLen = len(tc.File)
+			}
+		}
+
+		total := 0
+		for _, tc := range r.OtherTokenCounts {
+			total += tc.Tokens
+			padding := maxFileLen - len(tc.File) + 2
+			fmt.Fprintf(w, "  %s%s:%s%s%s tokens\n", colorCyan, tc.File, colorReset, strings.Repeat(" ", padding), formatNumber(tc.Tokens))
+		}
+
+		separator := strings.Repeat("─", maxFileLen+20)
+		fmt.Fprintf(w, "  %s\n", separator)
+		label := "Total (other)"
+		padding := maxFileLen - len(label) + 2
+		fmt.Fprintf(w, "  %s%s:%s%s%s tokens\n", colorBold, label, colorReset, strings.Repeat(" ", padding), formatNumber(total))
+	}
+
 	// Summary
 	fmt.Fprintln(w)
 	if r.Errors == 0 && r.Warnings == 0 {

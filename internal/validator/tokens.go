@@ -22,16 +22,20 @@ const (
 	// Aggregate thresholds across all reference files
 	refTotalSoftLimit = 25_000
 	refTotalHardLimit = 50_000
+
+	// Aggregate thresholds for non-standard files
+	otherTotalSoftLimit = 25_000
+	otherTotalHardLimit = 100_000
 )
 
-func checkTokens(dir string, body string) ([]Result, []TokenCount) {
+func checkTokens(dir string, body string) ([]Result, []TokenCount, []TokenCount) {
 	var results []Result
 	var counts []TokenCount
 
 	enc, err := tokenizer.Get(tokenizer.O200kBase)
 	if err != nil {
 		results = append(results, Result{Level: Error, Category: "Tokens", Message: fmt.Sprintf("failed to initialize tokenizer: %v", err)})
-		return results, counts
+		return results, counts, nil
 	}
 
 	// Count SKILL.md body tokens
@@ -121,5 +125,132 @@ func checkTokens(dir string, body string) ([]Result, []TokenCount) {
 		})
 	}
 
-	return results, counts
+	// Count tokens in non-standard files
+	otherCounts := countOtherFiles(dir, enc)
+
+	// Check other-files aggregate limits
+	otherTotal := 0
+	for _, c := range otherCounts {
+		otherTotal += c.Tokens
+	}
+	if otherTotal > otherTotalHardLimit {
+		results = append(results, Result{
+			Level:    Error,
+			Category: "Tokens",
+			Message: fmt.Sprintf(
+				"non-standard files total %d tokens — if an agent loads these, "+
+					"they will consume most of the context window and severely degrade performance; "+
+					"move essential content into references/ or remove unnecessary files",
+				otherTotal,
+			),
+		})
+	} else if otherTotal > otherTotalSoftLimit {
+		results = append(results, Result{
+			Level:    Warning,
+			Category: "Tokens",
+			Message: fmt.Sprintf(
+				"non-standard files total %d tokens — if an agent loads these, "+
+					"they could consume a significant portion of the context window; "+
+					"consider moving essential content into references/ or removing unnecessary files",
+				otherTotal,
+			),
+		})
+	}
+
+	return results, counts, otherCounts
+}
+
+// binaryExtensions lists file extensions that should be skipped for token counting.
+var binaryExtensions = map[string]bool{
+	".png": true, ".jpg": true, ".jpeg": true, ".gif": true, ".bmp": true,
+	".ico": true, ".svg": true, ".webp": true,
+	".pdf": true, ".doc": true, ".docx": true, ".xls": true, ".xlsx": true,
+	".zip": true, ".tar": true, ".gz": true, ".bz2": true, ".7z": true, ".rar": true,
+	".exe": true, ".dll": true, ".so": true, ".dylib": true, ".bin": true,
+	".mp3": true, ".mp4": true, ".wav": true, ".avi": true, ".mov": true,
+	".woff": true, ".woff2": true, ".ttf": true, ".eot": true, ".otf": true,
+}
+
+// standardRootFiles are files that are already counted in the main token table.
+var standardRootFiles = map[string]bool{
+	"skill.md": true,
+}
+
+// standardDirs are directories already handled by the standard structure.
+var standardDirs = map[string]bool{
+	"references": true,
+	"scripts":    true,
+	"assets":     true,
+}
+
+func countOtherFiles(dir string, enc tokenizer.Codec) []TokenCount {
+	var counts []TokenCount
+
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return counts
+	}
+
+	for _, entry := range entries {
+		name := entry.Name()
+		if strings.HasPrefix(name, ".") {
+			continue
+		}
+
+		if entry.IsDir() {
+			if standardDirs[strings.ToLower(name)] {
+				continue
+			}
+			// Walk files in unknown directory
+			counts = append(counts, countFilesInDir(dir, name, enc)...)
+		} else {
+			if standardRootFiles[strings.ToLower(name)] {
+				continue
+			}
+			if binaryExtensions[strings.ToLower(filepath.Ext(name))] {
+				continue
+			}
+			data, err := os.ReadFile(filepath.Join(dir, name))
+			if err != nil {
+				continue
+			}
+			tokens, _, _ := enc.Encode(string(data))
+			counts = append(counts, TokenCount{File: name, Tokens: len(tokens)})
+		}
+	}
+
+	return counts
+}
+
+func countFilesInDir(rootDir, dirName string, enc tokenizer.Codec) []TokenCount {
+	var counts []TokenCount
+	fullDir := filepath.Join(rootDir, dirName)
+
+	filepath.Walk(fullDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return nil
+		}
+		if info.IsDir() {
+			if strings.HasPrefix(info.Name(), ".") && path != fullDir {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		if strings.HasPrefix(info.Name(), ".") {
+			return nil
+		}
+		if binaryExtensions[strings.ToLower(filepath.Ext(info.Name()))] {
+			return nil
+		}
+		data, err := os.ReadFile(path)
+		if err != nil {
+			return nil
+		}
+		rel, _ := filepath.Rel(rootDir, path)
+		tokens, _, _ := enc.Encode(string(data))
+		counts = append(counts, TokenCount{File: rel, Tokens: len(tokens)})
+		return nil
+	})
+
+	return counts
 }

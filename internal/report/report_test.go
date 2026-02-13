@@ -199,6 +199,61 @@ func TestFormatNumber(t *testing.T) {
 	}
 }
 
+func TestPrint_OtherTokenCounts(t *testing.T) {
+	r := &validator.Report{
+		SkillDir: "/tmp/test",
+		Results:  []validator.Result{},
+		TokenCounts: []validator.TokenCount{
+			{File: "SKILL.md body", Tokens: 1250},
+		},
+		OtherTokenCounts: []validator.TokenCount{
+			{File: "AGENTS.md", Tokens: 45000},
+			{File: "rules/rule1.md", Tokens: 850},
+		},
+	}
+
+	var buf bytes.Buffer
+	Print(&buf, r)
+	output := buf.String()
+
+	if !strings.Contains(output, "Other files (outside standard structure)") {
+		t.Error("expected Other files section header")
+	}
+	if !strings.Contains(output, "AGENTS.md:") {
+		t.Error("expected AGENTS.md in other token counts")
+	}
+	if !strings.Contains(output, "rules/rule1.md:") {
+		t.Error("expected rules/rule1.md in other token counts")
+	}
+	if !strings.Contains(output, "45,000") {
+		t.Error("expected formatted number 45,000")
+	}
+	if !strings.Contains(output, "Total (other):") {
+		t.Error("expected Total (other) in output")
+	}
+	if !strings.Contains(output, "45,850") {
+		t.Errorf("expected formatted total 45,850 in output")
+	}
+}
+
+func TestPrint_NoOtherTokenCounts(t *testing.T) {
+	r := &validator.Report{
+		SkillDir: "/tmp/test",
+		Results:  []validator.Result{},
+		TokenCounts: []validator.TokenCount{
+			{File: "SKILL.md body", Tokens: 1250},
+		},
+	}
+
+	var buf bytes.Buffer
+	Print(&buf, r)
+	output := buf.String()
+
+	if strings.Contains(output, "Other files") {
+		t.Error("unexpected Other files section when no other counts")
+	}
+}
+
 func TestPluralize(t *testing.T) {
 	if pluralize(0) != "s" {
 		t.Error("pluralize(0) should be 's'")

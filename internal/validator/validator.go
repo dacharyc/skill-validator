@@ -22,11 +22,12 @@ type Result struct {
 
 // Report holds all validation results and token counts.
 type Report struct {
-	SkillDir    string
-	Results     []Result
-	TokenCounts []TokenCount
-	Errors      int
-	Warnings    int
+	SkillDir         string
+	Results          []Result
+	TokenCounts      []TokenCount
+	OtherTokenCounts []TokenCount
+	Errors           int
+	Warnings         int
 }
 
 // Validate runs all checks against the skill in the given directory.
@@ -65,9 +66,10 @@ func Validate(dir string) *Report {
 	report.Results = append(report.Results, checkLinks(dir, s.Body)...)
 
 	// Token checks
-	tokenResults, tokenCounts := checkTokens(dir, s.Body)
+	tokenResults, tokenCounts, otherCounts := checkTokens(dir, s.Body)
 	report.Results = append(report.Results, tokenResults...)
 	report.TokenCounts = tokenCounts
+	report.OtherTokenCounts = otherCounts
 
 	report.tally()
 	return report
