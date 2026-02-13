@@ -2,6 +2,9 @@ package validator
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/dacharyc/skill-validator/internal/skill"
 )
@@ -44,6 +47,72 @@ type Report struct {
 	OtherTokenCounts []TokenCount
 	Errors           int
 	Warnings         int
+}
+
+// SkillMode indicates what kind of skill directory was detected.
+type SkillMode int
+
+const (
+	NoSkill    SkillMode = iota
+	SingleSkill
+	MultiSkill
+)
+
+// DetectSkills determines whether dir is a single skill, a multi-skill
+// parent, or contains no skills. It follows symlinks when checking
+// subdirectories.
+func DetectSkills(dir string) (SkillMode, []string) {
+	// If the directory itself contains SKILL.md, it's a single skill.
+	if _, err := os.Stat(filepath.Join(dir, "SKILL.md")); err == nil {
+		return SingleSkill, []string{dir}
+	}
+
+	// Scan immediate subdirectories for SKILL.md.
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return NoSkill, nil
+	}
+
+	var skillDirs []string
+	for _, entry := range entries {
+		name := entry.Name()
+		if strings.HasPrefix(name, ".") {
+			continue
+		}
+		subdir := filepath.Join(dir, name)
+		// Use os.Stat (not entry.IsDir()) to follow symlinks.
+		info, err := os.Stat(subdir)
+		if err != nil || !info.IsDir() {
+			continue
+		}
+		if _, err := os.Stat(filepath.Join(subdir, "SKILL.md")); err == nil {
+			skillDirs = append(skillDirs, subdir)
+		}
+	}
+
+	if len(skillDirs) > 0 {
+		return MultiSkill, skillDirs
+	}
+	return NoSkill, nil
+}
+
+// MultiReport holds aggregated results from validating multiple skills.
+type MultiReport struct {
+	Skills   []*Report
+	Errors   int
+	Warnings int
+}
+
+// ValidateMulti validates each directory and returns an aggregated report.
+func ValidateMulti(dirs []string) *MultiReport {
+	mr := &MultiReport{}
+	for _, dir := range dirs {
+		r := Validate(dir)
+		mr.Skills = append(mr.Skills, r)
+		mr.Errors += r.Errors
+		mr.Warnings += r.Warnings
+	}
+	return mr
 }
 
 // Validate runs all checks against the skill in the given directory.

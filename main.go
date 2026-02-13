@@ -51,20 +51,41 @@ func main() {
 		os.Exit(2)
 	}
 
-	r := validator.Validate(absDir)
+	mode, dirs := validator.DetectSkills(absDir)
 
-	switch outputFormat {
-	case "json":
-		if err := report.PrintJSON(os.Stdout, r); err != nil {
-			fmt.Fprintf(os.Stderr, "Error writing JSON: %v\n", err)
-			os.Exit(2)
+	switch mode {
+	case validator.SingleSkill:
+		r := validator.Validate(dirs[0])
+		switch outputFormat {
+		case "json":
+			if err := report.PrintJSON(os.Stdout, r); err != nil {
+				fmt.Fprintf(os.Stderr, "Error writing JSON: %v\n", err)
+				os.Exit(2)
+			}
+		default:
+			report.Print(os.Stdout, r)
 		}
-	default:
-		report.Print(os.Stdout, r)
-	}
+		if r.Errors > 0 {
+			os.Exit(1)
+		}
 
-	if r.Errors > 0 {
-		os.Exit(1)
+	case validator.MultiSkill:
+		mr := validator.ValidateMulti(dirs)
+		switch outputFormat {
+		case "json":
+			if err := report.PrintMultiJSON(os.Stdout, mr); err != nil {
+				fmt.Fprintf(os.Stderr, "Error writing JSON: %v\n", err)
+				os.Exit(2)
+			}
+		default:
+			report.PrintMulti(os.Stdout, mr)
+		}
+		if mr.Errors > 0 {
+			os.Exit(1)
+		}
+
+	case validator.NoSkill:
+		fmt.Fprintf(os.Stderr, "Error: no skills found in %s (expected SKILL.md or subdirectories containing SKILL.md)\n", dir)
+		os.Exit(2)
 	}
-	os.Exit(0)
 }

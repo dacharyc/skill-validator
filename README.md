@@ -91,6 +91,30 @@ The `passed` field is `true` when `errors` is `0`. Token count sections are omit
 skill-validator -o json my-skill/ | jq '.results[] | select(.level == "error")'
 ```
 
+### Multi-skill directories
+
+If the given path does not contain a `SKILL.md` but has subdirectories that do, the validator automatically detects and validates each skill. This is useful when skills are organized as sibling directories (e.g. `skills/algorithmic-art/`, `skills/brand-guidelines/`). Symlinks are followed during detection.
+
+```
+skill-validator skills/
+```
+
+Each skill is validated independently. The text output separates skills with a line and appends an overall summary. The JSON output wraps individual skill reports in a `skills` array:
+
+```json
+{
+  "passed": false,
+  "errors": 3,
+  "warnings": 1,
+  "skills": [
+    { "skill_dir": "...", "passed": true, "errors": 0, "warnings": 0, "results": [...] },
+    { "skill_dir": "...", "passed": false, "errors": 3, "warnings": 1, "results": [...] }
+  ]
+}
+```
+
+If no `SKILL.md` is found at the root or in any immediate subdirectory, the validator exits with code 2.
+
 ## What it checks
 
 ### Spec compliance

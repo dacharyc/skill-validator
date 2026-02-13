@@ -332,3 +332,147 @@ func TestPluralize(t *testing.T) {
 		t.Error("pluralize(2) should be 's'")
 	}
 }
+
+func TestPrintMulti_AllPassed(t *testing.T) {
+	mr := &validator.MultiReport{
+		Skills: []*validator.Report{
+			{
+				SkillDir: "/tmp/alpha",
+				Results:  []validator.Result{{Level: validator.Pass, Category: "Structure", Message: "SKILL.md found"}},
+			},
+			{
+				SkillDir: "/tmp/beta",
+				Results:  []validator.Result{{Level: validator.Pass, Category: "Structure", Message: "SKILL.md found"}},
+			},
+		},
+	}
+
+	var buf bytes.Buffer
+	PrintMulti(&buf, mr)
+	output := buf.String()
+
+	if !strings.Contains(output, "Validating skill: /tmp/alpha") {
+		t.Error("expected alpha in output")
+	}
+	if !strings.Contains(output, "Validating skill: /tmp/beta") {
+		t.Error("expected beta in output")
+	}
+	if !strings.Contains(output, "━") {
+		t.Error("expected separator line")
+	}
+	if !strings.Contains(output, "2 skills validated") {
+		t.Error("expected '2 skills validated' summary")
+	}
+	if !strings.Contains(output, "all passed") {
+		t.Error("expected 'all passed' in summary")
+	}
+	// No Total line when there are no errors or warnings
+	if strings.Contains(output, "Total:") {
+		t.Error("unexpected Total line when no errors or warnings")
+	}
+}
+
+func TestPrintMulti_SomeFailed(t *testing.T) {
+	mr := &validator.MultiReport{
+		Skills: []*validator.Report{
+			{
+				SkillDir: "/tmp/good",
+				Results:  []validator.Result{{Level: validator.Pass, Category: "Structure", Message: "ok"}},
+			},
+			{
+				SkillDir: "/tmp/bad",
+				Results: []validator.Result{
+					{Level: validator.Error, Category: "Structure", Message: "fail"},
+					{Level: validator.Warning, Category: "Structure", Message: "warn"},
+				},
+				Errors:   1,
+				Warnings: 1,
+			},
+		},
+		Errors:   1,
+		Warnings: 1,
+	}
+
+	var buf bytes.Buffer
+	PrintMulti(&buf, mr)
+	output := buf.String()
+
+	if !strings.Contains(output, "2 skills validated") {
+		t.Error("expected '2 skills validated'")
+	}
+	if !strings.Contains(output, "1 passed") {
+		t.Error("expected '1 passed'")
+	}
+	if !strings.Contains(output, "1 failed") {
+		t.Error("expected '1 failed'")
+	}
+	if !strings.Contains(output, "Total:") {
+		t.Error("expected 'Total:' line with error/warning counts")
+	}
+	if !strings.Contains(output, "1 error") {
+		t.Errorf("expected '1 error' in total line, got:\n%s", output)
+	}
+	if !strings.Contains(output, "1 warning") {
+		t.Errorf("expected '1 warning' in total line, got:\n%s", output)
+	}
+}
+
+func TestPrintMulti_SingleSkill(t *testing.T) {
+	mr := &validator.MultiReport{
+		Skills: []*validator.Report{
+			{
+				SkillDir: "/tmp/only",
+				Results:  []validator.Result{{Level: validator.Pass, Category: "Structure", Message: "ok"}},
+			},
+		},
+	}
+
+	var buf bytes.Buffer
+	PrintMulti(&buf, mr)
+	output := buf.String()
+
+	// Singular: "1 skill validated"
+	if !strings.Contains(output, "1 skill validated") {
+		t.Errorf("expected '1 skill validated' (singular), got:\n%s", output)
+	}
+}
+
+func TestPrintMulti_AggregatedCounts(t *testing.T) {
+	mr := &validator.MultiReport{
+		Skills: []*validator.Report{
+			{
+				SkillDir: "/tmp/a",
+				Results: []validator.Result{
+					{Level: validator.Error, Category: "A", Message: "e1"},
+					{Level: validator.Error, Category: "A", Message: "e2"},
+					{Level: validator.Warning, Category: "A", Message: "w1"},
+				},
+				Errors:   2,
+				Warnings: 1,
+			},
+			{
+				SkillDir: "/tmp/b",
+				Results: []validator.Result{
+					{Level: validator.Error, Category: "A", Message: "e3"},
+					{Level: validator.Warning, Category: "A", Message: "w2"},
+					{Level: validator.Warning, Category: "A", Message: "w3"},
+				},
+				Errors:   1,
+				Warnings: 2,
+			},
+		},
+		Errors:   3,
+		Warnings: 3,
+	}
+
+	var buf bytes.Buffer
+	PrintMulti(&buf, mr)
+	output := buf.String()
+
+	if !strings.Contains(output, "3 errors") {
+		t.Errorf("expected '3 errors' in total, got:\n%s", output)
+	}
+	if !strings.Contains(output, "3 warnings") {
+		t.Errorf("expected '3 warnings' in total, got:\n%s", output)
+	}
+}

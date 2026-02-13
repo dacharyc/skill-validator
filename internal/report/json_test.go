@@ -257,3 +257,135 @@ func TestPrintJSON_SpecialCharacters(t *testing.T) {
 		t.Errorf("message = %q, want %q", msg, want)
 	}
 }
+
+func TestPrintMultiJSON_AllPassed(t *testing.T) {
+	mr := &validator.MultiReport{
+		Skills: []*validator.Report{
+			{
+				SkillDir: "/tmp/alpha",
+				Results:  []validator.Result{{Level: validator.Pass, Category: "Structure", Message: "ok"}},
+			},
+			{
+				SkillDir: "/tmp/beta",
+				Results:  []validator.Result{{Level: validator.Pass, Category: "Structure", Message: "ok"}},
+			},
+		},
+	}
+
+	var buf bytes.Buffer
+	if err := PrintMultiJSON(&buf, mr); err != nil {
+		t.Fatalf("PrintMultiJSON error: %v", err)
+	}
+
+	var out map[string]any
+	if err := json.Unmarshal(buf.Bytes(), &out); err != nil {
+		t.Fatalf("invalid JSON: %v", err)
+	}
+
+	if out["passed"] != true {
+		t.Errorf("passed = %v, want true", out["passed"])
+	}
+	if out["errors"].(float64) != 0 {
+		t.Errorf("errors = %v, want 0", out["errors"])
+	}
+	if out["warnings"].(float64) != 0 {
+		t.Errorf("warnings = %v, want 0", out["warnings"])
+	}
+
+	skills := out["skills"].([]any)
+	if len(skills) != 2 {
+		t.Fatalf("skills length = %d, want 2", len(skills))
+	}
+
+	first := skills[0].(map[string]any)
+	if first["skill_dir"] != "/tmp/alpha" {
+		t.Errorf("first skill_dir = %v, want /tmp/alpha", first["skill_dir"])
+	}
+	if first["passed"] != true {
+		t.Errorf("first passed = %v, want true", first["passed"])
+	}
+}
+
+func TestPrintMultiJSON_SomeFailed(t *testing.T) {
+	mr := &validator.MultiReport{
+		Skills: []*validator.Report{
+			{
+				SkillDir: "/tmp/good",
+				Results:  []validator.Result{{Level: validator.Pass, Category: "Structure", Message: "ok"}},
+			},
+			{
+				SkillDir: "/tmp/bad",
+				Results: []validator.Result{
+					{Level: validator.Error, Category: "Frontmatter", Message: "name is required"},
+					{Level: validator.Warning, Category: "Structure", Message: "unknown dir"},
+				},
+				Errors:   1,
+				Warnings: 1,
+			},
+		},
+		Errors:   1,
+		Warnings: 1,
+	}
+
+	var buf bytes.Buffer
+	if err := PrintMultiJSON(&buf, mr); err != nil {
+		t.Fatalf("PrintMultiJSON error: %v", err)
+	}
+
+	var out map[string]any
+	if err := json.Unmarshal(buf.Bytes(), &out); err != nil {
+		t.Fatalf("invalid JSON: %v", err)
+	}
+
+	if out["passed"] != false {
+		t.Errorf("passed = %v, want false", out["passed"])
+	}
+	if out["errors"].(float64) != 1 {
+		t.Errorf("errors = %v, want 1", out["errors"])
+	}
+	if out["warnings"].(float64) != 1 {
+		t.Errorf("warnings = %v, want 1", out["warnings"])
+	}
+
+	skills := out["skills"].([]any)
+	bad := skills[1].(map[string]any)
+	if bad["passed"] != false {
+		t.Errorf("bad skill passed = %v, want false", bad["passed"])
+	}
+}
+
+func TestPrintMultiJSON_IncludesTokenCounts(t *testing.T) {
+	mr := &validator.MultiReport{
+		Skills: []*validator.Report{
+			{
+				SkillDir: "/tmp/with-tokens",
+				Results:  []validator.Result{{Level: validator.Pass, Category: "Structure", Message: "ok"}},
+				TokenCounts: []validator.TokenCount{
+					{File: "SKILL.md body", Tokens: 500},
+					{File: "references/ref.md", Tokens: 300},
+				},
+			},
+		},
+	}
+
+	var buf bytes.Buffer
+	if err := PrintMultiJSON(&buf, mr); err != nil {
+		t.Fatalf("PrintMultiJSON error: %v", err)
+	}
+
+	var out map[string]any
+	if err := json.Unmarshal(buf.Bytes(), &out); err != nil {
+		t.Fatalf("invalid JSON: %v", err)
+	}
+
+	skills := out["skills"].([]any)
+	skill := skills[0].(map[string]any)
+	tc := skill["token_counts"].(map[string]any)
+	if tc["total"].(float64) != 800 {
+		t.Errorf("token_counts.total = %v, want 800", tc["total"])
+	}
+	files := tc["files"].([]any)
+	if len(files) != 2 {
+		t.Fatalf("token_counts.files length = %d, want 2", len(files))
+	}
+}

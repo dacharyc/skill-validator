@@ -122,6 +122,51 @@ func Print(w io.Writer, r *validator.Report) {
 	fmt.Fprintln(w)
 }
 
+// PrintMulti prints each skill report separated by a line, with an overall summary.
+func PrintMulti(w io.Writer, mr *validator.MultiReport) {
+	for i, r := range mr.Skills {
+		if i > 0 {
+			fmt.Fprintf(w, "\n%s\n", strings.Repeat("━", 60))
+		}
+		Print(w, r)
+	}
+
+	passed := 0
+	failed := 0
+	for _, r := range mr.Skills {
+		if r.Errors == 0 {
+			passed++
+		} else {
+			failed++
+		}
+	}
+
+	fmt.Fprintf(w, "%s\n", strings.Repeat("━", 60))
+	fmt.Fprintf(w, "\n%s%d skill%s validated: ", colorBold, len(mr.Skills), pluralize(len(mr.Skills)))
+	if failed == 0 {
+		fmt.Fprintf(w, "%sall passed%s\n", colorGreen, colorReset)
+	} else {
+		skillParts := []string{}
+		if passed > 0 {
+			skillParts = append(skillParts, fmt.Sprintf("%s%d passed%s", colorGreen, passed, colorReset))
+		}
+		skillParts = append(skillParts, fmt.Sprintf("%s%d failed%s", colorRed, failed, colorReset))
+		fmt.Fprintf(w, "%s%s\n", strings.Join(skillParts, ", "), colorReset)
+	}
+
+	countParts := []string{}
+	if mr.Errors > 0 {
+		countParts = append(countParts, fmt.Sprintf("%s%d error%s%s", colorRed, mr.Errors, pluralize(mr.Errors), colorReset))
+	}
+	if mr.Warnings > 0 {
+		countParts = append(countParts, fmt.Sprintf("%s%d warning%s%s", colorYellow, mr.Warnings, pluralize(mr.Warnings), colorReset))
+	}
+	if len(countParts) > 0 {
+		fmt.Fprintf(w, "%sTotal: %s%s\n", colorBold, strings.Join(countParts, ", "), colorReset)
+	}
+	fmt.Fprintln(w)
+}
+
 func formatLevel(level validator.Level) (string, string) {
 	switch level {
 	case validator.Pass:

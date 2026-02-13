@@ -1,6 +1,8 @@
 package validator
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 )
 
@@ -120,4 +122,186 @@ func TestValidate(t *testing.T) {
 		}
 		requireResultContaining(t, report.Results, Error, "parsing frontmatter YAML")
 	})
+}
+
+func TestDetectSkills(t *testing.T) {
+	t.Run("single skill", func(t *testing.T) {
+		dir := t.TempDir()
+		writeSkill(t, dir, "---\nname: test\n---\n")
+		mode, dirs := DetectSkills(dir)
+		if mode != SingleSkill {
+			t.Errorf("expected SingleSkill, got %d", mode)
+		}
+		if len(dirs) != 1 || dirs[0] != dir {
+			t.Errorf("expected [%s], got %v", dir, dirs)
+		}
+	})
+
+	t.Run("multi skill", func(t *testing.T) {
+		dir := t.TempDir()
+		writeSkill(t, filepath.Join(dir, "alpha"), "---\nname: alpha\n---\n")
+		writeSkill(t, filepath.Join(dir, "beta"), "---\nname: beta\n---\n")
+		mode, dirs := DetectSkills(dir)
+		if mode != MultiSkill {
+			t.Errorf("expected MultiSkill, got %d", mode)
+		}
+		if len(dirs) != 2 {
+			t.Fatalf("expected 2 dirs, got %d", len(dirs))
+		}
+		// os.ReadDir returns sorted entries
+		if filepath.Base(dirs[0]) != "alpha" || filepath.Base(dirs[1]) != "beta" {
+			t.Errorf("expected [alpha, beta], got [%s, %s]", filepath.Base(dirs[0]), filepath.Base(dirs[1]))
+		}
+	})
+
+	t.Run("no skills", func(t *testing.T) {
+		dir := t.TempDir()
+		mode, dirs := DetectSkills(dir)
+		if mode != NoSkill {
+			t.Errorf("expected NoSkill, got %d", mode)
+		}
+		if dirs != nil {
+			t.Errorf("expected nil dirs, got %v", dirs)
+		}
+	})
+
+	t.Run("SKILL.md at root takes precedence", func(t *testing.T) {
+		dir := t.TempDir()
+		// Root has SKILL.md AND subdirs with SKILL.md
+		writeSkill(t, dir, "---\nname: root\n---\n")
+		writeSkill(t, filepath.Join(dir, "sub"), "---\nname: sub\n---\n")
+		mode, dirs := DetectSkills(dir)
+		if mode != SingleSkill {
+			t.Errorf("expected SingleSkill (root precedence), got %d", mode)
+		}
+		if len(dirs) != 1 || dirs[0] != dir {
+			t.Errorf("expected [%s], got %v", dir, dirs)
+		}
+	})
+
+	t.Run("skips hidden dirs", func(t *testing.T) {
+		dir := t.TempDir()
+		writeSkill(t, filepath.Join(dir, ".hidden"), "---\nname: hidden\n---\n")
+		writeSkill(t, filepath.Join(dir, "visible"), "---\nname: visible\n---\n")
+		mode, dirs := DetectSkills(dir)
+		if mode != MultiSkill {
+			t.Errorf("expected MultiSkill, got %d", mode)
+		}
+		if len(dirs) != 1 {
+			t.Fatalf("expected 1 dir (hidden skipped), got %d", len(dirs))
+		}
+		if filepath.Base(dirs[0]) != "visible" {
+			t.Errorf("expected visible, got %s", filepath.Base(dirs[0]))
+		}
+	})
+
+	t.Run("ignores subdirs without SKILL.md", func(t *testing.T) {
+		dir := t.TempDir()
+		// Create a subdir without SKILL.md
+		if err := os.MkdirAll(filepath.Join(dir, "no-skill"), 0755); err != nil {
+			t.Fatal(err)
+		}
+		writeSkill(t, filepath.Join(dir, "has-skill"), "---\nname: has-skill\n---\n")
+		mode, dirs := DetectSkills(dir)
+		if mode != MultiSkill {
+			t.Errorf("expected MultiSkill, got %d", mode)
+		}
+		if len(dirs) != 1 {
+			t.Fatalf("expected 1 dir, got %d", len(dirs))
+		}
+		if filepath.Base(dirs[0]) != "has-skill" {
+			t.Errorf("expected has-skill, got %s", filepath.Base(dirs[0]))
+		}
+	})
+
+	t.Run("follows symlinks", func(t *testing.T) {
+		dir := t.TempDir()
+		// Create a real skill dir outside
+		realDir := filepath.Join(dir, "real")
+		writeSkill(t, realDir, "---\nname: real\n---\n")
+		// Create a parent with a symlink
+		parent := filepath.Join(dir, "parent")
+		if err := os.MkdirAll(parent, 0755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Symlink(realDir, filepath.Join(parent, "linked")); err != nil {
+			t.Fatal(err)
+		}
+		mode, dirs := DetectSkills(parent)
+		if mode != MultiSkill {
+			t.Errorf("expected MultiSkill, got %d", mode)
+		}
+		if len(dirs) != 1 {
+			t.Fatalf("expected 1 dir, got %d", len(dirs))
+		}
+	})
+}
+
+func TestValidateMulti(t *testing.T) {
+	dir := t.TempDir()
+	// Create two skills: one valid, one invalid
+	goodDir := filepath.Join(dir, "good")
+	writeSkill(t, goodDir, "---\nname: good\ndescription: A good skill\n---\n# Body\n")
+	badDir := filepath.Join(dir, "bad")
+	writeSkill(t, badDir, "---\nname: BAD\ndescription: \"\"\n---\n# Body\n")
+
+	mr := ValidateMulti([]string{goodDir, badDir})
+
+	if len(mr.Skills) != 2 {
+		t.Fatalf("expected 2 skills, got %d", len(mr.Skills))
+	}
+	if mr.Skills[0].Errors != 0 {
+		t.Errorf("expected good skill to have 0 errors, got %d", mr.Skills[0].Errors)
+	}
+	if mr.Skills[1].Errors == 0 {
+		t.Errorf("expected bad skill to have errors")
+	}
+	if mr.Errors != mr.Skills[0].Errors+mr.Skills[1].Errors {
+		t.Errorf("expected aggregated errors %d, got %d", mr.Skills[0].Errors+mr.Skills[1].Errors, mr.Errors)
+	}
+	if mr.Warnings != mr.Skills[0].Warnings+mr.Skills[1].Warnings {
+		t.Errorf("expected aggregated warnings %d, got %d", mr.Skills[0].Warnings+mr.Skills[1].Warnings, mr.Warnings)
+	}
+}
+
+func TestValidate_MultiSkillFixture(t *testing.T) {
+	// Integration test using testdata/multi-skill
+	fixtureDir := "../../testdata/multi-skill"
+	mode, dirs := DetectSkills(fixtureDir)
+	if mode != MultiSkill {
+		t.Fatalf("expected MultiSkill, got %d", mode)
+	}
+	if len(dirs) != 3 {
+		t.Fatalf("expected 3 skill dirs, got %d: %v", len(dirs), dirs)
+	}
+
+	mr := ValidateMulti(dirs)
+	if len(mr.Skills) != 3 {
+		t.Fatalf("expected 3 skills, got %d", len(mr.Skills))
+	}
+
+	// skill-alpha and skill-beta should pass
+	for _, r := range mr.Skills {
+		base := filepath.Base(r.SkillDir)
+		if base == "skill-alpha" || base == "skill-beta" {
+			if r.Errors != 0 {
+				t.Errorf("%s: expected 0 errors, got %d", base, r.Errors)
+				for _, res := range r.Results {
+					if res.Level == Error {
+						t.Logf("  %s: %s", res.Category, res.Message)
+					}
+				}
+			}
+		}
+		// skill-gamma should have errors
+		if base == "skill-gamma" {
+			if r.Errors == 0 {
+				t.Errorf("skill-gamma: expected errors, got 0")
+			}
+		}
+	}
+
+	if mr.Errors == 0 {
+		t.Error("expected aggregated errors > 0")
+	}
 }
