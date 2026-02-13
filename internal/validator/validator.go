@@ -15,6 +15,20 @@ const (
 	Error
 )
 
+// String returns the lowercase name of the level.
+func (l Level) String() string {
+	switch l {
+	case Pass:
+		return "pass"
+	case Warning:
+		return "warning"
+	case Error:
+		return "error"
+	default:
+		return "unknown"
+	}
+}
+
 // Result represents a single validation finding.
 type Result struct {
 	Level    Level

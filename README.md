@@ -24,8 +24,12 @@ go build -o skill-validator .
 ## Usage
 
 ```
-skill-validator <path-to-skill-directory>
+skill-validator [-o format] <path-to-skill-directory>
 ```
+
+Flags:
+
+- `-o`, `--output` — output format: `text` (default) or `json`
 
 Exit codes: `0` = passed, `1` = validation errors, `2` = usage/tool error.
 
@@ -52,6 +56,39 @@ Tokens
   Total:                2,070 tokens
 
 Result: passed
+```
+
+### JSON output
+
+Use `-o json` for machine-readable output:
+
+```
+skill-validator -o json my-skill/
+```
+
+```json
+{
+  "skill_dir": "/path/to/my-skill",
+  "passed": true,
+  "errors": 0,
+  "warnings": 0,
+  "results": [
+    { "level": "pass", "category": "Structure", "message": "SKILL.md found" }
+  ],
+  "token_counts": {
+    "files": [
+      { "file": "SKILL.md body", "tokens": 1250 },
+      { "file": "references/guide.md", "tokens": 820 }
+    ],
+    "total": 2070
+  }
+}
+```
+
+The `passed` field is `true` when `errors` is `0`. Token count sections are omitted when empty. Pipe to `jq` for post-processing:
+
+```
+skill-validator -o json my-skill/ | jq '.results[] | select(.level == "error")'
 ```
 
 ## What it checks

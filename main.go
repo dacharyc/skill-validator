@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -10,10 +11,27 @@ import (
 )
 
 func main() {
-	args := os.Args[1:]
+	var outputFormat string
+	flag.StringVar(&outputFormat, "output", "text", "output format: text or json")
+	flag.StringVar(&outputFormat, "o", "text", "output format: text or json (shorthand)")
+
+	flag.Usage = func() {
+		fmt.Fprintf(os.Stderr, "Usage: skill-validator [-o format] <path-to-skill-directory>\n\n")
+		fmt.Fprintf(os.Stderr, "Flags:\n")
+		flag.PrintDefaults()
+	}
+
+	flag.Parse()
+
+	if outputFormat != "text" && outputFormat != "json" {
+		fmt.Fprintf(os.Stderr, "Error: unknown output format %q (expected text or json)\n", outputFormat)
+		os.Exit(2)
+	}
+
+	args := flag.Args()
 
 	if len(args) == 0 {
-		fmt.Fprintf(os.Stderr, "Usage: skill-validator <path-to-skill-directory>\n")
+		flag.Usage()
 		os.Exit(2)
 	}
 
@@ -34,7 +52,16 @@ func main() {
 	}
 
 	r := validator.Validate(absDir)
-	report.Print(os.Stdout, r)
+
+	switch outputFormat {
+	case "json":
+		if err := report.PrintJSON(os.Stdout, r); err != nil {
+			fmt.Fprintf(os.Stderr, "Error writing JSON: %v\n", err)
+			os.Exit(2)
+		}
+	default:
+		report.Print(os.Stdout, r)
+	}
 
 	if r.Errors > 0 {
 		os.Exit(1)
