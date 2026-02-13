@@ -25,7 +25,6 @@ go build -o skill-validator .
 
 ```
 skill-validator <path-to-skill-directory>
-skill-validator validate <path-to-skill-directory>
 ```
 
 Exit codes: `0` = passed, `1` = validation errors, `2` = usage/tool error.

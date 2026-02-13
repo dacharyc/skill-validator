@@ -17,15 +17,7 @@ func main() {
 		os.Exit(2)
 	}
 
-	// Support optional "validate" subcommand
 	dir := args[0]
-	if dir == "validate" {
-		if len(args) < 2 {
-			fmt.Fprintf(os.Stderr, "Usage: skill-validator validate <path-to-skill-directory>\n")
-			os.Exit(2)
-		}
-		dir = args[1]
-	}
 
 	// Resolve to absolute path
 	absDir, err := filepath.Abs(dir)
