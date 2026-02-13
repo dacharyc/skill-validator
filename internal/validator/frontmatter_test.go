@@ -116,6 +116,59 @@ func TestCheckFrontmatter_Description(t *testing.T) {
 	})
 }
 
+func TestCheckFrontmatter_KeywordStuffing(t *testing.T) {
+	t.Run("normal description no warning", func(t *testing.T) {
+		s := makeSkill("/tmp/my-skill", "my-skill", "A skill for building MongoDB vector search applications with best practices.")
+		results := checkFrontmatter(s)
+		requireNoResultContaining(t, results, Warning, "keyword")
+	})
+
+	t.Run("description with a few quoted terms is fine", func(t *testing.T) {
+		s := makeSkill("/tmp/my-skill", "my-skill", `Use when you see "vector search" or "embeddings" in a query.`)
+		results := checkFrontmatter(s)
+		requireNoResultContaining(t, results, Warning, "keyword")
+	})
+
+	t.Run("description with many quoted strings", func(t *testing.T) {
+		desc := `MongoDB vector search. Triggers on "vector search", "vector index", "$vectorSearch", "embedding", "semantic search", "RAG", "numCandidates".`
+		s := makeSkill("/tmp/my-skill", "my-skill", desc)
+		results := checkFrontmatter(s)
+		requireResultContaining(t, results, Warning, "quoted strings")
+		requireResultContaining(t, results, Warning, "what the skill does and when to use it")
+	})
+
+	t.Run("comma-separated keyword list", func(t *testing.T) {
+		desc := "MongoDB, Atlas, Vector Search, embeddings, RAG, retrieval, indexing, HNSW, quantization, similarity"
+		s := makeSkill("/tmp/my-skill", "my-skill", desc)
+		results := checkFrontmatter(s)
+		requireResultContaining(t, results, Warning, "comma-separated segments")
+		requireResultContaining(t, results, Warning, "what the skill does and when to use it")
+	})
+
+	t.Run("legitimate list of features is fine", func(t *testing.T) {
+		desc := "Helps with creating indexes, writing queries, and building applications."
+		s := makeSkill("/tmp/my-skill", "my-skill", desc)
+		results := checkFrontmatter(s)
+		requireNoResultContaining(t, results, Warning, "keyword")
+		requireNoResultContaining(t, results, Warning, "comma-separated")
+	})
+
+	t.Run("only one warning when both heuristics match", func(t *testing.T) {
+		desc := `Triggers on "a", "b", "c", "d", "e", "f", "g", "h", "i", "j".`
+		s := makeSkill("/tmp/my-skill", "my-skill", desc)
+		results := checkFrontmatter(s)
+		requireResultContaining(t, results, Warning, "quoted strings")
+		requireNoResultContaining(t, results, Warning, "comma-separated segments")
+	})
+
+	t.Run("many commas but long segments is fine", func(t *testing.T) {
+		desc := "Use when creating vector indexes for search, writing complex aggregation queries with multiple stages, building RAG applications with retrieval patterns, implementing hybrid search with rank fusion, storing AI agent memory in collections, optimizing search performance with explain plans, configuring HNSW index parameters for your workload, tuning numCandidates for recall versus latency tradeoffs"
+		s := makeSkill("/tmp/my-skill", "my-skill", desc)
+		results := checkFrontmatter(s)
+		requireNoResultContaining(t, results, Warning, "comma-separated segments")
+	})
+}
+
 func TestCheckFrontmatter_Compatibility(t *testing.T) {
 	t.Run("valid compatibility", func(t *testing.T) {
 		s := makeSkill("/tmp/my-skill", "my-skill", "desc")

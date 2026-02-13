@@ -42,7 +42,7 @@ func Print(w io.Writer, r *validator.Report) {
 	if len(r.TokenCounts) > 0 {
 		fmt.Fprintf(w, "\n%sTokens%s\n", colorBold, colorReset)
 
-		maxFileLen := 0
+		maxFileLen := len("Total")
 		for _, tc := range r.TokenCounts {
 			if len(tc.File) > maxFileLen {
 				maxFileLen = len(tc.File)
@@ -66,7 +66,7 @@ func Print(w io.Writer, r *validator.Report) {
 	if len(r.OtherTokenCounts) > 0 {
 		fmt.Fprintf(w, "\n%sOther files (outside standard structure)%s\n", colorBold, colorReset)
 
-		maxFileLen := 0
+		maxFileLen := len("Total (other)")
 		for _, tc := range r.OtherTokenCounts {
 			if len(tc.File) > maxFileLen {
 				maxFileLen = len(tc.File)
@@ -77,14 +77,32 @@ func Print(w io.Writer, r *validator.Report) {
 		for _, tc := range r.OtherTokenCounts {
 			total += tc.Tokens
 			padding := maxFileLen - len(tc.File) + 2
-			fmt.Fprintf(w, "  %s%s:%s%s%s tokens\n", colorCyan, tc.File, colorReset, strings.Repeat(" ", padding), formatNumber(tc.Tokens))
+			countColor := ""
+			countColorEnd := ""
+			if tc.Tokens > 25_000 {
+				countColor = colorRed
+				countColorEnd = colorReset
+			} else if tc.Tokens > 10_000 {
+				countColor = colorYellow
+				countColorEnd = colorReset
+			}
+			fmt.Fprintf(w, "  %s%s:%s%s%s%s tokens%s\n", colorCyan, tc.File, colorReset, strings.Repeat(" ", padding), countColor, formatNumber(tc.Tokens), countColorEnd)
 		}
 
 		separator := strings.Repeat("─", maxFileLen+20)
 		fmt.Fprintf(w, "  %s\n", separator)
 		label := "Total (other)"
 		padding := maxFileLen - len(label) + 2
-		fmt.Fprintf(w, "  %s%s:%s%s%s tokens\n", colorBold, label, colorReset, strings.Repeat(" ", padding), formatNumber(total))
+		totalColor := ""
+		totalColorEnd := ""
+		if total > 100_000 {
+			totalColor = colorRed
+			totalColorEnd = colorReset
+		} else if total > 25_000 {
+			totalColor = colorYellow
+			totalColorEnd = colorReset
+		}
+		fmt.Fprintf(w, "  %s%s:%s%s%s%s tokens%s\n", colorBold, label, colorReset, strings.Repeat(" ", padding), totalColor, formatNumber(total), totalColorEnd)
 	}
 
 	// Summary

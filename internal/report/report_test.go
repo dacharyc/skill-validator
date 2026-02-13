@@ -236,6 +236,73 @@ func TestPrint_OtherTokenCounts(t *testing.T) {
 	}
 }
 
+func TestPrint_OtherTokenCountsColors(t *testing.T) {
+	r := &validator.Report{
+		SkillDir: "/tmp/test",
+		Results:  []validator.Result{},
+		OtherTokenCounts: []validator.TokenCount{
+			{File: "small.md", Tokens: 500},
+			{File: "medium.md", Tokens: 15000},
+			{File: "large.md", Tokens: 40000},
+		},
+	}
+
+	var buf bytes.Buffer
+	Print(&buf, r)
+	output := buf.String()
+
+	// small.md (500 tokens) should have no warning/error color on the count
+	// Find the line with small.md and check it doesn't have yellow or red before "500"
+	for _, line := range strings.Split(output, "\n") {
+		if strings.Contains(line, "small.md") {
+			if strings.Contains(line, "\033[33m500") || strings.Contains(line, "\033[31m500") {
+				t.Error("small.md count should not be colored")
+			}
+		}
+		// medium.md (15,000 tokens) should be yellow
+		if strings.Contains(line, "medium.md") {
+			if !strings.Contains(line, "\033[33m15,000") {
+				t.Error("medium.md count should be yellow")
+			}
+		}
+		// large.md (40,000 tokens) should be red
+		if strings.Contains(line, "large.md") {
+			if !strings.Contains(line, "\033[31m40,000") {
+				t.Error("large.md count should be red")
+			}
+		}
+		// Total (55,500) should be yellow (over 25k, under 100k)
+		if strings.Contains(line, "Total (other)") {
+			if !strings.Contains(line, "\033[33m55,500") {
+				t.Errorf("total should be yellow, got line: %q", line)
+			}
+		}
+	}
+}
+
+func TestPrint_OtherTokenCountsTotalRed(t *testing.T) {
+	r := &validator.Report{
+		SkillDir: "/tmp/test",
+		Results:  []validator.Result{},
+		OtherTokenCounts: []validator.TokenCount{
+			{File: "huge1.md", Tokens: 60000},
+			{File: "huge2.md", Tokens: 50000},
+		},
+	}
+
+	var buf bytes.Buffer
+	Print(&buf, r)
+	output := buf.String()
+
+	for _, line := range strings.Split(output, "\n") {
+		if strings.Contains(line, "Total (other)") {
+			if !strings.Contains(line, "\033[31m110,000") {
+				t.Errorf("total over 100k should be red, got line: %q", line)
+			}
+		}
+	}
+}
+
 func TestPrint_NoOtherTokenCounts(t *testing.T) {
 	r := &validator.Report{
 		SkillDir: "/tmp/test",

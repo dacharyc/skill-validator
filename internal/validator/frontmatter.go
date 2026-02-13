@@ -45,6 +45,7 @@ func checkFrontmatter(s *skill.Skill) []Result {
 		results = append(results, Result{Level: Error, Category: "Frontmatter", Message: "description must not be empty/whitespace-only"})
 	} else {
 		results = append(results, Result{Level: Pass, Category: "Frontmatter", Message: fmt.Sprintf("description: (%d chars)", len(desc))})
+		results = append(results, checkDescriptionKeywordStuffing(desc)...)
 	}
 
 	// Check optional license
@@ -91,4 +92,49 @@ func checkFrontmatter(s *skill.Skill) []Result {
 	}
 
 	return results
+}
+
+var quotedStringPattern = regexp.MustCompile(`"[^"]*"`)
+
+func checkDescriptionKeywordStuffing(desc string) []Result {
+	// Heuristic 1: Many quoted strings suggest keyword/trigger stuffing
+	quotes := quotedStringPattern.FindAllString(desc, -1)
+	if len(quotes) >= 5 {
+		return []Result{{
+			Level:    Warning,
+			Category: "Frontmatter",
+			Message: fmt.Sprintf(
+				"description contains %d quoted strings — this looks like keyword stuffing; "+
+					"per the spec, the description should concisely describe what the skill does "+
+					"and when to use it, not list trigger phrases",
+				len(quotes),
+			),
+		}}
+	}
+
+	// Heuristic 2: Many comma-separated short segments suggest a keyword list
+	segments := strings.Split(desc, ",")
+	if len(segments) >= 8 {
+		shortCount := 0
+		for _, seg := range segments {
+			words := strings.Fields(strings.TrimSpace(seg))
+			if len(words) <= 3 {
+				shortCount++
+			}
+		}
+		if shortCount*100/len(segments) >= 60 {
+			return []Result{{
+				Level:    Warning,
+				Category: "Frontmatter",
+				Message: fmt.Sprintf(
+					"description has %d comma-separated segments, most very short — "+
+						"this looks like a keyword list; per the spec, the description should "+
+						"concisely describe what the skill does and when to use it",
+					len(segments),
+				),
+			}}
+		}
+	}
+
+	return nil
 }
