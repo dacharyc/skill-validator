@@ -133,5 +133,8 @@ func checkHTTPLink(url string) Result {
 	if resp.StatusCode >= 300 && resp.StatusCode < 400 {
 		return Result{Level: Pass, Category: "Links", Message: fmt.Sprintf("%s (HTTP %d redirect)", url, resp.StatusCode)}
 	}
+	if resp.StatusCode == http.StatusForbidden {
+		return Result{Level: Info, Category: "Links", Message: fmt.Sprintf("%s (HTTP 403 — may block automated requests)", url)}
+	}
 	return Result{Level: Error, Category: "Links", Message: fmt.Sprintf("%s (HTTP %d)", url, resp.StatusCode)}
 }

@@ -14,6 +14,7 @@ type Level int
 
 const (
 	Pass    Level = iota
+	Info
 	Warning
 	Error
 )
@@ -23,6 +24,8 @@ func (l Level) String() string {
 	switch l {
 	case Pass:
 		return "pass"
+	case Info:
+		return "info"
 	case Warning:
 		return "warning"
 	case Error:

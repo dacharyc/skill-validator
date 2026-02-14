@@ -134,6 +134,9 @@ These checks go beyond the spec. A skill can be spec-compliant and still perform
 - Template URLs using [RFC 6570](https://www.rfc-editor.org/rfc/rfc6570) syntax are skipped (e.g. `https://github.com/{OWNER}/{REPO}/pull/{PR}`)
 - Broken links mean an agent will either fail silently or waste context on error handling
 
+> [!TIP]
+> HTTP 403 responses are reported as `info` rather than errors, since many sites (e.g. doi.org, science.org, mathworks.com) block automated HEAD requests while working fine in browsers. A 403 doesn't necessarily mean the link is broken -- but it does mean the validator couldn't verify it. If your skill includes 403-flagged links, keep in mind that sites blocking the validator's requests may also block requests from LLM agents. If an agent can't access a linked resource, the link wastes context without providing value. Where possible, consider providing the content directly in `references/` rather than linking to it, or offer an alternate source that doesn't restrict automated access. If the links are for human readers rather than agent use, consider removing them from the skill entirely.
+
 **Extraneous file detection**
 - Files like `README.md`, `CHANGELOG.md`, and `LICENSE` are flagged at the skill root -- these are for human readers, not agents, and may be loaded into the context window unnecessarily
 - `AGENTS.md` gets a specific warning: it's for repo-level agent configuration, not skill content, and should live outside the skill directory

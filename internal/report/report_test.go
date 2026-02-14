@@ -70,6 +70,32 @@ func TestPrint_WithErrors(t *testing.T) {
 	}
 }
 
+func TestPrint_InfoLevel(t *testing.T) {
+	r := &validator.Report{
+		SkillDir: "/tmp/info-skill",
+		Results: []validator.Result{
+			{Level: validator.Pass, Category: "Structure", Message: "SKILL.md found"},
+			{Level: validator.Info, Category: "Links", Message: "https://example.com (HTTP 403 — may block automated requests)"},
+		},
+		Errors:   0,
+		Warnings: 0,
+	}
+
+	var buf bytes.Buffer
+	Print(&buf, r)
+	output := buf.String()
+
+	if !strings.Contains(output, "ℹ") {
+		t.Error("expected info icon ℹ")
+	}
+	if !strings.Contains(output, "HTTP 403") {
+		t.Error("expected HTTP 403 message")
+	}
+	if !strings.Contains(output, "Result: passed") {
+		t.Error("expected passed result (info should not block passing)")
+	}
+}
+
 func TestPrint_Pluralization(t *testing.T) {
 	r := &validator.Report{
 		SkillDir: "/tmp/test",

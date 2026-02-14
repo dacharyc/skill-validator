@@ -104,6 +104,7 @@ func TestPrintJSON_LevelStrings(t *testing.T) {
 		SkillDir: "/tmp/test",
 		Results: []validator.Result{
 			{Level: validator.Pass, Category: "A", Message: "p"},
+			{Level: validator.Info, Category: "A", Message: "i"},
 			{Level: validator.Warning, Category: "A", Message: "w"},
 			{Level: validator.Error, Category: "A", Message: "e"},
 		},
@@ -122,7 +123,7 @@ func TestPrintJSON_LevelStrings(t *testing.T) {
 	}
 
 	results := out["results"].([]any)
-	levels := []string{"pass", "warning", "error"}
+	levels := []string{"pass", "info", "warning", "error"}
 	for i, want := range levels {
 		got := results[i].(map[string]any)["level"]
 		if got != want {

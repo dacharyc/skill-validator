@@ -123,6 +123,9 @@ func TestCheckLinks_HTTP(t *testing.T) {
 	mux.HandleFunc("/not-found", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
 	})
+	mux.HandleFunc("/forbidden", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusForbidden)
+	})
 	mux.HandleFunc("/server-error", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 	})
@@ -141,6 +144,13 @@ func TestCheckLinks_HTTP(t *testing.T) {
 		body := "[missing](" + server.URL + "/not-found)"
 		results := checkLinks(dir, body)
 		requireResultContaining(t, results, Error, "HTTP 404")
+	})
+
+	t.Run("403 HTTP link", func(t *testing.T) {
+		dir := t.TempDir()
+		body := "[blocked](" + server.URL + "/forbidden)"
+		results := checkLinks(dir, body)
+		requireResultContaining(t, results, Info, "HTTP 403")
 	})
 
 	t.Run("500 HTTP link", func(t *testing.T) {
@@ -215,6 +225,19 @@ func TestCheckHTTPLink(t *testing.T) {
 			t.Errorf("expected Error for redirect loop, got level=%d message=%q", result.Level, result.Message)
 		}
 		requireContains(t, result.Message, "request failed")
+	})
+
+	t.Run("403 forbidden", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusForbidden)
+		}))
+		defer server.Close()
+
+		result := checkHTTPLink(server.URL)
+		if result.Level != Info {
+			t.Errorf("expected Info level for 403, got %d", result.Level)
+		}
+		requireContains(t, result.Message, "HTTP 403")
 	})
 
 	t.Run("invalid URL", func(t *testing.T) {

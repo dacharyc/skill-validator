@@ -171,6 +171,8 @@ func formatLevel(level validator.Level) (string, string) {
 	switch level {
 	case validator.Pass:
 		return "✓", colorGreen
+	case validator.Info:
+		return "ℹ", colorCyan
 	case validator.Warning:
 		return "⚠", colorYellow
 	case validator.Error:
