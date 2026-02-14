@@ -82,8 +82,11 @@ func checkFrontmatter(s *skill.Skill) []Result {
 	}
 
 	// Check optional allowed-tools
-	if s.Frontmatter.AllowedTools != "" {
-		results = append(results, Result{Level: Pass, Category: "Frontmatter", Message: fmt.Sprintf("allowed-tools: %q", s.Frontmatter.AllowedTools)})
+	if !s.Frontmatter.AllowedTools.IsEmpty() {
+		results = append(results, Result{Level: Pass, Category: "Frontmatter", Message: fmt.Sprintf("allowed-tools: %q", s.Frontmatter.AllowedTools.Value)})
+		if s.Frontmatter.AllowedTools.WasList {
+			results = append(results, Result{Level: Info, Category: "Frontmatter", Message: "allowed-tools is a YAML list; the spec defines this as a space-delimited string — both are accepted, but a string is more portable across agent implementations"})
+		}
 	}
 
 	// Warn on unrecognized fields

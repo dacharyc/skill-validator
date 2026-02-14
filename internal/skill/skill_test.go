@@ -164,6 +164,79 @@ func TestLoad(t *testing.T) {
 		}
 	})
 
+	t.Run("allowed-tools as string", func(t *testing.T) {
+		dir := t.TempDir()
+		content := "---\nname: my-skill\ndescription: A test skill\nallowed-tools: Read Write Bash\n---\n# My Skill\n"
+		if err := os.WriteFile(filepath.Join(dir, "SKILL.md"), []byte(content), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		s, err := Load(dir)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if s.Frontmatter.AllowedTools.Value != "Read Write Bash" {
+			t.Errorf("allowed-tools value = %q, want %q", s.Frontmatter.AllowedTools.Value, "Read Write Bash")
+		}
+		if s.Frontmatter.AllowedTools.WasList {
+			t.Error("expected WasList=false for string format")
+		}
+	})
+
+	t.Run("allowed-tools as inline list", func(t *testing.T) {
+		dir := t.TempDir()
+		content := "---\nname: my-skill\ndescription: A test skill\nallowed-tools: [Read, Write, Bash]\n---\n# My Skill\n"
+		if err := os.WriteFile(filepath.Join(dir, "SKILL.md"), []byte(content), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		s, err := Load(dir)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if s.Frontmatter.AllowedTools.Value != "Read Write Bash" {
+			t.Errorf("allowed-tools value = %q, want %q", s.Frontmatter.AllowedTools.Value, "Read Write Bash")
+		}
+		if !s.Frontmatter.AllowedTools.WasList {
+			t.Error("expected WasList=true for inline list format")
+		}
+	})
+
+	t.Run("allowed-tools as block list", func(t *testing.T) {
+		dir := t.TempDir()
+		content := "---\nname: my-skill\ndescription: A test skill\nallowed-tools:\n  - Read\n  - Bash\n  - Grep\n---\n# My Skill\n"
+		if err := os.WriteFile(filepath.Join(dir, "SKILL.md"), []byte(content), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		s, err := Load(dir)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if s.Frontmatter.AllowedTools.Value != "Read Bash Grep" {
+			t.Errorf("allowed-tools value = %q, want %q", s.Frontmatter.AllowedTools.Value, "Read Bash Grep")
+		}
+		if !s.Frontmatter.AllowedTools.WasList {
+			t.Error("expected WasList=true for block list format")
+		}
+	})
+
+	t.Run("allowed-tools absent", func(t *testing.T) {
+		dir := t.TempDir()
+		content := "---\nname: my-skill\ndescription: A test skill\n---\n# My Skill\n"
+		if err := os.WriteFile(filepath.Join(dir, "SKILL.md"), []byte(content), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		s, err := Load(dir)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if !s.Frontmatter.AllowedTools.IsEmpty() {
+			t.Errorf("expected empty allowed-tools, got %q", s.Frontmatter.AllowedTools.Value)
+		}
+	})
+
 	t.Run("metadata parsing", func(t *testing.T) {
 		dir := t.TempDir()
 		content := "---\nname: test\ndescription: desc\nmetadata:\n  author: alice\n  version: \"1.0\"\n---\nBody\n"

@@ -9,6 +9,8 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+var _ yaml.Unmarshaler = (*AllowedTools)(nil)
+
 // Frontmatter represents the parsed YAML frontmatter of a SKILL.md file.
 type Frontmatter struct {
 	Name          string            `yaml:"name"`
@@ -16,7 +18,41 @@ type Frontmatter struct {
 	License       string            `yaml:"license"`
 	Compatibility string            `yaml:"compatibility"`
 	Metadata      map[string]string `yaml:"metadata"`
-	AllowedTools  string            `yaml:"allowed-tools"`
+	AllowedTools  AllowedTools      `yaml:"allowed-tools"`
+}
+
+// AllowedTools handles the type ambiguity in the allowed-tools field.
+// The spec defines it as a space-delimited string, but many skills use
+// a YAML list instead. This type accepts both.
+type AllowedTools struct {
+	Value  string // normalized space-delimited string
+	WasList bool  // true if the original YAML used a sequence
+}
+
+// UnmarshalYAML implements custom unmarshaling for AllowedTools to accept
+// both string and list formats.
+func (a *AllowedTools) UnmarshalYAML(value *yaml.Node) error {
+	switch value.Kind {
+	case yaml.ScalarNode:
+		a.Value = value.Value
+		a.WasList = false
+		return nil
+	case yaml.SequenceNode:
+		var items []string
+		if err := value.Decode(&items); err != nil {
+			return fmt.Errorf("decoding allowed-tools list: %w", err)
+		}
+		a.Value = strings.Join(items, " ")
+		a.WasList = true
+		return nil
+	default:
+		return fmt.Errorf("allowed-tools must be a string or list, got YAML node kind %d", value.Kind)
+	}
+}
+
+// IsEmpty returns true if no allowed-tools value was specified.
+func (a AllowedTools) IsEmpty() bool {
+	return a.Value == ""
 }
 
 // Skill represents a parsed skill package.

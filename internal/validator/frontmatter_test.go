@@ -221,11 +221,21 @@ func TestCheckFrontmatter_OptionalFields(t *testing.T) {
 		requireResult(t, results, Pass, `license: "MIT"`)
 	})
 
-	t.Run("allowed-tools present", func(t *testing.T) {
+	t.Run("allowed-tools string", func(t *testing.T) {
 		s := makeSkill("/tmp/my-skill", "my-skill", "desc")
-		s.Frontmatter.AllowedTools = "Bash, Read"
+		s.Frontmatter.AllowedTools = skill.AllowedTools{Value: "Bash Read", WasList: false}
 		results := checkFrontmatter(s)
-		requireResult(t, results, Pass, `allowed-tools: "Bash, Read"`)
+		requireResult(t, results, Pass, `allowed-tools: "Bash Read"`)
+		requireNoResultContaining(t, results, Info, "YAML list")
+	})
+
+	t.Run("allowed-tools list emits info", func(t *testing.T) {
+		s := makeSkill("/tmp/my-skill", "my-skill", "desc")
+		s.Frontmatter.AllowedTools = skill.AllowedTools{Value: "Read Bash Grep", WasList: true}
+		results := checkFrontmatter(s)
+		requireResult(t, results, Pass, `allowed-tools: "Read Bash Grep"`)
+		requireResultContaining(t, results, Info, "YAML list")
+		requireResultContaining(t, results, Info, "space-delimited string")
 	})
 }
 
