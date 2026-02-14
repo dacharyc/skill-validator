@@ -10,8 +10,9 @@ import (
 
 	"github.com/dacharyc/skill-validator/internal/contamination"
 	"github.com/dacharyc/skill-validator/internal/content"
-	"github.com/dacharyc/skill-validator/internal/quality"
+	"github.com/dacharyc/skill-validator/internal/links"
 	"github.com/dacharyc/skill-validator/internal/report"
+	"github.com/dacharyc/skill-validator/internal/structure"
 	"github.com/dacharyc/skill-validator/internal/validator"
 )
 
@@ -31,7 +32,7 @@ func fixtureDir(t *testing.T, name string) string {
 func TestValidateCommand_ValidSkill(t *testing.T) {
 	dir := fixtureDir(t, "valid-skill")
 
-	r := validator.Validate(dir)
+	r := structure.Validate(dir)
 	if r.Errors != 0 {
 		t.Errorf("expected 0 errors, got %d", r.Errors)
 		for _, res := range r.Results {
@@ -44,12 +45,16 @@ func TestValidateCommand_ValidSkill(t *testing.T) {
 	// Validate should check structure and frontmatter
 	hasStructure := false
 	hasFrontmatter := false
+	hasMarkdown := false
 	for _, res := range r.Results {
 		if res.Category == "Structure" {
 			hasStructure = true
 		}
 		if res.Category == "Frontmatter" {
 			hasFrontmatter = true
+		}
+		if res.Category == "Markdown" {
+			hasMarkdown = true
 		}
 	}
 	if !hasStructure {
@@ -58,14 +63,14 @@ func TestValidateCommand_ValidSkill(t *testing.T) {
 	if !hasFrontmatter {
 		t.Error("expected Frontmatter results from validate")
 	}
+	if !hasMarkdown {
+		t.Error("expected Markdown results from validate (code fence checks)")
+	}
 
-	// Validate should NOT include Links or Markdown results (those moved to quality)
+	// Validate should NOT include Links results (those are in validate links)
 	for _, res := range r.Results {
 		if res.Category == "Links" {
-			t.Error("validate should not include Links results (moved to quality)")
-		}
-		if res.Category == "Markdown" {
-			t.Error("validate should not include Markdown results (moved to quality)")
+			t.Error("validate should not include Links results (moved to validate links)")
 		}
 	}
 
@@ -78,7 +83,7 @@ func TestValidateCommand_ValidSkill(t *testing.T) {
 func TestValidateCommand_InvalidSkill(t *testing.T) {
 	dir := fixtureDir(t, "invalid-skill")
 
-	r := validator.Validate(dir)
+	r := structure.Validate(dir)
 	if r.Errors == 0 {
 		t.Error("expected errors for invalid skill")
 	}
@@ -92,13 +97,13 @@ func TestValidateCommand_MultiSkill(t *testing.T) {
 		t.Fatalf("expected MultiSkill, got %d", mode)
 	}
 
-	mr := validator.ValidateMulti(dirs)
+	mr := structure.ValidateMulti(dirs)
 	if len(mr.Skills) != 3 {
 		t.Fatalf("expected 3 skills, got %d", len(mr.Skills))
 	}
 }
 
-func TestAnalyzeQuality_ValidSkill(t *testing.T) {
+func TestValidateLinks_ValidSkill(t *testing.T) {
 	dir := fixtureDir(t, "valid-skill")
 
 	s, err := validator.LoadSkill(dir)
@@ -106,7 +111,7 @@ func TestAnalyzeQuality_ValidSkill(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	linkResults := quality.CheckLinks(dir, s.Body)
+	linkResults := links.CheckLinks(dir, s.Body)
 	// valid-skill has one relative link to references/guide.md
 	foundLink := false
 	for _, r := range linkResults {
@@ -117,17 +122,9 @@ func TestAnalyzeQuality_ValidSkill(t *testing.T) {
 	if !foundLink {
 		t.Error("expected passing link check for references/guide.md")
 	}
-
-	mdResults := quality.CheckMarkdown(dir, s.Body)
-	// valid-skill has no unclosed fences
-	for _, r := range mdResults {
-		if r.Level == validator.Warning {
-			t.Errorf("unexpected warning: %s", r.Message)
-		}
-	}
 }
 
-func TestAnalyzeQuality_InvalidSkill(t *testing.T) {
+func TestValidateLinks_InvalidSkill(t *testing.T) {
 	dir := fixtureDir(t, "invalid-skill")
 
 	s, err := validator.LoadSkill(dir)
@@ -135,7 +132,7 @@ func TestAnalyzeQuality_InvalidSkill(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	linkResults := quality.CheckLinks(dir, s.Body)
+	linkResults := links.CheckLinks(dir, s.Body)
 	// invalid-skill has a broken relative link
 	foundBroken := false
 	for _, r := range linkResults {
@@ -258,8 +255,8 @@ func TestCheckCommand_AllChecks(t *testing.T) {
 	dir := fixtureDir(t, "valid-skill")
 
 	enabled := map[string]bool{
-		"validate":      true,
-		"quality":       true,
+		"structure":     true,
+		"links":         true,
 		"content":       true,
 		"contamination": true,
 	}
@@ -287,7 +284,7 @@ func TestCheckCommand_AllChecks(t *testing.T) {
 		t.Error("expected Frontmatter results")
 	}
 	if !categories["Links"] {
-		t.Error("expected Links results from quality checks")
+		t.Error("expected Links results from link checks")
 	}
 
 	// Should have content and contamination reports
@@ -299,22 +296,33 @@ func TestCheckCommand_AllChecks(t *testing.T) {
 	}
 }
 
-func TestCheckCommand_OnlyValidate(t *testing.T) {
+func TestCheckCommand_OnlyStructure(t *testing.T) {
 	dir := fixtureDir(t, "valid-skill")
 
 	enabled := map[string]bool{
-		"validate":      true,
-		"quality":       false,
+		"structure":     true,
+		"links":         false,
 		"content":       false,
 		"contamination": false,
 	}
 
 	r := runAllChecks(dir, enabled)
 
-	// Should NOT have quality/content/contamination results
+	// Should have Markdown results (code fence checks are part of structure now)
+	hasMarkdown := false
 	for _, res := range r.Results {
-		if res.Category == "Links" || res.Category == "Markdown" {
-			t.Errorf("unexpected quality result: %s: %s", res.Category, res.Message)
+		if res.Category == "Markdown" {
+			hasMarkdown = true
+		}
+	}
+	if !hasMarkdown {
+		t.Error("expected Markdown results from structure validation")
+	}
+
+	// Should NOT have links/content/contamination results
+	for _, res := range r.Results {
+		if res.Category == "Links" {
+			t.Errorf("unexpected Links result: %s: %s", res.Category, res.Message)
 		}
 	}
 	if r.ContentReport != nil {
@@ -325,22 +333,29 @@ func TestCheckCommand_OnlyValidate(t *testing.T) {
 	}
 }
 
-func TestCheckCommand_OnlyQuality(t *testing.T) {
+func TestCheckCommand_OnlyLinks(t *testing.T) {
 	dir := fixtureDir(t, "valid-skill")
 
 	enabled := map[string]bool{
-		"validate":      false,
-		"quality":       true,
+		"structure":     false,
+		"links":         true,
 		"content":       false,
 		"contamination": false,
 	}
 
 	r := runAllChecks(dir, enabled)
 
-	// Should NOT have validate results
+	// Should NOT have structure results
 	for _, res := range r.Results {
 		if res.Category == "Structure" || res.Category == "Frontmatter" || res.Category == "Tokens" {
-			t.Errorf("unexpected validate result: %s: %s", res.Category, res.Message)
+			t.Errorf("unexpected structure result: %s: %s", res.Category, res.Message)
+		}
+	}
+
+	// Should NOT have Markdown results (those are part of structure now)
+	for _, res := range r.Results {
+		if res.Category == "Markdown" {
+			t.Errorf("unexpected Markdown result in links-only check: %s: %s", res.Category, res.Message)
 		}
 	}
 }
@@ -349,8 +364,8 @@ func TestCheckCommand_SkipContamination(t *testing.T) {
 	dir := fixtureDir(t, "valid-skill")
 
 	enabled := map[string]bool{
-		"validate":      true,
-		"quality":       true,
+		"structure":     true,
+		"links":         true,
 		"content":       true,
 		"contamination": false,
 	}
@@ -369,8 +384,8 @@ func TestCheckCommand_OnlyContentContamination(t *testing.T) {
 	dir := fixtureDir(t, "rich-skill")
 
 	enabled := map[string]bool{
-		"validate":      false,
-		"quality":       false,
+		"structure":     false,
+		"links":         false,
 		"content":       true,
 		"contamination": true,
 	}
@@ -405,15 +420,15 @@ func TestCheckCommand_BrokenFrontmatter_AllChecks(t *testing.T) {
 	dir := fixtureDir(t, "broken-frontmatter")
 
 	enabled := map[string]bool{
-		"validate":      true,
-		"quality":       true,
+		"structure":     true,
+		"links":         true,
 		"content":       true,
 		"contamination": true,
 	}
 
 	r := runAllChecks(dir, enabled)
 
-	// Should have a frontmatter parse error from validate
+	// Should have a frontmatter parse error from structure
 	if r.Errors == 0 {
 		t.Error("expected errors for broken frontmatter")
 	}
@@ -450,10 +465,10 @@ func TestCheckCommand_BrokenFrontmatter_AllChecks(t *testing.T) {
 		t.Error("expected non-empty contamination level")
 	}
 
-	// Quality checks should be skipped (need parsed skill for link/fence checks)
+	// Link checks should be skipped (need parsed skill for link checks)
 	for _, res := range r.Results {
-		if res.Category == "Links" || res.Category == "Markdown" {
-			t.Errorf("unexpected quality result for broken-frontmatter skill: %s: %s",
+		if res.Category == "Links" {
+			t.Errorf("unexpected Links result for broken-frontmatter skill: %s: %s",
 				res.Category, res.Message)
 		}
 	}
@@ -463,15 +478,15 @@ func TestCheckCommand_BrokenFrontmatter_OnlyContent(t *testing.T) {
 	dir := fixtureDir(t, "broken-frontmatter")
 
 	enabled := map[string]bool{
-		"validate":      false,
-		"quality":       false,
+		"structure":     false,
+		"links":         false,
 		"content":       true,
 		"contamination": false,
 	}
 
 	r := runAllChecks(dir, enabled)
 
-	// Content analysis should work even without validate
+	// Content analysis should work even without structure
 	if r.ContentReport == nil {
 		t.Fatal("expected ContentReport for content-only check")
 	}
@@ -487,8 +502,8 @@ func TestCheckCommand_BrokenFrontmatter_OnlyContamination(t *testing.T) {
 	dir := fixtureDir(t, "broken-frontmatter")
 
 	enabled := map[string]bool{
-		"validate":      false,
-		"quality":       false,
+		"structure":     false,
+		"links":         false,
 		"content":       false,
 		"contamination": true,
 	}
@@ -536,20 +551,20 @@ func TestResolveCheckGroups(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		for _, g := range []string{"validate", "quality", "content", "contamination"} {
+		for _, g := range []string{"structure", "links", "content", "contamination"} {
 			if !enabled[g] {
 				t.Errorf("expected %s enabled by default", g)
 			}
 		}
 	})
 
-	t.Run("only validate,quality", func(t *testing.T) {
-		enabled, err := resolveCheckGroups("validate,quality", "")
+	t.Run("only structure,links", func(t *testing.T) {
+		enabled, err := resolveCheckGroups("structure,links", "")
 		if err != nil {
 			t.Fatal(err)
 		}
-		if !enabled["validate"] || !enabled["quality"] {
-			t.Error("expected validate and quality enabled")
+		if !enabled["structure"] || !enabled["links"] {
+			t.Error("expected structure and links enabled")
 		}
 		if enabled["content"] || enabled["contamination"] {
 			t.Error("expected content and contamination disabled")
@@ -561,8 +576,8 @@ func TestResolveCheckGroups(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if !enabled["validate"] || !enabled["quality"] || !enabled["content"] {
-			t.Error("expected validate, quality, content enabled")
+		if !enabled["structure"] || !enabled["links"] || !enabled["content"] {
+			t.Error("expected structure, links, content enabled")
 		}
 		if enabled["contamination"] {
 			t.Error("expected contamination disabled")
@@ -570,7 +585,7 @@ func TestResolveCheckGroups(t *testing.T) {
 	})
 
 	t.Run("invalid group", func(t *testing.T) {
-		_, err := resolveCheckGroups("validate,bogus", "")
+		_, err := resolveCheckGroups("structure,bogus", "")
 		if err == nil {
 			t.Error("expected error for invalid group")
 		}
@@ -588,8 +603,8 @@ func TestCheckCommand_JSONOutput(t *testing.T) {
 	dir := fixtureDir(t, "rich-skill")
 
 	enabled := map[string]bool{
-		"validate":      true,
-		"quality":       true,
+		"structure":     true,
+		"links":         true,
 		"content":       true,
 		"contamination": true,
 	}
@@ -792,9 +807,9 @@ func TestRunContentAnalysis_BrokenDir(t *testing.T) {
 	}
 }
 
-func TestRunQualityChecks_ValidSkill(t *testing.T) {
+func TestRunLinkChecks_ValidSkill(t *testing.T) {
 	dir := fixtureDir(t, "valid-skill")
-	r := runQualityChecks(dir)
+	r := runLinkChecks(dir)
 	if r.Errors != 0 {
 		t.Errorf("expected 0 errors, got %d", r.Errors)
 		for _, res := range r.Results {
@@ -810,21 +825,21 @@ func TestRunQualityChecks_ValidSkill(t *testing.T) {
 		}
 	}
 	if !hasLinks {
-		t.Error("expected Links results from quality checks")
+		t.Error("expected Links results from link checks")
 	}
 }
 
-func TestRunQualityChecks_InvalidSkill(t *testing.T) {
+func TestRunLinkChecks_InvalidSkill(t *testing.T) {
 	dir := fixtureDir(t, "invalid-skill")
-	r := runQualityChecks(dir)
+	r := runLinkChecks(dir)
 	if r.Errors == 0 {
 		t.Error("expected errors for invalid skill with broken links")
 	}
 }
 
-func TestRunQualityChecks_BrokenDir(t *testing.T) {
+func TestRunLinkChecks_BrokenDir(t *testing.T) {
 	dir := t.TempDir()
-	r := runQualityChecks(dir)
+	r := runLinkChecks(dir)
 	if r.Errors != 1 {
 		t.Errorf("expected 1 error, got %d", r.Errors)
 	}
@@ -837,8 +852,8 @@ func TestRunAllChecks_MultiSkill(t *testing.T) {
 	_, dirs := validator.DetectSkills(dir)
 
 	enabled := map[string]bool{
-		"validate":      true,
-		"quality":       true,
+		"structure":     true,
+		"links":         true,
 		"content":       true,
 		"contamination": true,
 	}
@@ -871,8 +886,8 @@ func TestRunAllChecks_MultiSkill(t *testing.T) {
 func TestOutputJSON_FullCheck_ValidSkill(t *testing.T) {
 	dir := fixtureDir(t, "valid-skill")
 	enabled := map[string]bool{
-		"validate":      true,
-		"quality":       true,
+		"structure":     true,
+		"links":         true,
 		"content":       true,
 		"contamination": true,
 	}
@@ -905,8 +920,8 @@ func TestOutputJSON_FullCheck_ValidSkill(t *testing.T) {
 func TestOutputJSON_FullCheck_RichSkill(t *testing.T) {
 	dir := fixtureDir(t, "rich-skill")
 	enabled := map[string]bool{
-		"validate":      true,
-		"quality":       true,
+		"structure":     true,
+		"links":         true,
 		"content":       true,
 		"contamination": true,
 	}
@@ -960,8 +975,8 @@ func TestOutputJSON_MultiSkill(t *testing.T) {
 	_, dirs := validator.DetectSkills(dir)
 
 	enabled := map[string]bool{
-		"validate":      true,
-		"quality":       true,
+		"structure":     true,
+		"links":         true,
 		"content":       true,
 		"contamination": true,
 	}

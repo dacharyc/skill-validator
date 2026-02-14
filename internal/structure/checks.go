@@ -1,10 +1,12 @@
-package validator
+package structure
 
 import (
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/dacharyc/skill-validator/internal/validator"
 )
 
 var recognizedDirs = map[string]bool{
@@ -33,21 +35,21 @@ var knownExtraneousFiles = map[string]string{
 	".gitignore":            ".gitignore",
 }
 
-func checkStructure(dir string) []Result {
-	var results []Result
+func CheckStructure(dir string) []validator.Result {
+	var results []validator.Result
 
 	// Check SKILL.md exists
 	skillPath := filepath.Join(dir, "SKILL.md")
 	if _, err := os.Stat(skillPath); os.IsNotExist(err) {
-		results = append(results, Result{Level: Error, Category: "Structure", Message: "SKILL.md not found"})
+		results = append(results, validator.Result{Level: validator.Error, Category: "Structure", Message: "SKILL.md not found"})
 		return results
 	}
-	results = append(results, Result{Level: Pass, Category: "Structure", Message: "SKILL.md found"})
+	results = append(results, validator.Result{Level: validator.Pass, Category: "Structure", Message: "SKILL.md found"})
 
 	// Check directories
 	entries, err := os.ReadDir(dir)
 	if err != nil {
-		results = append(results, Result{Level: Error, Category: "Structure", Message: fmt.Sprintf("reading directory: %v", err)})
+		results = append(results, validator.Result{Level: validator.Error, Category: "Structure", Message: fmt.Sprintf("reading directory: %v", err)})
 		return results
 	}
 
@@ -79,7 +81,7 @@ func checkStructure(dir string) []Result {
 					)
 				}
 			}
-			results = append(results, Result{Level: Warning, Category: "Structure", Message: msg})
+			results = append(results, validator.Result{Level: validator.Warning, Category: "Structure", Message: msg})
 		}
 	}
 
@@ -98,11 +100,11 @@ func checkStructure(dir string) []Result {
 	return results
 }
 
-func extraneousFileResult(name string) Result {
+func extraneousFileResult(name string) validator.Result {
 	lower := strings.ToLower(name)
 	if lower == "agents.md" {
-		return Result{
-			Level:    Warning,
+		return validator.Result{
+			Level:    validator.Warning,
 			Category: "Structure",
 			Message: fmt.Sprintf(
 				"%s is for repo-level agent configuration, not skill content — "+
@@ -113,8 +115,8 @@ func extraneousFileResult(name string) Result {
 		}
 	}
 	if _, known := knownExtraneousFiles[lower]; known {
-		return Result{
-			Level:    Warning,
+		return validator.Result{
+			Level:    validator.Warning,
 			Category: "Structure",
 			Message: fmt.Sprintf(
 				"%s is not needed in a skill — agents may load it into their context window, "+
@@ -124,8 +126,8 @@ func extraneousFileResult(name string) Result {
 			),
 		}
 	}
-	return Result{
-		Level:    Warning,
+	return validator.Result{
+		Level:    validator.Warning,
 		Category: "Structure",
 		Message: fmt.Sprintf(
 			"unexpected file at root: %s — if agents need this file, move it into "+
@@ -157,8 +159,8 @@ func pluralS(n int) string {
 	return "s"
 }
 
-func checkNesting(dir string, prefix string) []Result {
-	var results []Result
+func checkNesting(dir string, prefix string) []validator.Result {
+	var results []validator.Result
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		return results
@@ -168,8 +170,8 @@ func checkNesting(dir string, prefix string) []Result {
 			continue
 		}
 		if entry.IsDir() {
-			results = append(results, Result{
-				Level:    Warning,
+			results = append(results, validator.Result{
+				Level:    validator.Warning,
 				Category: "Structure",
 				Message:  fmt.Sprintf("deep nesting detected: %s/%s/", prefix, entry.Name()),
 			})

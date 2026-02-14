@@ -1,4 +1,4 @@
-package validator
+package structure
 
 import (
 	"fmt"
@@ -6,13 +6,9 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/dacharyc/skill-validator/internal/validator"
 	"github.com/tiktoken-go/tokenizer"
 )
-
-type TokenCount struct {
-	File   string
-	Tokens int
-}
 
 const (
 	// Per-file thresholds for reference files
@@ -28,30 +24,30 @@ const (
 	otherTotalHardLimit = 100_000
 )
 
-func checkTokens(dir string, body string) ([]Result, []TokenCount, []TokenCount) {
-	var results []Result
-	var counts []TokenCount
+func CheckTokens(dir string, body string) ([]validator.Result, []validator.TokenCount, []validator.TokenCount) {
+	var results []validator.Result
+	var counts []validator.TokenCount
 
 	enc, err := tokenizer.Get(tokenizer.O200kBase)
 	if err != nil {
-		results = append(results, Result{Level: Error, Category: "Tokens", Message: fmt.Sprintf("failed to initialize tokenizer: %v", err)})
+		results = append(results, validator.Result{Level: validator.Error, Category: "Tokens", Message: fmt.Sprintf("failed to initialize tokenizer: %v", err)})
 		return results, counts, nil
 	}
 
 	// Count SKILL.md body tokens
 	bodyTokens, _, _ := enc.Encode(body)
 	bodyCount := len(bodyTokens)
-	counts = append(counts, TokenCount{File: "SKILL.md body", Tokens: bodyCount})
+	counts = append(counts, validator.TokenCount{File: "SKILL.md body", Tokens: bodyCount})
 
 	// Warn if body exceeds 5000 tokens
 	if bodyCount > 5000 {
-		results = append(results, Result{Level: Warning, Category: "Tokens", Message: fmt.Sprintf("SKILL.md body is %d tokens (spec recommends < 5000)", bodyCount)})
+		results = append(results, validator.Result{Level: validator.Warning, Category: "Tokens", Message: fmt.Sprintf("SKILL.md body is %d tokens (spec recommends < 5000)", bodyCount)})
 	}
 
 	// Warn if SKILL.md exceeds 500 lines
 	lineCount := strings.Count(body, "\n") + 1
 	if lineCount > 500 {
-		results = append(results, Result{Level: Warning, Category: "Tokens", Message: fmt.Sprintf("SKILL.md body is %d lines (spec recommends < 500)", lineCount)})
+		results = append(results, validator.Result{Level: validator.Warning, Category: "Tokens", Message: fmt.Sprintf("SKILL.md body is %d lines (spec recommends < 500)", lineCount)})
 	}
 
 	// Count tokens for files in references/
@@ -65,13 +61,13 @@ func checkTokens(dir string, body string) ([]Result, []TokenCount, []TokenCount)
 			path := filepath.Join(refsDir, entry.Name())
 			data, err := os.ReadFile(path)
 			if err != nil {
-				results = append(results, Result{Level: Warning, Category: "Tokens", Message: fmt.Sprintf("could not read %s: %v", filepath.Join("references", entry.Name()), err)})
+				results = append(results, validator.Result{Level: validator.Warning, Category: "Tokens", Message: fmt.Sprintf("could not read %s: %v", filepath.Join("references", entry.Name()), err)})
 				continue
 			}
 			tokens, _, _ := enc.Encode(string(data))
 			fileTokens := len(tokens)
 			relPath := filepath.Join("references", entry.Name())
-			counts = append(counts, TokenCount{
+			counts = append(counts, validator.TokenCount{
 				File:   relPath,
 				Tokens: fileTokens,
 			})
@@ -79,8 +75,8 @@ func checkTokens(dir string, body string) ([]Result, []TokenCount, []TokenCount)
 
 			// Per-file limits
 			if fileTokens > refFileHardLimit {
-				results = append(results, Result{
-					Level:    Error,
+				results = append(results, validator.Result{
+					Level:    validator.Error,
 					Category: "Tokens",
 					Message: fmt.Sprintf(
 						"%s is %d tokens — this will consume 12-20%% of a typical context window "+
@@ -89,8 +85,8 @@ func checkTokens(dir string, body string) ([]Result, []TokenCount, []TokenCount)
 					),
 				})
 			} else if fileTokens > refFileSoftLimit {
-				results = append(results, Result{
-					Level:    Warning,
+				results = append(results, validator.Result{
+					Level:    validator.Warning,
 					Category: "Tokens",
 					Message: fmt.Sprintf(
 						"%s is %d tokens — consider splitting into smaller focused files "+
@@ -104,8 +100,8 @@ func checkTokens(dir string, body string) ([]Result, []TokenCount, []TokenCount)
 
 	// Aggregate reference limits
 	if refTotal > refTotalHardLimit {
-		results = append(results, Result{
-			Level:    Error,
+		results = append(results, validator.Result{
+			Level:    validator.Error,
 			Category: "Tokens",
 			Message: fmt.Sprintf(
 				"total reference files: %d tokens — this will consume 25-40%% of a typical "+
@@ -114,8 +110,8 @@ func checkTokens(dir string, body string) ([]Result, []TokenCount, []TokenCount)
 			),
 		})
 	} else if refTotal > refTotalSoftLimit {
-		results = append(results, Result{
-			Level:    Warning,
+		results = append(results, validator.Result{
+			Level:    validator.Warning,
 			Category: "Tokens",
 			Message: fmt.Sprintf(
 				"total reference files: %d tokens — agents may load multiple references "+
@@ -134,8 +130,8 @@ func checkTokens(dir string, body string) ([]Result, []TokenCount, []TokenCount)
 		otherTotal += c.Tokens
 	}
 	if otherTotal > otherTotalHardLimit {
-		results = append(results, Result{
-			Level:    Error,
+		results = append(results, validator.Result{
+			Level:    validator.Error,
 			Category: "Tokens",
 			Message: fmt.Sprintf(
 				"non-standard files total %d tokens — if an agent loads these, "+
@@ -145,8 +141,8 @@ func checkTokens(dir string, body string) ([]Result, []TokenCount, []TokenCount)
 			),
 		})
 	} else if otherTotal > otherTotalSoftLimit {
-		results = append(results, Result{
-			Level:    Warning,
+		results = append(results, validator.Result{
+			Level:    validator.Warning,
 			Category: "Tokens",
 			Message: fmt.Sprintf(
 				"non-standard files total %d tokens — if an agent loads these, "+
@@ -183,8 +179,8 @@ var standardDirs = map[string]bool{
 	"assets":     true,
 }
 
-func countOtherFiles(dir string, enc tokenizer.Codec) []TokenCount {
-	var counts []TokenCount
+func countOtherFiles(dir string, enc tokenizer.Codec) []validator.TokenCount {
+	var counts []validator.TokenCount
 
 	entries, err := os.ReadDir(dir)
 	if err != nil {
@@ -215,15 +211,15 @@ func countOtherFiles(dir string, enc tokenizer.Codec) []TokenCount {
 				continue
 			}
 			tokens, _, _ := enc.Encode(string(data))
-			counts = append(counts, TokenCount{File: name, Tokens: len(tokens)})
+			counts = append(counts, validator.TokenCount{File: name, Tokens: len(tokens)})
 		}
 	}
 
 	return counts
 }
 
-func countFilesInDir(rootDir, dirName string, enc tokenizer.Codec) []TokenCount {
-	var counts []TokenCount
+func countFilesInDir(rootDir, dirName string, enc tokenizer.Codec) []validator.TokenCount {
+	var counts []validator.TokenCount
 	fullDir := filepath.Join(rootDir, dirName)
 
 	filepath.Walk(fullDir, func(path string, info os.FileInfo, err error) error {
@@ -248,7 +244,7 @@ func countFilesInDir(rootDir, dirName string, enc tokenizer.Codec) []TokenCount 
 		}
 		rel, _ := filepath.Rel(rootDir, path)
 		tokens, _, _ := enc.Encode(string(data))
-		counts = append(counts, TokenCount{File: rel, Tokens: len(tokens)})
+		counts = append(counts, validator.TokenCount{File: rel, Tokens: len(tokens)})
 		return nil
 	})
 

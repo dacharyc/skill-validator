@@ -1,16 +1,18 @@
-package validator
+package structure
 
 import (
 	"strings"
 	"testing"
+
+	"github.com/dacharyc/skill-validator/internal/validator"
 )
 
 func TestCheckTokens(t *testing.T) {
 	t.Run("counts body tokens", func(t *testing.T) {
 		dir := t.TempDir()
 		body := "Hello world, this is a test body."
-		results, counts, _ := checkTokens(dir, body)
-		requireNoLevel(t, results, Error)
+		results, counts, _ := CheckTokens(dir, body)
+		requireNoLevel(t, results, validator.Error)
 		if len(counts) == 0 {
 			t.Fatal("expected at least one token count")
 		}
@@ -27,7 +29,7 @@ func TestCheckTokens(t *testing.T) {
 		writeFile(t, dir, "references/guide.md", "# Guide\n\nSome reference content here.")
 		writeFile(t, dir, "references/api.md", "# API\n\nAPI documentation.")
 		body := "Body text."
-		_, counts, _ := checkTokens(dir, body)
+		_, counts, _ := CheckTokens(dir, body)
 		if len(counts) != 3 { // body + 2 references
 			t.Fatalf("expected 3 token counts, got %d", len(counts))
 		}
@@ -50,8 +52,8 @@ func TestCheckTokens(t *testing.T) {
 	t.Run("no references directory", func(t *testing.T) {
 		dir := t.TempDir()
 		body := "Short body."
-		results, counts, _ := checkTokens(dir, body)
-		requireNoLevel(t, results, Error)
+		results, counts, _ := CheckTokens(dir, body)
+		requireNoLevel(t, results, validator.Error)
 		if len(counts) != 1 {
 			t.Fatalf("expected 1 token count (body only), got %d", len(counts))
 		}
@@ -62,7 +64,7 @@ func TestCheckTokens(t *testing.T) {
 		writeFile(t, dir, "references/.hidden", "secret")
 		writeFile(t, dir, "references/visible.md", "content")
 		body := "Body."
-		_, counts, _ := checkTokens(dir, body)
+		_, counts, _ := CheckTokens(dir, body)
 		if len(counts) != 2 { // body + visible.md
 			t.Fatalf("expected 2 token counts, got %d", len(counts))
 		}
@@ -73,7 +75,7 @@ func TestCheckTokens(t *testing.T) {
 		writeFile(t, dir, "references/subdir/file.md", "nested")
 		writeFile(t, dir, "references/top.md", "top level")
 		body := "Body."
-		_, counts, _ := checkTokens(dir, body)
+		_, counts, _ := CheckTokens(dir, body)
 		if len(counts) != 2 { // body + top.md
 			t.Fatalf("expected 2 token counts, got %d", len(counts))
 		}
@@ -83,22 +85,22 @@ func TestCheckTokens(t *testing.T) {
 		dir := t.TempDir()
 		// Generate a body that exceeds 5000 tokens (~4 chars per token average)
 		body := strings.Repeat("This is a test sentence for token counting purposes. ", 500)
-		results, _, _ := checkTokens(dir, body)
-		requireResultContaining(t, results, Warning, "spec recommends < 5000")
+		results, _, _ := CheckTokens(dir, body)
+		requireResultContaining(t, results, validator.Warning, "spec recommends < 5000")
 	})
 
 	t.Run("warns on many lines", func(t *testing.T) {
 		dir := t.TempDir()
 		body := strings.Repeat("line\n", 501)
-		results, _, _ := checkTokens(dir, body)
-		requireResultContaining(t, results, Warning, "spec recommends < 500")
+		results, _, _ := CheckTokens(dir, body)
+		requireResultContaining(t, results, validator.Warning, "spec recommends < 500")
 	})
 
 	t.Run("no warning on small body", func(t *testing.T) {
 		dir := t.TempDir()
 		body := "Small body."
-		results, _, _ := checkTokens(dir, body)
-		requireNoLevel(t, results, Warning)
+		results, _, _ := CheckTokens(dir, body)
+		requireNoLevel(t, results, validator.Warning)
 	})
 }
 
@@ -115,25 +117,25 @@ func TestCheckTokens_PerFileRefLimits(t *testing.T) {
 	t.Run("reference file under soft limit", func(t *testing.T) {
 		dir := t.TempDir()
 		writeFile(t, dir, "references/small.md", "A small reference file.")
-		results, _, _ := checkTokens(dir, "body")
-		requireNoResultContaining(t, results, Warning, "references/small.md")
-		requireNoResultContaining(t, results, Error, "references/small.md")
+		results, _, _ := CheckTokens(dir, "body")
+		requireNoResultContaining(t, results, validator.Warning, "references/small.md")
+		requireNoResultContaining(t, results, validator.Error, "references/small.md")
 	})
 
 	t.Run("reference file exceeds soft limit", func(t *testing.T) {
 		dir := t.TempDir()
 		writeFile(t, dir, "references/medium.md", generateContent(11_000))
-		results, _, _ := checkTokens(dir, "body")
-		requireResultContaining(t, results, Warning, "references/medium.md")
-		requireResultContaining(t, results, Warning, "consider splitting into smaller focused files")
+		results, _, _ := CheckTokens(dir, "body")
+		requireResultContaining(t, results, validator.Warning, "references/medium.md")
+		requireResultContaining(t, results, validator.Warning, "consider splitting into smaller focused files")
 	})
 
 	t.Run("reference file exceeds hard limit", func(t *testing.T) {
 		dir := t.TempDir()
 		writeFile(t, dir, "references/huge.md", generateContent(26_000))
-		results, _, _ := checkTokens(dir, "body")
-		requireResultContaining(t, results, Error, "references/huge.md")
-		requireResultContaining(t, results, Error, "meaningfully degrade agent performance")
+		results, _, _ := CheckTokens(dir, "body")
+		requireResultContaining(t, results, validator.Error, "references/huge.md")
+		requireResultContaining(t, results, validator.Error, "meaningfully degrade agent performance")
 	})
 }
 
@@ -142,9 +144,9 @@ func TestCheckTokens_AggregateRefLimits(t *testing.T) {
 		dir := t.TempDir()
 		writeFile(t, dir, "references/a.md", generateContent(5_000))
 		writeFile(t, dir, "references/b.md", generateContent(5_000))
-		results, _, _ := checkTokens(dir, "body")
-		requireNoResultContaining(t, results, Warning, "total reference files")
-		requireNoResultContaining(t, results, Error, "total reference files")
+		results, _, _ := CheckTokens(dir, "body")
+		requireNoResultContaining(t, results, validator.Warning, "total reference files")
+		requireNoResultContaining(t, results, validator.Error, "total reference files")
 	})
 
 	t.Run("total exceeds soft limit", func(t *testing.T) {
@@ -152,9 +154,9 @@ func TestCheckTokens_AggregateRefLimits(t *testing.T) {
 		writeFile(t, dir, "references/a.md", generateContent(9_000))
 		writeFile(t, dir, "references/b.md", generateContent(9_000))
 		writeFile(t, dir, "references/c.md", generateContent(9_000))
-		results, _, _ := checkTokens(dir, "body")
-		requireResultContaining(t, results, Warning, "total reference files")
-		requireResultContaining(t, results, Warning, "consider whether all this content is essential")
+		results, _, _ := CheckTokens(dir, "body")
+		requireResultContaining(t, results, validator.Warning, "total reference files")
+		requireResultContaining(t, results, validator.Warning, "consider whether all this content is essential")
 	})
 
 	t.Run("total exceeds hard limit", func(t *testing.T) {
@@ -163,9 +165,9 @@ func TestCheckTokens_AggregateRefLimits(t *testing.T) {
 		writeFile(t, dir, "references/a.md", generateContent(18_000))
 		writeFile(t, dir, "references/b.md", generateContent(18_000))
 		writeFile(t, dir, "references/c.md", generateContent(18_000))
-		results, _, _ := checkTokens(dir, "body")
-		requireResultContaining(t, results, Error, "total reference files")
-		requireResultContaining(t, results, Error, "25-40%")
+		results, _, _ := CheckTokens(dir, "body")
+		requireResultContaining(t, results, validator.Error, "total reference files")
+		requireResultContaining(t, results, validator.Error, "25-40%")
 	})
 }
 
@@ -175,7 +177,7 @@ func TestCountOtherFiles(t *testing.T) {
 		writeFile(t, dir, "SKILL.md", "---\nname: test\n---\nbody")
 		writeFile(t, dir, "AGENTS.md", "Some agent content here.")
 		writeFile(t, dir, "metadata.json", `{"key": "value"}`)
-		_, _, otherCounts := checkTokens(dir, "body")
+		_, _, otherCounts := CheckTokens(dir, "body")
 		if len(otherCounts) != 2 {
 			t.Fatalf("expected 2 other counts, got %d", len(otherCounts))
 		}
@@ -199,7 +201,7 @@ func TestCountOtherFiles(t *testing.T) {
 		writeFile(t, dir, "SKILL.md", "content")
 		writeFile(t, dir, "rules/rule1.md", "Rule one content.")
 		writeFile(t, dir, "rules/rule2.md", "Rule two content.")
-		_, _, otherCounts := checkTokens(dir, "body")
+		_, _, otherCounts := CheckTokens(dir, "body")
 		if len(otherCounts) != 2 {
 			t.Fatalf("expected 2 other counts, got %d", len(otherCounts))
 		}
@@ -221,7 +223,7 @@ func TestCountOtherFiles(t *testing.T) {
 		writeFile(t, dir, "image.png", "fake png data")
 		writeFile(t, dir, "archive.zip", "fake zip data")
 		writeFile(t, dir, "notes.txt", "text content")
-		_, _, otherCounts := checkTokens(dir, "body")
+		_, _, otherCounts := CheckTokens(dir, "body")
 		if len(otherCounts) != 1 {
 			t.Fatalf("expected 1 other count (notes.txt only), got %d", len(otherCounts))
 		}
@@ -235,7 +237,7 @@ func TestCountOtherFiles(t *testing.T) {
 		writeFile(t, dir, "SKILL.md", "content")
 		writeFile(t, dir, ".hidden", "secret")
 		writeFile(t, dir, "visible.txt", "visible content")
-		_, _, otherCounts := checkTokens(dir, "body")
+		_, _, otherCounts := CheckTokens(dir, "body")
 		if len(otherCounts) != 1 {
 			t.Fatalf("expected 1 other count, got %d", len(otherCounts))
 		}
@@ -250,7 +252,7 @@ func TestCountOtherFiles(t *testing.T) {
 		writeFile(t, dir, "references/ref.md", "reference content")
 		writeFile(t, dir, "scripts/run.sh", "#!/bin/bash")
 		writeFile(t, dir, "assets/logo.txt", "logo")
-		_, _, otherCounts := checkTokens(dir, "body")
+		_, _, otherCounts := CheckTokens(dir, "body")
 		if len(otherCounts) != 0 {
 			t.Fatalf("expected 0 other counts, got %d", len(otherCounts))
 		}
@@ -259,7 +261,7 @@ func TestCountOtherFiles(t *testing.T) {
 	t.Run("no other files returns empty", func(t *testing.T) {
 		dir := t.TempDir()
 		writeFile(t, dir, "SKILL.md", "content")
-		_, _, otherCounts := checkTokens(dir, "body")
+		_, _, otherCounts := CheckTokens(dir, "body")
 		if len(otherCounts) != 0 {
 			t.Fatalf("expected 0 other counts, got %d", len(otherCounts))
 		}
@@ -271,9 +273,9 @@ func TestCheckTokens_OtherFilesLimits(t *testing.T) {
 		dir := t.TempDir()
 		writeFile(t, dir, "SKILL.md", "content")
 		writeFile(t, dir, "extra.md", generateContent(5_000))
-		results, _, _ := checkTokens(dir, "body")
-		requireNoResultContaining(t, results, Warning, "non-standard files total")
-		requireNoResultContaining(t, results, Error, "non-standard files total")
+		results, _, _ := CheckTokens(dir, "body")
+		requireNoResultContaining(t, results, validator.Warning, "non-standard files total")
+		requireNoResultContaining(t, results, validator.Error, "non-standard files total")
 	})
 
 	t.Run("other files exceed soft limit", func(t *testing.T) {
@@ -281,9 +283,9 @@ func TestCheckTokens_OtherFilesLimits(t *testing.T) {
 		writeFile(t, dir, "SKILL.md", "content")
 		writeFile(t, dir, "extra1.md", generateContent(15_000))
 		writeFile(t, dir, "extra2.md", generateContent(15_000))
-		results, _, _ := checkTokens(dir, "body")
-		requireResultContaining(t, results, Warning, "non-standard files total")
-		requireResultContaining(t, results, Warning, "could consume a significant portion")
+		results, _, _ := CheckTokens(dir, "body")
+		requireResultContaining(t, results, validator.Warning, "non-standard files total")
+		requireResultContaining(t, results, validator.Warning, "could consume a significant portion")
 	})
 
 	t.Run("other files exceed hard limit", func(t *testing.T) {
@@ -292,8 +294,8 @@ func TestCheckTokens_OtherFilesLimits(t *testing.T) {
 		writeFile(t, dir, "rules/a.md", generateContent(40_000))
 		writeFile(t, dir, "rules/b.md", generateContent(40_000))
 		writeFile(t, dir, "rules/c.md", generateContent(25_000))
-		results, _, _ := checkTokens(dir, "body")
-		requireResultContaining(t, results, Error, "non-standard files total")
-		requireResultContaining(t, results, Error, "severely degrade performance")
+		results, _, _ := CheckTokens(dir, "body")
+		requireResultContaining(t, results, validator.Error, "non-standard files total")
+		requireResultContaining(t, results, validator.Error, "severely degrade performance")
 	})
 }

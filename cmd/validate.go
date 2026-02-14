@@ -11,32 +11,13 @@ import (
 )
 
 var validateCmd = &cobra.Command{
-	Use:   "validate <path>",
-	Short: "Validate skill spec compliance (structure, frontmatter, tokens)",
-	Long:  "Checks that a skill directory conforms to the spec: structure, frontmatter fields, token limits, and skill ratio.",
-	Args:  cobra.ExactArgs(1),
-	RunE:  runValidate,
+	Use:   "validate",
+	Short: "Validate skill structure or links",
+	Long:  "Parent command for structure and link validation subcommands.",
 }
 
 func init() {
 	rootCmd.AddCommand(validateCmd)
-}
-
-func runValidate(cmd *cobra.Command, args []string) error {
-	_, mode, dirs, err := detectAndResolve(args)
-	if err != nil {
-		return err
-	}
-
-	switch mode {
-	case validator.SingleSkill:
-		r := validator.Validate(dirs[0])
-		return outputReport(r)
-	case validator.MultiSkill:
-		mr := validator.ValidateMulti(dirs)
-		return outputMultiReport(mr)
-	}
-	return nil
 }
 
 func outputReport(r *validator.Report) error {

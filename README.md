@@ -27,23 +27,23 @@ Commands map to skill development lifecycle stages:
 
 | Development stage | Command | What it answers |
 |---|---|---|
-| Scaffolding | `validate` | Does it conform to the spec? (structure, frontmatter, tokens) |
-| Authoring | `analyze quality` | Is it well-crafted? (links work, code fences closed) |
+| Scaffolding | `validate structure` | Does it conform to the spec and can agents use it? (structure, frontmatter, tokens, code fences) |
 | Writing content | `analyze content` | Is the instruction quality good? (density, specificity, imperative ratio) |
 | Adding examples | `analyze contamination` | Am I introducing cross-language contamination? |
+| Review | `validate links` | Do all the links still resolve? (HTTP and relative) |
 | Pre-publish | `check` | Run everything |
 
 All commands accept `-o text` (default) or `-o json` for output format.
 
 Exit codes: `0` = passed, `1` = validation errors, `2` = usage/tool error.
 
-### validate
+### validate structure
 
 ```
-skill-validator validate <path>
+skill-validator validate structure <path>
 ```
 
-Checks spec compliance: directory structure, frontmatter fields, token limits, and skill ratio.
+Checks spec compliance: directory structure, frontmatter fields, token limits, skill ratio, and code fence integrity.
 
 ```
 Validating skill: my-skill/
@@ -56,6 +56,9 @@ Frontmatter
   ✓ description: (54 chars)
   ✓ license: "MIT"
 
+Markdown
+  ✓ no unclosed code fences found
+
 Tokens
   SKILL.md body:        1,250 tokens
   references/guide.md:    820 tokens
@@ -65,13 +68,13 @@ Tokens
 Result: passed
 ```
 
-### analyze quality
+### validate links
 
 ```
-skill-validator analyze quality <path>
+skill-validator validate links <path>
 ```
 
-Validates links (relative and HTTP) and checks for unclosed code fences in SKILL.md and references.
+Validates links (relative and HTTP) in SKILL.md and references.
 
 ### analyze content
 
@@ -116,13 +119,13 @@ Contamination scoring considers three factors: multi-interface tools (0.3 weight
 
 ```
 skill-validator check <path>
-skill-validator check --only validate,quality <path>
+skill-validator check --only structure,links <path>
 skill-validator check --skip contamination <path>
 ```
 
-Runs all checks (validate + quality + content + contamination). Use `--only` or `--skip` to select specific check groups. The flags are mutually exclusive.
+Runs all checks (structure + links + content + contamination). Use `--only` or `--skip` to select specific check groups. The flags are mutually exclusive.
 
-Valid check groups: `validate`, `quality`, `content`, `contamination`.
+Valid check groups: `structure`, `links`, `content`, `contamination`.
 
 ### JSON output
 
@@ -202,9 +205,9 @@ If no `SKILL.md` is found at the root or in any immediate subdirectory, the vali
 
 ## What it checks
 
-### Spec compliance (`validate`)
+### Structure validation (`validate structure`)
 
-These checks validate conformance with the [Agent Skills specification](https://agentskills.io/specification):
+These checks validate conformance with the [Agent Skills specification](https://agentskills.io/specification) and perform additional checks:
 
 - **Structure**: `SKILL.md` exists; only recognized directories (`scripts/`, `references/`, `assets/`); no deep nesting
 - **Frontmatter**: required fields (`name`, `description`) are present and valid; `name` is lowercase alphanumeric with hyphens (1-64 chars) and matches the directory name; optional fields (`license`, `compatibility`, `metadata`, `allowed-tools`) conform to expected types and lengths; unrecognized fields are flagged
@@ -232,19 +235,19 @@ These checks validate conformance with the [Agent Skills specification](https://
 **Holistic structure check**
 - If non-standard content exceeds 10x the standard structure content (and is over 25,000 tokens), the validator errors with a clear message that the directory doesn't appear to be structured as a skill
 
-### Quality checks (`analyze quality`)
+**Markdown validation**
+- Checks SKILL.md and reference files for unclosed code fences (`` ``` `` or `~~~`)
+- An unclosed fence causes agents to misinterpret everything after it as code
+- Unclosed fences are reported as errors (not warnings) because they break agent usability
 
-**Link validation**
+### Link validation (`validate links`)
+
 - Relative links are resolved against the skill directory and checked for existence
 - HTTP/HTTPS links are verified with a HEAD request (10s timeout, concurrent checks)
 - Template URLs using [RFC 6570](https://www.rfc-editor.org/rfc/rfc6570) syntax are skipped (e.g. `https://github.com/{OWNER}/{REPO}/pull/{PR}`)
 
 > [!TIP]
 > HTTP 403 responses are reported as `info` rather than errors, since many sites (e.g. doi.org, science.org, mathworks.com) block automated HEAD requests while working fine in browsers. A 403 doesn't necessarily mean the link is broken -- but it does mean the validator couldn't verify it. If your skill includes 403-flagged links, keep in mind that sites blocking the validator's requests may also block requests from LLM agents. If an agent can't access a linked resource, the link wastes context without providing value. Where possible, consider providing the content directly in `references/` rather than linking to it, or offer an alternate source that doesn't restrict automated access. If the links are for human readers rather than agent use, consider removing them from the skill entirely.
-
-**Markdown validation**
-- Checks SKILL.md and reference files for unclosed code fences (`` ``` `` or `~~~`)
-- An unclosed fence causes agents to misinterpret everything after it as code
 
 ### Content analysis (`analyze content`)
 

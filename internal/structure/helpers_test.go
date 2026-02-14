@@ -1,10 +1,12 @@
-package validator
+package structure
 
 import (
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/dacharyc/skill-validator/internal/validator"
 )
 
 // writeFile creates a file at dir/relPath with the given content, creating directories as needed.
@@ -31,7 +33,7 @@ func dirName(dir string) string {
 }
 
 // requireResult asserts that at least one result has the exact level and message.
-func requireResult(t *testing.T, results []Result, level Level, message string) {
+func requireResult(t *testing.T, results []validator.Result, level validator.Level, message string) {
 	t.Helper()
 	for _, r := range results {
 		if r.Level == level && r.Message == message {
@@ -45,7 +47,7 @@ func requireResult(t *testing.T, results []Result, level Level, message string) 
 }
 
 // requireResultContaining asserts that at least one result has the given level and message containing substr.
-func requireResultContaining(t *testing.T, results []Result, level Level, substr string) {
+func requireResultContaining(t *testing.T, results []validator.Result, level validator.Level, substr string) {
 	t.Helper()
 	for _, r := range results {
 		if r.Level == level && strings.Contains(r.Message, substr) {
@@ -59,7 +61,7 @@ func requireResultContaining(t *testing.T, results []Result, level Level, substr
 }
 
 // requireNoLevel asserts that no result has the given level.
-func requireNoLevel(t *testing.T, results []Result, level Level) {
+func requireNoLevel(t *testing.T, results []validator.Result, level validator.Level) {
 	t.Helper()
 	for _, r := range results {
 		if r.Level == level {
@@ -69,7 +71,7 @@ func requireNoLevel(t *testing.T, results []Result, level Level) {
 }
 
 // requireNoResultContaining asserts no result has the given level with message containing substr.
-func requireNoResultContaining(t *testing.T, results []Result, level Level, substr string) {
+func requireNoResultContaining(t *testing.T, results []validator.Result, level validator.Level, substr string) {
 	t.Helper()
 	for _, r := range results {
 		if r.Level == level && strings.Contains(r.Message, substr) {
