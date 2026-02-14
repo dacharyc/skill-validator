@@ -96,6 +96,15 @@ func TestCheckLinks_Relative(t *testing.T) {
 		}
 	})
 
+	t.Run("template URLs are skipped", func(t *testing.T) {
+		dir := t.TempDir()
+		body := "[PR](https://github.com/{OWNER}/{REPO}/pull/{PR}) and https://api.example.com/{version}/users/{id}"
+		results := checkLinks(dir, body)
+		if len(results) != 0 {
+			t.Errorf("expected 0 results for template URLs, got %d", len(results))
+		}
+	})
+
 	t.Run("no links returns nil", func(t *testing.T) {
 		dir := t.TempDir()
 		body := "No links here."

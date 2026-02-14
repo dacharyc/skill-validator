@@ -38,6 +38,10 @@ func checkLinks(dir string, body string) []Result {
 
 	// Check relative and HTTP links
 	for _, link := range links {
+		// Skip template URLs containing {placeholder} variables (RFC 6570 URI Templates)
+		if strings.Contains(link, "{") {
+			continue
+		}
 		if strings.HasPrefix(link, "http://") || strings.HasPrefix(link, "https://") {
 			httpLinks = append(httpLinks, link)
 			continue

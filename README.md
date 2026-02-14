@@ -131,6 +131,7 @@ These checks go beyond the spec. A skill can be spec-compliant and still perform
 **Link validation**
 - Relative links are resolved against the skill directory and checked for existence
 - HTTP/HTTPS links are verified with a HEAD request (10s timeout, concurrent checks)
+- Template URLs using [RFC 6570](https://www.rfc-editor.org/rfc/rfc6570) syntax are skipped (e.g. `https://github.com/{OWNER}/{REPO}/pull/{PR}`)
 - Broken links mean an agent will either fail silently or waste context on error handling
 
 **Extraneous file detection**
