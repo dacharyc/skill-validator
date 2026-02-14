@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/dacharyc/skill-validator/internal/contamination"
+	"github.com/dacharyc/skill-validator/internal/content"
 	"github.com/dacharyc/skill-validator/internal/skill"
 )
 
@@ -48,6 +50,8 @@ type Report struct {
 	Results          []Result
 	TokenCounts      []TokenCount
 	OtherTokenCounts []TokenCount
+	ContentReport         *content.Report
+	ContaminationReport   *contamination.Report
 	Errors           int
 	Warnings         int
 }
@@ -150,12 +154,6 @@ func Validate(dir string) *Report {
 	// Frontmatter checks
 	report.Results = append(report.Results, checkFrontmatter(s)...)
 
-	// Link checks
-	report.Results = append(report.Results, checkLinks(dir, s.Body)...)
-
-	// Markdown checks
-	report.Results = append(report.Results, checkMarkdown(dir, s.Body)...)
-
 	// Token checks
 	tokenResults, tokenCounts, otherCounts := checkTokens(dir, s.Body)
 	report.Results = append(report.Results, tokenResults...)
@@ -167,6 +165,23 @@ func Validate(dir string) *Report {
 
 	report.tally()
 	return report
+}
+
+// LoadSkill loads and returns the skill from the given directory.
+// This is used by commands that need the parsed skill (e.g., quality, content, contamination).
+func LoadSkill(dir string) (*skill.Skill, error) {
+	return skill.Load(dir)
+}
+
+// ReadSkillRaw reads the raw SKILL.md content from a directory without parsing
+// frontmatter. This is used as a fallback for content/contamination analysis when
+// frontmatter parsing fails.
+func ReadSkillRaw(dir string) string {
+	data, err := os.ReadFile(filepath.Join(dir, "SKILL.md"))
+	if err != nil {
+		return ""
+	}
+	return string(data)
 }
 
 func checkSkillRatio(standard []TokenCount, other []TokenCount) []Result {

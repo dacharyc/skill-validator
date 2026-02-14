@@ -5,7 +5,7 @@
 
 A CLI tool that validates [Agent Skill](https://agentskills.io) packages.
 
-Spec compliance is table stakes. `skill-validator` goes further: it checks that links actually resolve, flags files that shouldn't be in a skill directory, and reports token counts so you can see how much of an agent's context window your skill will consume. A spec-compliant skill that has broken links or a 60k-token reference file will technically pass the spec but perform poorly in practice.
+Spec compliance is table stakes. `skill-validator` goes further: it checks that links actually resolve, flags files that shouldn't be in a skill directory, reports token counts so you can see how much of an agent's context window your skill will consume, analyzes content quality metrics, and detects cross-language contamination. A spec-compliant skill that has broken links or a 60k-token reference file will technically pass the spec but perform poorly in practice.
 
 ## Install
 
@@ -21,19 +21,29 @@ cd skill-validator
 go build -o skill-validator .
 ```
 
-## Usage
+## Commands
 
-```
-skill-validator [-o format] <path-to-skill-directory>
-```
+Commands map to skill development lifecycle stages:
 
-Flags:
+| Development stage | Command | What it answers |
+|---|---|---|
+| Scaffolding | `validate` | Does it conform to the spec? (structure, frontmatter, tokens) |
+| Authoring | `analyze quality` | Is it well-crafted? (links work, code fences closed) |
+| Writing content | `analyze content` | Is the instruction quality good? (density, specificity, imperative ratio) |
+| Adding examples | `analyze contamination` | Am I introducing cross-language contamination? |
+| Pre-publish | `check` | Run everything |
 
-- `-o`, `--output` — output format: `text` (default) or `json`
+All commands accept `-o text` (default) or `-o json` for output format.
 
 Exit codes: `0` = passed, `1` = validation errors, `2` = usage/tool error.
 
-### Example output
+### validate
+
+```
+skill-validator validate <path>
+```
+
+Checks spec compliance: directory structure, frontmatter fields, token limits, and skill ratio.
 
 ```
 Validating skill: my-skill/
@@ -46,9 +56,6 @@ Frontmatter
   ✓ description: (54 chars)
   ✓ license: "MIT"
 
-Links
-  ✓ references/guide.md (exists)
-
 Tokens
   SKILL.md body:        1,250 tokens
   references/guide.md:    820 tokens
@@ -58,12 +65,71 @@ Tokens
 Result: passed
 ```
 
+### analyze quality
+
+```
+skill-validator analyze quality <path>
+```
+
+Validates links (relative and HTTP) and checks for unclosed code fences in SKILL.md and references.
+
+### analyze content
+
+```
+skill-validator analyze content <path>
+```
+
+Computes content quality metrics:
+
+```
+Content Analysis
+  Word count:               1,250
+  Code block ratio:         0.32
+  Imperative ratio:         0.45
+  Information density:      0.39
+  Instruction specificity:  0.78
+  Sections: 6  |  List items: 23  |  Code blocks: 8
+```
+
+Metrics include word count, code block count/ratio, code languages, sentence count, imperative sentence ratio, information density, strong/weak language markers, instruction specificity, section count, and list item count.
+
+### analyze contamination
+
+```
+skill-validator analyze contamination <path>
+```
+
+Detects cross-language contamination — skills where code examples in one language could cause incorrect code generation in another context:
+
+```
+Contamination Analysis
+  Contamination level: medium (score: 0.35)
+  Primary language category: javascript
+  ⚠ Language mismatch: python, shell (2 categories differ from primary)
+  ℹ Multi-interface tool detected: mongodb
+  Scope breadth: 4
+```
+
+Contamination scoring considers three factors: multi-interface tools (0.3 weight), language mismatch across code blocks (0.4 weight), and scope breadth (0.3 weight).
+
+### check
+
+```
+skill-validator check <path>
+skill-validator check --only validate,quality <path>
+skill-validator check --skip contamination <path>
+```
+
+Runs all checks (validate + quality + content + contamination). Use `--only` or `--skip` to select specific check groups. The flags are mutually exclusive.
+
+Valid check groups: `validate`, `quality`, `content`, `contamination`.
+
 ### JSON output
 
 Use `-o json` for machine-readable output:
 
 ```
-skill-validator -o json my-skill/
+skill-validator check -o json my-skill/
 ```
 
 ```json
@@ -81,14 +147,33 @@ skill-validator -o json my-skill/
       { "file": "references/guide.md", "tokens": 820 }
     ],
     "total": 2070
+  },
+  "content_analysis": {
+    "word_count": 1250,
+    "code_block_count": 5,
+    "code_block_ratio": 0.25,
+    "code_languages": ["python", "bash"],
+    "imperative_ratio": 0.35,
+    "information_density": 0.30,
+    "instruction_specificity": 0.78,
+    "section_count": 4,
+    "list_item_count": 12
+  },
+  "contamination_analysis": {
+    "multi_interface_tools": ["mongodb"],
+    "contamination_score": 0.35,
+    "contamination_level": "medium",
+    "language_mismatch": true,
+    "scope_breadth": 4
   }
 }
 ```
 
-The `passed` field is `true` when `errors` is `0`. Token count sections are omitted when empty. Pipe to `jq` for post-processing:
+The `passed` field is `true` when `errors` is `0`. Token count, content analysis, and contamination analysis sections are omitted when not computed. Pipe to `jq` for post-processing:
 
 ```
-skill-validator -o json my-skill/ | jq '.results[] | select(.level == "error")'
+skill-validator check -o json my-skill/ | jq '.content_analysis'
+skill-validator check -o json my-skill/ | jq '.results[] | select(.level == "error")'
 ```
 
 ### Multi-skill directories
@@ -96,7 +181,7 @@ skill-validator -o json my-skill/ | jq '.results[] | select(.level == "error")'
 If the given path does not contain a `SKILL.md` but has subdirectories that do, the validator automatically detects and validates each skill. This is useful when skills are organized as sibling directories (e.g. `skills/algorithmic-art/`, `skills/brand-guidelines/`). Symlinks are followed during detection.
 
 ```
-skill-validator skills/
+skill-validator check skills/
 ```
 
 Each skill is validated independently. The text output separates skills with a line and appends an overall summary. The JSON output wraps individual skill reports in a `skills` array:
@@ -117,25 +202,12 @@ If no `SKILL.md` is found at the root or in any immediate subdirectory, the vali
 
 ## What it checks
 
-### Spec compliance
+### Spec compliance (`validate`)
 
 These checks validate conformance with the [Agent Skills specification](https://agentskills.io/specification):
 
 - **Structure**: `SKILL.md` exists; only recognized directories (`scripts/`, `references/`, `assets/`); no deep nesting
 - **Frontmatter**: required fields (`name`, `description`) are present and valid; `name` is lowercase alphanumeric with hyphens (1-64 chars) and matches the directory name; optional fields (`license`, `compatibility`, `metadata`, `allowed-tools`) conform to expected types and lengths; unrecognized fields are flagged
-
-### Quality checks
-
-These checks go beyond the spec. A skill can be spec-compliant and still perform poorly if an agent wastes context on broken links, irrelevant files, or oversized references.
-
-**Link validation**
-- Relative links are resolved against the skill directory and checked for existence
-- HTTP/HTTPS links are verified with a HEAD request (10s timeout, concurrent checks)
-- Template URLs using [RFC 6570](https://www.rfc-editor.org/rfc/rfc6570) syntax are skipped (e.g. `https://github.com/{OWNER}/{REPO}/pull/{PR}`)
-- Broken links mean an agent will either fail silently or waste context on error handling
-
-> [!TIP]
-> HTTP 403 responses are reported as `info` rather than errors, since many sites (e.g. doi.org, science.org, mathworks.com) block automated HEAD requests while working fine in browsers. A 403 doesn't necessarily mean the link is broken -- but it does mean the validator couldn't verify it. If your skill includes 403-flagged links, keep in mind that sites blocking the validator's requests may also block requests from LLM agents. If an agent can't access a linked resource, the link wastes context without providing value. Where possible, consider providing the content directly in `references/` rather than linking to it, or offer an alternate source that doesn't restrict automated access. If the links are for human readers rather than agent use, consider removing them from the skill entirely.
 
 **Extraneous file detection**
 - Files like `README.md`, `CHANGELOG.md`, and `LICENSE` are flagged at the skill root -- these are for human readers, not agents, and may be loaded into the context window unnecessarily
@@ -149,10 +221,6 @@ These checks go beyond the spec. A skill can be spec-compliant and still perform
 - Descriptions with 8+ comma-separated short segments are flagged as keyword lists
 - Per the spec, the description should concisely describe what the skill does and when to use it
 
-**Markdown validation**
-- Checks SKILL.md and reference files for unclosed code fences (`` ``` `` or `~~~`)
-- An unclosed fence causes agents to misinterpret everything after it as code, which can silently break comprehension of the rest of the file
-
 **Token counting and limits**
 - Reports per-file and total token counts (using `o200k_base` encoding)
 - SKILL.md body: warns if over 5,000 tokens or 500 lines (per spec recommendation)
@@ -160,13 +228,51 @@ These checks go beyond the spec. A skill can be spec-compliant and still perform
 - Total references: warns at 25,000 tokens, errors at 50,000 tokens
 - Non-standard files (anything outside SKILL.md, references/, scripts/, assets/) are scanned separately and reported in an "Other files" section with per-file and total token counts
 - Other files total: warns at 25,000 tokens, errors at 100,000 tokens
-- Individual other-file counts are color-coded: yellow over 10k tokens, red over 25k
-
-The reference file limits reflect practical context window budgets. A single 25,000-token reference consumes 12-20% of a typical context window (128k-200k). At 50,000 tokens across all references, you're using 25-40% of the window before the agent has even started working on the actual task. The context window is shared with the system prompt, conversation history, tool output, and the agent's own reasoning -- large reference files crowd all of that out and degrade tool performance.
 
 **Holistic structure check**
 - If non-standard content exceeds 10x the standard structure content (and is over 25,000 tokens), the validator errors with a clear message that the directory doesn't appear to be structured as a skill
-- This catches build pipeline issues, documentation repos with a SKILL.md tacked on, and other cases where the content fundamentally isn't a skill
+
+### Quality checks (`analyze quality`)
+
+**Link validation**
+- Relative links are resolved against the skill directory and checked for existence
+- HTTP/HTTPS links are verified with a HEAD request (10s timeout, concurrent checks)
+- Template URLs using [RFC 6570](https://www.rfc-editor.org/rfc/rfc6570) syntax are skipped (e.g. `https://github.com/{OWNER}/{REPO}/pull/{PR}`)
+
+> [!TIP]
+> HTTP 403 responses are reported as `info` rather than errors, since many sites (e.g. doi.org, science.org, mathworks.com) block automated HEAD requests while working fine in browsers. A 403 doesn't necessarily mean the link is broken -- but it does mean the validator couldn't verify it. If your skill includes 403-flagged links, keep in mind that sites blocking the validator's requests may also block requests from LLM agents. If an agent can't access a linked resource, the link wastes context without providing value. Where possible, consider providing the content directly in `references/` rather than linking to it, or offer an alternate source that doesn't restrict automated access. If the links are for human readers rather than agent use, consider removing them from the skill entirely.
+
+**Markdown validation**
+- Checks SKILL.md and reference files for unclosed code fences (`` ``` `` or `~~~`)
+- An unclosed fence causes agents to misinterpret everything after it as code
+
+### Content analysis (`analyze content`)
+
+Computes content quality metrics ported from the [agent-skill-analysis](https://github.com/dacharyc/agent-skill-analysis) research project:
+
+- **Word count**: total words in SKILL.md
+- **Code block count / ratio**: number and proportion of fenced code blocks
+- **Code languages**: language identifiers from code block markers
+- **Sentence count**: approximate sentences (split on punctuation and blank lines, after stripping code)
+- **Imperative count / ratio**: sentences starting with imperative verbs (use, run, create, configure, etc.)
+- **Strong markers**: directive language count (must, always, never, required, ensure, etc.)
+- **Weak markers**: advisory language count (may, consider, could, optional, suggested, etc.)
+- **Instruction specificity**: strong / (strong + weak) — how directive vs advisory the language is
+- **Information density**: (code_block_ratio * 0.5) + (imperative_ratio * 0.5)
+- **Section count**: H2+ headers
+- **List item count**: bullet and numbered list items
+
+### Contamination analysis (`analyze contamination`)
+
+Detects cross-language contamination — where code examples in one language could cause incorrect generation in another context:
+
+- **Multi-interface tools**: detects tools with many language bindings (MongoDB, AWS, Docker, Kubernetes, Redis, etc.) by scanning the skill name and content
+- **Language categories**: maps code block languages to broad categories (shell, javascript, python, java, systems, config, etc.)
+- **Language mismatch**: code blocks spanning different language categories
+- **Technology references**: framework/runtime mentions (Node.js, Django, Flask, Spring, Rails, etc.)
+- **Scope breadth**: number of distinct technology categories referenced
+- **Contamination score**: 3-factor formula — multi_interface (0.3) + mismatch (0.4) + breadth (0.3), capped at 1.0
+- **Contamination level**: high (≥0.5), medium (≥0.2), low (<0.2)
 
 ## Development
 

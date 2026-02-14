@@ -105,6 +105,45 @@ func Print(w io.Writer, r *validator.Report) {
 		fmt.Fprintf(w, "  %s%s:%s%s%s%s tokens%s\n", colorBold, label, colorReset, strings.Repeat(" ", padding), totalColor, formatNumber(total), totalColorEnd)
 	}
 
+	// Content analysis
+	if r.ContentReport != nil {
+		cr := r.ContentReport
+		fmt.Fprintf(w, "\n%sContent Analysis%s\n", colorBold, colorReset)
+		fmt.Fprintf(w, "  Word count:               %s\n", formatNumber(cr.WordCount))
+		fmt.Fprintf(w, "  Code block ratio:         %.2f\n", cr.CodeBlockRatio)
+		fmt.Fprintf(w, "  Imperative ratio:         %.2f\n", cr.ImperativeRatio)
+		fmt.Fprintf(w, "  Information density:      %.2f\n", cr.InformationDensity)
+		fmt.Fprintf(w, "  Instruction specificity:  %.2f\n", cr.InstructionSpecificity)
+		fmt.Fprintf(w, "  Sections: %d  |  List items: %d  |  Code blocks: %d\n",
+			cr.SectionCount, cr.ListItemCount, cr.CodeBlockCount)
+	}
+
+	// Contamination analysis
+	if r.ContaminationReport != nil {
+		rr := r.ContaminationReport
+		fmt.Fprintf(w, "\n%sContamination Analysis%s\n", colorBold, colorReset)
+		levelColor := colorGreen
+		if rr.ContaminationLevel == "high" {
+			levelColor = colorRed
+		} else if rr.ContaminationLevel == "medium" {
+			levelColor = colorYellow
+		}
+		fmt.Fprintf(w, "  Contamination level: %s%s%s (score: %.2f)\n", levelColor, rr.ContaminationLevel, colorReset, rr.ContaminationScore)
+		if rr.PrimaryCategory != "" {
+			fmt.Fprintf(w, "  Primary language category: %s\n", rr.PrimaryCategory)
+		}
+		if rr.LanguageMismatch && len(rr.MismatchedCategories) > 0 {
+			fmt.Fprintf(w, "  %s⚠ Language mismatch: %s (%d categor%s differ from primary)%s\n",
+				colorYellow, strings.Join(rr.MismatchedCategories, ", "),
+				len(rr.MismatchedCategories), ySuffix(len(rr.MismatchedCategories)), colorReset)
+		}
+		if len(rr.MultiInterfaceTools) > 0 {
+			fmt.Fprintf(w, "  %sℹ Multi-interface tool detected: %s%s\n",
+				colorCyan, strings.Join(rr.MultiInterfaceTools, ", "), colorReset)
+		}
+		fmt.Fprintf(w, "  Scope breadth: %d\n", rr.ScopeBreadth)
+	}
+
 	// Summary
 	fmt.Fprintln(w)
 	if r.Errors == 0 && r.Warnings == 0 {
@@ -203,4 +242,11 @@ func pluralize(n int) string {
 		return ""
 	}
 	return "s"
+}
+
+func ySuffix(n int) string {
+	if n == 1 {
+		return "y"
+	}
+	return "ies"
 }

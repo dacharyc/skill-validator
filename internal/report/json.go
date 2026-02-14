@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"io"
 
+	"github.com/dacharyc/skill-validator/internal/contamination"
+	"github.com/dacharyc/skill-validator/internal/content"
 	"github.com/dacharyc/skill-validator/internal/validator"
 )
 
@@ -15,6 +17,8 @@ type jsonReport struct {
 	Results          []jsonResult     `json:"results"`
 	TokenCounts      *jsonTokenCounts `json:"token_counts,omitempty"`
 	OtherTokenCounts *jsonTokenCounts `json:"other_token_counts,omitempty"`
+	ContentAnalysis        *content.Report        `json:"content_analysis,omitempty"`
+	ContaminationAnalysis  *contamination.Report  `json:"contamination_analysis,omitempty"`
 }
 
 type jsonResult struct {
@@ -78,6 +82,9 @@ func buildJSONReport(r *validator.Report) jsonReport {
 		}
 		out.OtherTokenCounts = otc
 	}
+
+	out.ContentAnalysis = r.ContentReport
+	out.ContaminationAnalysis = r.ContaminationReport
 
 	return out
 }

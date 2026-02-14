@@ -5,6 +5,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/dacharyc/skill-validator/internal/contamination"
+	"github.com/dacharyc/skill-validator/internal/content"
 	"github.com/dacharyc/skill-validator/internal/validator"
 )
 
@@ -460,6 +462,225 @@ func TestPrintMulti_SingleSkill(t *testing.T) {
 	// Singular: "1 skill validated"
 	if !strings.Contains(output, "1 skill validated") {
 		t.Errorf("expected '1 skill validated' (singular), got:\n%s", output)
+	}
+}
+
+func TestPrint_ContentAnalysis(t *testing.T) {
+	r := &validator.Report{
+		SkillDir: "/tmp/test",
+		Results:  []validator.Result{},
+		ContentReport: &content.Report{
+			WordCount:              1250,
+			CodeBlockCount:         5,
+			CodeBlockRatio:         0.25,
+			CodeLanguages:          []string{"python", "bash"},
+			SentenceCount:          40,
+			ImperativeCount:        18,
+			ImperativeRatio:        0.45,
+			InformationDensity:     0.35,
+			StrongMarkers:          8,
+			WeakMarkers:            3,
+			InstructionSpecificity: 0.73,
+			SectionCount:           4,
+			ListItemCount:          12,
+		},
+	}
+
+	var buf bytes.Buffer
+	Print(&buf, r)
+	output := buf.String()
+
+	if !strings.Contains(output, "Content Analysis") {
+		t.Error("expected Content Analysis heading")
+	}
+	if !strings.Contains(output, "Word count:") {
+		t.Error("expected Word count line")
+	}
+	if !strings.Contains(output, "1,250") {
+		t.Error("expected formatted word count 1,250")
+	}
+	if !strings.Contains(output, "Code block ratio:") {
+		t.Error("expected Code block ratio line")
+	}
+	if !strings.Contains(output, "Imperative ratio:") {
+		t.Error("expected Imperative ratio line")
+	}
+	if !strings.Contains(output, "Information density:") {
+		t.Error("expected Information density line")
+	}
+	if !strings.Contains(output, "Instruction specificity:") {
+		t.Error("expected Instruction specificity line")
+	}
+	if !strings.Contains(output, "Sections: 4") {
+		t.Error("expected Sections: 4")
+	}
+	if !strings.Contains(output, "List items: 12") {
+		t.Error("expected List items: 12")
+	}
+	if !strings.Contains(output, "Code blocks: 5") {
+		t.Error("expected Code blocks: 5")
+	}
+}
+
+func TestPrint_NoContentAnalysis(t *testing.T) {
+	r := &validator.Report{
+		SkillDir: "/tmp/test",
+		Results:  []validator.Result{},
+	}
+
+	var buf bytes.Buffer
+	Print(&buf, r)
+	output := buf.String()
+
+	if strings.Contains(output, "Content Analysis") {
+		t.Error("unexpected Content Analysis when ContentReport is nil")
+	}
+}
+
+func TestPrint_ContaminationAnalysis_Low(t *testing.T) {
+	r := &validator.Report{
+		SkillDir: "/tmp/test",
+		Results:  []validator.Result{},
+		ContaminationReport: &contamination.Report{
+			ContaminationLevel: "low",
+			ContaminationScore: 0.0,
+			ScopeBreadth:       1,
+			CodeLanguages:      []string{"python"},
+			LanguageCategories: []string{"python"},
+			PrimaryCategory:    "python",
+		},
+	}
+
+	var buf bytes.Buffer
+	Print(&buf, r)
+	output := buf.String()
+
+	if !strings.Contains(output, "Contamination Analysis") {
+		t.Error("expected Contamination Analysis heading")
+	}
+	if !strings.Contains(output, "Contamination level:") {
+		t.Error("expected Contamination level line")
+	}
+	if !strings.Contains(output, "low") {
+		t.Error("expected 'low' level")
+	}
+	// Low level should use green
+	if !strings.Contains(output, colorGreen+"low") {
+		t.Error("expected green color for low level")
+	}
+	if !strings.Contains(output, "Primary language category: python") {
+		t.Error("expected primary language category")
+	}
+	if !strings.Contains(output, "Scope breadth: 1") {
+		t.Error("expected scope breadth")
+	}
+	// Should NOT show mismatch or multi-interface tool warnings
+	if strings.Contains(output, "Language mismatch") {
+		t.Error("unexpected language mismatch for low contamination")
+	}
+	if strings.Contains(output, "Multi-interface tool") {
+		t.Error("unexpected multi-interface tool for simple skill")
+	}
+}
+
+func TestPrint_ContaminationAnalysis_Medium(t *testing.T) {
+	r := &validator.Report{
+		SkillDir: "/tmp/test",
+		Results:  []validator.Result{},
+		ContaminationReport: &contamination.Report{
+			ContaminationLevel:   "medium",
+			ContaminationScore:   0.35,
+			ScopeBreadth:         3,
+			CodeLanguages:        []string{"python", "bash"},
+			LanguageCategories:   []string{"python", "shell"},
+			PrimaryCategory:      "python",
+			MismatchedCategories: []string{"shell"},
+			LanguageMismatch:     true,
+		},
+	}
+
+	var buf bytes.Buffer
+	Print(&buf, r)
+	output := buf.String()
+
+	if !strings.Contains(output, colorYellow+"medium") {
+		t.Error("expected yellow color for medium level")
+	}
+	if !strings.Contains(output, "Language mismatch: shell") {
+		t.Error("expected language mismatch warning with shell")
+	}
+	if !strings.Contains(output, "1 category differ from primary") {
+		t.Error("expected singular category count")
+	}
+}
+
+func TestPrint_ContaminationAnalysis_High(t *testing.T) {
+	r := &validator.Report{
+		SkillDir: "/tmp/test",
+		Results:  []validator.Result{},
+		ContaminationReport: &contamination.Report{
+			ContaminationLevel:   "high",
+			ContaminationScore:   0.7,
+			ScopeBreadth:         5,
+			CodeLanguages:        []string{"python", "javascript", "bash", "ruby"},
+			LanguageCategories:   []string{"python", "javascript", "shell", "ruby"},
+			PrimaryCategory:      "python",
+			MismatchedCategories: []string{"javascript", "ruby", "shell"},
+			LanguageMismatch:     true,
+			MultiInterfaceTools:  []string{"mongodb"},
+		},
+	}
+
+	var buf bytes.Buffer
+	Print(&buf, r)
+	output := buf.String()
+
+	if !strings.Contains(output, colorRed+"high") {
+		t.Error("expected red color for high level")
+	}
+	if !strings.Contains(output, "Multi-interface tool detected: mongodb") {
+		t.Error("expected multi-interface tool warning")
+	}
+	if !strings.Contains(output, "3 categories differ") {
+		t.Error("expected plural categories count")
+	}
+	if !strings.Contains(output, "Scope breadth: 5") {
+		t.Error("expected scope breadth 5")
+	}
+}
+
+func TestPrint_NoContaminationAnalysis(t *testing.T) {
+	r := &validator.Report{
+		SkillDir: "/tmp/test",
+		Results:  []validator.Result{},
+	}
+
+	var buf bytes.Buffer
+	Print(&buf, r)
+	output := buf.String()
+
+	if strings.Contains(output, "Contamination Analysis") {
+		t.Error("unexpected Contamination Analysis when ContaminationReport is nil")
+	}
+}
+
+func TestPrint_ContaminationAnalysis_NoPrimaryCategory(t *testing.T) {
+	r := &validator.Report{
+		SkillDir: "/tmp/test",
+		Results:  []validator.Result{},
+		ContaminationReport: &contamination.Report{
+			ContaminationLevel: "low",
+			ContaminationScore: 0.0,
+			ScopeBreadth:       0,
+		},
+	}
+
+	var buf bytes.Buffer
+	Print(&buf, r)
+	output := buf.String()
+
+	if strings.Contains(output, "Primary language category:") {
+		t.Error("unexpected Primary language category when none set")
 	}
 }
 
