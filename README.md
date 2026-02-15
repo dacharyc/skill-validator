@@ -253,6 +253,7 @@ These checks validate conformance with the [Agent Skills specification](https://
 - SKILL.md body: warns if over 5,000 tokens or 500 lines (per spec recommendation)
 - Per reference file: warns at 10,000 tokens, errors at 25,000 tokens
 - Total references: warns at 25,000 tokens, errors at 50,000 tokens
+- Asset files: text-based files in `assets/` (`.md`, `.tex`, `.py`, `.yaml`, `.yml`, `.tsx`, `.ts`, `.jsx`, `.sty`, `.mplstyle`, `.ipynb`) are counted and reported in an "Asset files" section — these are templates, guides, and configs that LLMs load into context; non-text assets (images, binaries) are ignored
 - Non-standard files (anything outside SKILL.md, references/, scripts/, assets/) are scanned separately and reported in an "Other files" section with per-file and total token counts
 - Other files total: warns at 25,000 tokens, errors at 100,000 tokens
 

@@ -153,6 +153,10 @@ func CheckTokens(dir string, body string) ([]validator.Result, []validator.Token
 		})
 	}
 
+	// Count tokens in text-based asset files
+	assetCounts := countAssetFiles(dir, enc)
+	counts = append(counts, assetCounts...)
+
 	return results, counts, otherCounts
 }
 
@@ -177,6 +181,56 @@ var standardDirs = map[string]bool{
 	"references": true,
 	"scripts":    true,
 	"assets":     true,
+}
+
+// textAssetExtensions lists file extensions in assets/ that are text-based
+// and likely loaded into LLM context (templates, guides, configs).
+var textAssetExtensions = map[string]bool{
+	".md":       true,
+	".tex":      true,
+	".py":       true,
+	".yaml":     true,
+	".yml":      true,
+	".tsx":      true,
+	".ts":       true,
+	".jsx":      true,
+	".sty":      true,
+	".mplstyle": true,
+	".ipynb":    true,
+}
+
+func countAssetFiles(dir string, enc tokenizer.Codec) []validator.TokenCount {
+	var counts []validator.TokenCount
+	assetsDir := filepath.Join(dir, "assets")
+
+	filepath.Walk(assetsDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return nil
+		}
+		if info.IsDir() {
+			if strings.HasPrefix(info.Name(), ".") && path != assetsDir {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		if strings.HasPrefix(info.Name(), ".") {
+			return nil
+		}
+		ext := strings.ToLower(filepath.Ext(info.Name()))
+		if !textAssetExtensions[ext] {
+			return nil
+		}
+		data, err := os.ReadFile(path)
+		if err != nil {
+			return nil
+		}
+		rel, _ := filepath.Rel(dir, path)
+		tokens, _, _ := enc.Encode(string(data))
+		counts = append(counts, validator.TokenCount{File: rel, Tokens: len(tokens)})
+		return nil
+	})
+
+	return counts
 }
 
 func countOtherFiles(dir string, enc tokenizer.Codec) []validator.TokenCount {

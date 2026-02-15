@@ -299,3 +299,128 @@ func TestCheckTokens_OtherFilesLimits(t *testing.T) {
 		requireResultContaining(t, results, validator.Error, "severely degrade performance")
 	})
 }
+
+// assetCounts filters token counts to only those with an "assets/" prefix.
+func assetCounts(counts []validator.TokenCount) []validator.TokenCount {
+	var out []validator.TokenCount
+	for _, c := range counts {
+		if strings.HasPrefix(c.File, "assets/") {
+			out = append(out, c)
+		}
+	}
+	return out
+}
+
+func TestCountAssetFiles(t *testing.T) {
+	t.Run("counts text-based asset files in token_counts", func(t *testing.T) {
+		dir := t.TempDir()
+		writeFile(t, dir, "SKILL.md", "content")
+		writeFile(t, dir, "assets/template.md", "# Template\n\nFill this out.")
+		writeFile(t, dir, "assets/report.tex", "\\documentclass{article}\n\\begin{document}\nHello\n\\end{document}")
+		writeFile(t, dir, "assets/analysis.py", "import pandas as pd\n\ndef analyze():\n    pass")
+		_, counts, _ := CheckTokens(dir, "body")
+		ac := assetCounts(counts)
+		if len(ac) != 3 {
+			t.Fatalf("expected 3 asset counts, got %d", len(ac))
+		}
+		files := map[string]bool{}
+		for _, c := range ac {
+			files[c.File] = true
+			if c.Tokens <= 0 {
+				t.Errorf("expected positive tokens for %s, got %d", c.File, c.Tokens)
+			}
+		}
+		if !files["assets/template.md"] {
+			t.Error("expected assets/template.md in counts")
+		}
+		if !files["assets/report.tex"] {
+			t.Error("expected assets/report.tex in counts")
+		}
+		if !files["assets/analysis.py"] {
+			t.Error("expected assets/analysis.py in counts")
+		}
+	})
+
+	t.Run("counts all supported extensions", func(t *testing.T) {
+		dir := t.TempDir()
+		writeFile(t, dir, "assets/guide.md", "guide content")
+		writeFile(t, dir, "assets/report.tex", "tex content")
+		writeFile(t, dir, "assets/script.py", "py content")
+		writeFile(t, dir, "assets/config.yaml", "yaml content")
+		writeFile(t, dir, "assets/config2.yml", "yml content")
+		writeFile(t, dir, "assets/component.tsx", "tsx content")
+		writeFile(t, dir, "assets/util.ts", "ts content")
+		writeFile(t, dir, "assets/widget.jsx", "jsx content")
+		writeFile(t, dir, "assets/style.sty", "sty content")
+		writeFile(t, dir, "assets/plot.mplstyle", "mplstyle content")
+		writeFile(t, dir, "assets/notebook.ipynb", "ipynb content")
+		_, counts, _ := CheckTokens(dir, "body")
+		ac := assetCounts(counts)
+		if len(ac) != 11 {
+			t.Fatalf("expected 11 asset counts, got %d", len(ac))
+		}
+	})
+
+	t.Run("skips non-text asset files", func(t *testing.T) {
+		dir := t.TempDir()
+		writeFile(t, dir, "assets/logo.png", "fake png")
+		writeFile(t, dir, "assets/photo.jpg", "fake jpg")
+		writeFile(t, dir, "assets/icon.svg", "fake svg")
+		writeFile(t, dir, "assets/data.csv", "a,b,c")
+		writeFile(t, dir, "assets/template.md", "# Template")
+		_, counts, _ := CheckTokens(dir, "body")
+		ac := assetCounts(counts)
+		if len(ac) != 1 {
+			t.Fatalf("expected 1 asset count (template.md only), got %d", len(ac))
+		}
+		if ac[0].File != "assets/template.md" {
+			t.Errorf("expected assets/template.md, got %s", ac[0].File)
+		}
+	})
+
+	t.Run("counts files in asset subdirectories", func(t *testing.T) {
+		dir := t.TempDir()
+		writeFile(t, dir, "assets/templates/report.tex", "tex content")
+		writeFile(t, dir, "assets/templates/plan.md", "plan content")
+		writeFile(t, dir, "assets/styles/custom.sty", "sty content")
+		_, counts, _ := CheckTokens(dir, "body")
+		ac := assetCounts(counts)
+		if len(ac) != 3 {
+			t.Fatalf("expected 3 asset counts, got %d", len(ac))
+		}
+	})
+
+	t.Run("skips hidden files in assets", func(t *testing.T) {
+		dir := t.TempDir()
+		writeFile(t, dir, "assets/.hidden.md", "hidden")
+		writeFile(t, dir, "assets/visible.md", "visible")
+		_, counts, _ := CheckTokens(dir, "body")
+		ac := assetCounts(counts)
+		if len(ac) != 1 {
+			t.Fatalf("expected 1 asset count, got %d", len(ac))
+		}
+	})
+
+	t.Run("no assets directory returns empty", func(t *testing.T) {
+		dir := t.TempDir()
+		_, counts, _ := CheckTokens(dir, "body")
+		ac := assetCounts(counts)
+		if len(ac) != 0 {
+			t.Fatalf("expected 0 asset counts, got %d", len(ac))
+		}
+	})
+
+	t.Run("assets excluded from other counts and included in token counts", func(t *testing.T) {
+		dir := t.TempDir()
+		writeFile(t, dir, "SKILL.md", "content")
+		writeFile(t, dir, "assets/template.md", "template content")
+		_, counts, otherCounts := CheckTokens(dir, "body")
+		if len(otherCounts) != 0 {
+			t.Fatalf("expected 0 other counts, got %d", len(otherCounts))
+		}
+		ac := assetCounts(counts)
+		if len(ac) != 1 {
+			t.Fatalf("expected 1 asset in token counts, got %d", len(ac))
+		}
+	})
+}

@@ -306,6 +306,18 @@ func TestCheckCommand_AllChecks(t *testing.T) {
 		t.Error("expected ContaminationReport to be set")
 	}
 
+	// valid-skill has assets/template.md — asset tokens should be in TokenCounts
+	hasAsset := false
+	for _, tc := range r.TokenCounts {
+		if strings.HasPrefix(tc.File, "assets/") {
+			hasAsset = true
+			break
+		}
+	}
+	if !hasAsset {
+		t.Error("expected asset files in TokenCounts for valid-skill with assets/ directory")
+	}
+
 	// valid-skill has references/guide.md
 	if r.ReferencesContentReport == nil {
 		t.Error("expected ReferencesContentReport to be set for valid-skill")
