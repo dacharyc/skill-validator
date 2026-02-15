@@ -151,6 +151,81 @@ func TestFindPrimaryCategory(t *testing.T) {
 	})
 }
 
+func TestMismatchWeight(t *testing.T) {
+	tests := []struct {
+		cat1, cat2 string
+		want       float64
+	}{
+		{"python", "javascript", 1.0},  // app ↔ app
+		{"java", "dotnet", 1.0},        // app ↔ app
+		{"python", "shell", 0.25},      // app ↔ aux
+		{"javascript", "config", 0.25}, // app ↔ aux
+		{"shell", "config", 0.1},       // aux ↔ aux
+		{"query", "markup", 0.1},       // aux ↔ aux
+	}
+	for _, tt := range tests {
+		got := mismatchWeight(tt.cat1, tt.cat2)
+		if got != tt.want {
+			t.Errorf("mismatchWeight(%s, %s) = %f, want %f", tt.cat1, tt.cat2, got, tt.want)
+		}
+	}
+}
+
+func TestAnalyze_AuxiliaryOnlyMismatches(t *testing.T) {
+	// python + bash + yaml: auxiliary mismatches should score low
+	languages := []string{"python", "python", "bash", "yaml"}
+	r := Analyze("deploy-skill", "Deploy with bash and config.", languages)
+	if !r.LanguageMismatch {
+		t.Error("expected language mismatch")
+	}
+	// 2 auxiliary mismatches × 0.25 = 0.50 weighted → 0.4 × (0.50/3) ≈ 0.067
+	// No multi-interface tool, scope breadth = 3 → factor3 = 0.3 * (1/4) = 0.075
+	// Total ≈ 0.142, should be low
+	if r.ContaminationLevel != "low" {
+		t.Errorf("expected low contamination for python+bash+yaml, got %s (score=%f)", r.ContaminationLevel, r.ContaminationScore)
+	}
+	// Verify weights are populated
+	if w, ok := r.MismatchWeights["shell"]; !ok || w != 0.25 {
+		t.Errorf("expected shell weight 0.25, got %f (ok=%v)", w, ok)
+	}
+	if w, ok := r.MismatchWeights["config"]; !ok || w != 0.25 {
+		t.Errorf("expected config weight 0.25, got %f (ok=%v)", w, ok)
+	}
+}
+
+func TestAnalyze_ApplicationOnlyMismatches(t *testing.T) {
+	// python + javascript + ruby: all application mismatches, score unchanged from old behavior
+	languages := []string{"python", "python", "javascript", "ruby"}
+	r := Analyze("multi-sdk", "Multi-SDK skill.", languages)
+	if !r.LanguageMismatch {
+		t.Error("expected language mismatch")
+	}
+	// 2 app mismatches × 1.0 = 2.0 weighted → 0.4 × (2.0/3) ≈ 0.267
+	if r.ContaminationScore < 0.2 {
+		t.Errorf("expected score >= 0.2 for app-only mismatches, got %f", r.ContaminationScore)
+	}
+	if w := r.MismatchWeights["javascript"]; w != 1.0 {
+		t.Errorf("expected javascript weight 1.0, got %f", w)
+	}
+	if w := r.MismatchWeights["ruby"]; w != 1.0 {
+		t.Errorf("expected ruby weight 1.0, got %f", w)
+	}
+}
+
+func TestAnalyze_MixedMismatches(t *testing.T) {
+	// java + config + shell + markup: 3 auxiliary mismatches
+	languages := []string{"java", "java", "yaml", "bash", "html"}
+	r := Analyze("spring-boot", "Spring Boot app with config.", languages)
+	if !r.LanguageMismatch {
+		t.Error("expected language mismatch")
+	}
+	// 3 auxiliary mismatches × 0.25 = 0.75 weighted → 0.4 × (0.75/3) = 0.1
+	// Should be significantly lower than old score of 0.4 × (3/3) = 0.4
+	if r.ContaminationScore >= 0.4 {
+		t.Errorf("expected score < 0.4 for java+config+shell+markup, got %f", r.ContaminationScore)
+	}
+}
+
 func TestContaminationLevels(t *testing.T) {
 	tests := []struct {
 		score float64

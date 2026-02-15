@@ -56,18 +56,61 @@ var techPatterns = map[string]string{
 	"flutter": "mobile",
 }
 
+// Categories classified by type for syntactic similarity weighting.
+// Application languages have high confusion risk with each other (per PLC research).
+// Auxiliary languages (config, scripting, markup) have low confusion risk with application languages.
+var applicationCategories = map[string]bool{
+	"javascript": true,
+	"python":     true,
+	"java":       true,
+	"systems":    true,
+	"ruby":       true,
+	"dotnet":     true,
+	"mobile":     true,
+}
+
+var auxiliaryCategories = map[string]bool{
+	"shell":  true,
+	"config": true,
+	"query":  true,
+	"markup": true,
+}
+
+// mismatchWeight returns the similarity weight for a pair of language categories.
+// Application↔Application: 1.0 (high syntactic confusion risk)
+// Application↔Auxiliary: 0.25 (low confusion risk, syntactically very different)
+// Auxiliary↔Auxiliary: 0.1 (minimal confusion risk)
+func mismatchWeight(cat1, cat2 string) float64 {
+	app1 := applicationCategories[cat1]
+	app2 := applicationCategories[cat2]
+	if app1 && app2 {
+		return 1.0
+	}
+	aux1 := auxiliaryCategories[cat1]
+	aux2 := auxiliaryCategories[cat2]
+	if aux1 && aux2 {
+		return 0.1
+	}
+	if (app1 && aux2) || (aux1 && app2) {
+		return 0.25
+	}
+	// Unknown category: treat as application-level mismatch
+	return 1.0
+}
+
 // Report holds contamination metrics for a skill.
 type Report struct {
-	MultiInterfaceTools  []string `json:"multi_interface_tools"`
-	CodeLanguages        []string `json:"code_languages"`
-	LanguageCategories   []string `json:"language_categories"`
-	PrimaryCategory      string   `json:"primary_category"`
-	MismatchedCategories []string `json:"mismatched_categories"`
-	LanguageMismatch     bool     `json:"language_mismatch"`
-	TechReferences       []string `json:"tech_references"`
-	ScopeBreadth         int      `json:"scope_breadth"`
-	ContaminationScore   float64  `json:"contamination_score"`
-	ContaminationLevel   string   `json:"contamination_level"`
+	MultiInterfaceTools  []string           `json:"multi_interface_tools"`
+	CodeLanguages        []string           `json:"code_languages"`
+	LanguageCategories   []string           `json:"language_categories"`
+	PrimaryCategory      string             `json:"primary_category"`
+	MismatchedCategories []string           `json:"mismatched_categories"`
+	MismatchWeights      map[string]float64 `json:"mismatch_weights"`
+	LanguageMismatch     bool               `json:"language_mismatch"`
+	TechReferences       []string           `json:"tech_references"`
+	ScopeBreadth         int                `json:"scope_breadth"`
+	ContaminationScore   float64            `json:"contamination_score"`
+	ContaminationLevel   string             `json:"contamination_level"`
 }
 
 // Analyze computes contamination metrics for a skill.
@@ -118,8 +161,17 @@ func Analyze(name string, content string, codeLanguages []string) *Report {
 	}
 
 	// Factor 2: Language mismatch in code blocks (0.0-0.4)
+	// Weight mismatches by syntactic similarity: application↔application mismatches
+	// score higher than application↔auxiliary (per PLC research on language confusion).
+	mismatchWeights := make(map[string]float64)
 	if languageMismatch {
-		mismatchSeverity := math.Min(float64(len(mismatchedCategories))/3.0, 1.0)
+		weightedMismatch := 0.0
+		for cat := range mismatchedCategories {
+			w := mismatchWeight(primaryCategory, cat)
+			mismatchWeights[cat] = w
+			weightedMismatch += w
+		}
+		mismatchSeverity := math.Min(weightedMismatch/3.0, 1.0)
 		factors += 0.4 * mismatchSeverity
 	}
 
@@ -145,6 +197,7 @@ func Analyze(name string, content string, codeLanguages []string) *Report {
 		LanguageCategories:   sortedKeys(langCategories),
 		PrimaryCategory:      primaryCategory,
 		MismatchedCategories: sortedKeys(mismatchedCategories),
+		MismatchWeights:      mismatchWeights,
 		LanguageMismatch:     languageMismatch,
 		TechReferences:       sortedKeys(techRefs),
 		ScopeBreadth:         scopeBreadth,
