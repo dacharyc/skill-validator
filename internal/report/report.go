@@ -5,6 +5,8 @@ import (
 	"io"
 	"strings"
 
+	"github.com/dacharyc/skill-validator/internal/contamination"
+	"github.com/dacharyc/skill-validator/internal/content"
 	"github.com/dacharyc/skill-validator/internal/validator"
 )
 
@@ -17,7 +19,7 @@ const (
 	colorBold   = "\033[1m"
 )
 
-func Print(w io.Writer, r *validator.Report) {
+func Print(w io.Writer, r *validator.Report, perFile bool) {
 	fmt.Fprintf(w, "\n%sValidating skill: %s%s\n", colorBold, r.SkillDir, colorReset)
 
 	// Group results by category, preserving order of first appearance
@@ -107,41 +109,40 @@ func Print(w io.Writer, r *validator.Report) {
 
 	// Content analysis
 	if r.ContentReport != nil {
-		cr := r.ContentReport
-		fmt.Fprintf(w, "\n%sContent Analysis%s\n", colorBold, colorReset)
-		fmt.Fprintf(w, "  Word count:               %s\n", formatNumber(cr.WordCount))
-		fmt.Fprintf(w, "  Code block ratio:         %.2f\n", cr.CodeBlockRatio)
-		fmt.Fprintf(w, "  Imperative ratio:         %.2f\n", cr.ImperativeRatio)
-		fmt.Fprintf(w, "  Information density:      %.2f\n", cr.InformationDensity)
-		fmt.Fprintf(w, "  Instruction specificity:  %.2f\n", cr.InstructionSpecificity)
-		fmt.Fprintf(w, "  Sections: %d  |  List items: %d  |  Code blocks: %d\n",
-			cr.SectionCount, cr.ListItemCount, cr.CodeBlockCount)
+		printContentReport(w, "Content Analysis", r.ContentReport)
+	}
+
+	// References content analysis
+	if r.ReferencesContentReport != nil {
+		printContentReport(w, "References Content Analysis", r.ReferencesContentReport)
+	}
+
+	// Per-file content analysis
+	if perFile && len(r.ReferenceReports) > 0 {
+		for _, fr := range r.ReferenceReports {
+			if fr.ContentReport != nil {
+				printContentReport(w, fmt.Sprintf("  [%s] Content Analysis", fr.File), fr.ContentReport)
+			}
+		}
 	}
 
 	// Contamination analysis
 	if r.ContaminationReport != nil {
-		rr := r.ContaminationReport
-		fmt.Fprintf(w, "\n%sContamination Analysis%s\n", colorBold, colorReset)
-		levelColor := colorGreen
-		if rr.ContaminationLevel == "high" {
-			levelColor = colorRed
-		} else if rr.ContaminationLevel == "medium" {
-			levelColor = colorYellow
+		printContaminationReport(w, "Contamination Analysis", r.ContaminationReport)
+	}
+
+	// References contamination analysis
+	if r.ReferencesContaminationReport != nil {
+		printContaminationReport(w, "References Contamination Analysis", r.ReferencesContaminationReport)
+	}
+
+	// Per-file contamination analysis
+	if perFile && len(r.ReferenceReports) > 0 {
+		for _, fr := range r.ReferenceReports {
+			if fr.ContaminationReport != nil {
+				printContaminationReport(w, fmt.Sprintf("  [%s] Contamination Analysis", fr.File), fr.ContaminationReport)
+			}
 		}
-		fmt.Fprintf(w, "  Contamination level: %s%s%s (score: %.2f)\n", levelColor, rr.ContaminationLevel, colorReset, rr.ContaminationScore)
-		if rr.PrimaryCategory != "" {
-			fmt.Fprintf(w, "  Primary language category: %s\n", rr.PrimaryCategory)
-		}
-		if rr.LanguageMismatch && len(rr.MismatchedCategories) > 0 {
-			fmt.Fprintf(w, "  %s⚠ Language mismatch: %s (%d categor%s differ from primary)%s\n",
-				colorYellow, strings.Join(rr.MismatchedCategories, ", "),
-				len(rr.MismatchedCategories), ySuffix(len(rr.MismatchedCategories)), colorReset)
-		}
-		if len(rr.MultiInterfaceTools) > 0 {
-			fmt.Fprintf(w, "  %sℹ Multi-interface tool detected: %s%s\n",
-				colorCyan, strings.Join(rr.MultiInterfaceTools, ", "), colorReset)
-		}
-		fmt.Fprintf(w, "  Scope breadth: %d\n", rr.ScopeBreadth)
 	}
 
 	// Summary
@@ -162,12 +163,12 @@ func Print(w io.Writer, r *validator.Report) {
 }
 
 // PrintMulti prints each skill report separated by a line, with an overall summary.
-func PrintMulti(w io.Writer, mr *validator.MultiReport) {
+func PrintMulti(w io.Writer, mr *validator.MultiReport, perFile bool) {
 	for i, r := range mr.Skills {
 		if i > 0 {
 			fmt.Fprintf(w, "\n%s\n", strings.Repeat("━", 60))
 		}
-		Print(w, r)
+		Print(w, r, perFile)
 	}
 
 	passed := 0
@@ -204,6 +205,41 @@ func PrintMulti(w io.Writer, mr *validator.MultiReport) {
 		fmt.Fprintf(w, "%sTotal: %s%s\n", colorBold, strings.Join(countParts, ", "), colorReset)
 	}
 	fmt.Fprintln(w)
+}
+
+func printContentReport(w io.Writer, title string, cr *content.Report) {
+	fmt.Fprintf(w, "\n%s%s%s\n", colorBold, title, colorReset)
+	fmt.Fprintf(w, "  Word count:               %s\n", formatNumber(cr.WordCount))
+	fmt.Fprintf(w, "  Code block ratio:         %.2f\n", cr.CodeBlockRatio)
+	fmt.Fprintf(w, "  Imperative ratio:         %.2f\n", cr.ImperativeRatio)
+	fmt.Fprintf(w, "  Information density:      %.2f\n", cr.InformationDensity)
+	fmt.Fprintf(w, "  Instruction specificity:  %.2f\n", cr.InstructionSpecificity)
+	fmt.Fprintf(w, "  Sections: %d  |  List items: %d  |  Code blocks: %d\n",
+		cr.SectionCount, cr.ListItemCount, cr.CodeBlockCount)
+}
+
+func printContaminationReport(w io.Writer, title string, rr *contamination.Report) {
+	fmt.Fprintf(w, "\n%s%s%s\n", colorBold, title, colorReset)
+	levelColor := colorGreen
+	if rr.ContaminationLevel == "high" {
+		levelColor = colorRed
+	} else if rr.ContaminationLevel == "medium" {
+		levelColor = colorYellow
+	}
+	fmt.Fprintf(w, "  Contamination level: %s%s%s (score: %.2f)\n", levelColor, rr.ContaminationLevel, colorReset, rr.ContaminationScore)
+	if rr.PrimaryCategory != "" {
+		fmt.Fprintf(w, "  Primary language category: %s\n", rr.PrimaryCategory)
+	}
+	if rr.LanguageMismatch && len(rr.MismatchedCategories) > 0 {
+		fmt.Fprintf(w, "  %s⚠ Language mismatch: %s (%d categor%s differ from primary)%s\n",
+			colorYellow, strings.Join(rr.MismatchedCategories, ", "),
+			len(rr.MismatchedCategories), ySuffix(len(rr.MismatchedCategories)), colorReset)
+	}
+	if len(rr.MultiInterfaceTools) > 0 {
+		fmt.Fprintf(w, "  %sℹ Multi-interface tool detected: %s%s\n",
+			colorCyan, strings.Join(rr.MultiInterfaceTools, ", "), colorReset)
+	}
+	fmt.Fprintf(w, "  Scope breadth: %d\n", rr.ScopeBreadth)
 }
 
 func formatLevel(level validator.Level) (string, string) {

@@ -7,6 +7,8 @@ import (
 	"github.com/dacharyc/skill-validator/internal/validator"
 )
 
+var perFileContent bool
+
 var analyzeContentCmd = &cobra.Command{
 	Use:   "content <path>",
 	Short: "Analyze content quality metrics",
@@ -16,6 +18,7 @@ var analyzeContentCmd = &cobra.Command{
 }
 
 func init() {
+	analyzeContentCmd.Flags().BoolVar(&perFileContent, "per-file", false, "show per-file reference analysis")
 	analyzeCmd.AddCommand(analyzeContentCmd)
 }
 
@@ -28,7 +31,7 @@ func runAnalyzeContent(cmd *cobra.Command, args []string) error {
 	switch mode {
 	case validator.SingleSkill:
 		r := runContentAnalysis(dirs[0])
-		return outputReport(r)
+		return outputReportWithPerFile(r, perFileContent)
 	case validator.MultiSkill:
 		mr := &validator.MultiReport{}
 		for _, dir := range dirs {
@@ -37,7 +40,7 @@ func runAnalyzeContent(cmd *cobra.Command, args []string) error {
 			mr.Errors += r.Errors
 			mr.Warnings += r.Warnings
 		}
-		return outputMultiReport(mr)
+		return outputMultiReportWithPerFile(mr, perFileContent)
 	}
 	return nil
 }
@@ -59,10 +62,7 @@ func runContentAnalysis(dir string) *validator.Report {
 		Level: validator.Pass, Category: "Content", Message: "content analysis complete",
 	})
 
-	return rpt
-}
+	validator.AnalyzeReferences(dir, rpt)
 
-// AppendContentAnalysis runs content analysis and sets the report's ContentReport.
-func AppendContentAnalysis(rpt *validator.Report, rawContent string) {
-	rpt.ContentReport = content.Analyze(rawContent)
+	return rpt
 }

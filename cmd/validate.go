@@ -21,13 +21,17 @@ func init() {
 }
 
 func outputReport(r *validator.Report) error {
+	return outputReportWithPerFile(r, false)
+}
+
+func outputReportWithPerFile(r *validator.Report, perFile bool) error {
 	switch outputFormat {
 	case "json":
-		if err := report.PrintJSON(os.Stdout, r); err != nil {
+		if err := report.PrintJSON(os.Stdout, r, perFile); err != nil {
 			return fmt.Errorf("writing JSON: %w", err)
 		}
 	default:
-		report.Print(os.Stdout, r)
+		report.Print(os.Stdout, r, perFile)
 	}
 	if r.Errors > 0 {
 		os.Exit(1)
@@ -36,13 +40,17 @@ func outputReport(r *validator.Report) error {
 }
 
 func outputMultiReport(mr *validator.MultiReport) error {
+	return outputMultiReportWithPerFile(mr, false)
+}
+
+func outputMultiReportWithPerFile(mr *validator.MultiReport, perFile bool) error {
 	switch outputFormat {
 	case "json":
-		if err := report.PrintMultiJSON(os.Stdout, mr); err != nil {
+		if err := report.PrintMultiJSON(os.Stdout, mr, perFile); err != nil {
 			return fmt.Errorf("writing JSON: %w", err)
 		}
 	default:
-		report.PrintMulti(os.Stdout, mr)
+		report.PrintMulti(os.Stdout, mr, perFile)
 	}
 	if mr.Errors > 0 {
 		os.Exit(1)

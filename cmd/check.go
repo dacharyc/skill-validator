@@ -15,8 +15,9 @@ import (
 )
 
 var (
-	checkOnly string
-	checkSkip string
+	checkOnly    string
+	checkSkip    string
+	perFileCheck bool
 )
 
 var checkCmd = &cobra.Command{
@@ -30,6 +31,7 @@ var checkCmd = &cobra.Command{
 func init() {
 	checkCmd.Flags().StringVar(&checkOnly, "only", "", "comma-separated list of check groups to run: structure,links,content,contamination")
 	checkCmd.Flags().StringVar(&checkSkip, "skip", "", "comma-separated list of check groups to skip: structure,links,content,contamination")
+	checkCmd.Flags().BoolVar(&perFileCheck, "per-file", false, "show per-file reference analysis")
 	rootCmd.AddCommand(checkCmd)
 }
 
@@ -58,7 +60,7 @@ func runCheck(cmd *cobra.Command, args []string) error {
 	switch mode {
 	case validator.SingleSkill:
 		r := runAllChecks(dirs[0], enabled)
-		return outputReport(r)
+		return outputReportWithPerFile(r, perFileCheck)
 	case validator.MultiSkill:
 		mr := &validator.MultiReport{}
 		for _, dir := range dirs {
@@ -67,7 +69,7 @@ func runCheck(cmd *cobra.Command, args []string) error {
 			mr.Errors += r.Errors
 			mr.Warnings += r.Warnings
 		}
-		return outputMultiReport(mr)
+		return outputMultiReportWithPerFile(mr, perFileCheck)
 	}
 	return nil
 }
@@ -161,6 +163,25 @@ func runAllChecks(dir string, enabled map[string]bool) *validator.Report {
 			}
 			skillName := filepath.Base(dir)
 			rpt.ContaminationReport = contamination.Analyze(skillName, rawContent, codeLanguages)
+		}
+
+		// Reference file analysis (both content and contamination)
+		if enabled["content"] || enabled["contamination"] {
+			validator.AnalyzeReferences(dir, rpt)
+			// If content is disabled, clear the content-specific reference fields
+			if !enabled["content"] {
+				rpt.ReferencesContentReport = nil
+				for i := range rpt.ReferenceReports {
+					rpt.ReferenceReports[i].ContentReport = nil
+				}
+			}
+			// If contamination is disabled, clear the contamination-specific reference fields
+			if !enabled["contamination"] {
+				rpt.ReferencesContaminationReport = nil
+				for i := range rpt.ReferenceReports {
+					rpt.ReferenceReports[i].ContaminationReport = nil
+				}
+			}
 		}
 	}
 

@@ -10,6 +10,8 @@ import (
 	"github.com/dacharyc/skill-validator/internal/validator"
 )
 
+var perFileContamination bool
+
 var analyzeContaminationCmd = &cobra.Command{
 	Use:   "contamination <path>",
 	Short: "Assess cross-language contamination",
@@ -19,6 +21,7 @@ var analyzeContaminationCmd = &cobra.Command{
 }
 
 func init() {
+	analyzeContaminationCmd.Flags().BoolVar(&perFileContamination, "per-file", false, "show per-file reference analysis")
 	analyzeCmd.AddCommand(analyzeContaminationCmd)
 }
 
@@ -31,7 +34,7 @@ func runAnalyzeContamination(cmd *cobra.Command, args []string) error {
 	switch mode {
 	case validator.SingleSkill:
 		r := runContaminationAnalysis(dirs[0])
-		return outputReport(r)
+		return outputReportWithPerFile(r, perFileContamination)
 	case validator.MultiSkill:
 		mr := &validator.MultiReport{}
 		for _, dir := range dirs {
@@ -40,7 +43,7 @@ func runAnalyzeContamination(cmd *cobra.Command, args []string) error {
 			mr.Errors += r.Errors
 			mr.Warnings += r.Warnings
 		}
-		return outputMultiReport(mr)
+		return outputMultiReportWithPerFile(mr, perFileContamination)
 	}
 	return nil
 }
@@ -66,11 +69,7 @@ func runContaminationAnalysis(dir string) *validator.Report {
 		Level: validator.Pass, Category: "Contamination", Message: "contamination analysis complete",
 	})
 
-	return rpt
-}
+	validator.AnalyzeReferences(dir, rpt)
 
-// AppendContaminationAnalysis runs contamination analysis and sets the report's ContaminationReport.
-func AppendContaminationAnalysis(rpt *validator.Report, dir string, rawContent string, codeLanguages []string) {
-	skillName := filepath.Base(dir)
-	rpt.ContaminationReport = contamination.Analyze(skillName, rawContent, codeLanguages)
+	return rpt
 }

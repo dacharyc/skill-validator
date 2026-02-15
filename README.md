@@ -80,9 +80,10 @@ Validates external (HTTP/HTTPS) links in SKILL.md. Internal (relative) links are
 
 ```
 skill-validator analyze content <path>
+skill-validator analyze content --per-file <path>
 ```
 
-Computes content quality metrics:
+Computes content quality metrics for SKILL.md and reference markdown files:
 
 ```
 Content Analysis
@@ -92,17 +93,26 @@ Content Analysis
   Information density:      0.39
   Instruction specificity:  0.78
   Sections: 6  |  List items: 23  |  Code blocks: 8
+
+References Content Analysis
+  Word count:               820
+  ...
+
+References Contamination Analysis
+  Contamination level: low (score: 0.00)
+  Scope breadth: 0
 ```
 
-Metrics include word count, code block count/ratio, code languages, sentence count, imperative sentence ratio, information density, strong/weak language markers, instruction specificity, section count, and list item count.
+Metrics include word count, code block count/ratio, code languages, sentence count, imperative sentence ratio, information density, strong/weak language markers, instruction specificity, section count, and list item count. Reference files in `references/` are analyzed in aggregate. Use `--per-file` to see a breakdown by individual reference file.
 
 ### analyze contamination
 
 ```
 skill-validator analyze contamination <path>
+skill-validator analyze contamination --per-file <path>
 ```
 
-Detects cross-language contamination — skills where code examples in one language could cause incorrect code generation in another context:
+Detects cross-language contamination — skills where code examples in one language could cause incorrect code generation in another context. Analyzes both SKILL.md and reference markdown files:
 
 ```
 Contamination Analysis
@@ -111,9 +121,13 @@ Contamination Analysis
   ⚠ Language mismatch: python, shell (2 categories differ from primary)
   ℹ Multi-interface tool detected: mongodb
   Scope breadth: 4
+
+References Contamination Analysis
+  Contamination level: low (score: 0.00)
+  Scope breadth: 0
 ```
 
-Contamination scoring considers three factors: multi-interface tools (0.3 weight), language mismatch across code blocks (0.4 weight), and scope breadth (0.3 weight).
+Contamination scoring considers three factors: multi-interface tools (0.3 weight), language mismatch across code blocks (0.4 weight), and scope breadth (0.3 weight). Reference files in `references/` are analyzed in aggregate. Use `--per-file` to see a breakdown by individual reference file.
 
 ### check
 
@@ -121,9 +135,10 @@ Contamination scoring considers three factors: multi-interface tools (0.3 weight
 skill-validator check <path>
 skill-validator check --only structure,links <path>
 skill-validator check --skip contamination <path>
+skill-validator check --per-file <path>
 ```
 
-Runs all checks (structure + links + content + contamination). Use `--only` or `--skip` to select specific check groups. The flags are mutually exclusive.
+Runs all checks (structure + links + content + contamination). Use `--only` or `--skip` to select specific check groups. The flags are mutually exclusive. Use `--per-file` to see per-file reference analysis alongside the aggregate.
 
 Valid check groups: `structure`, `links`, `content`, `contamination`.
 
@@ -162,17 +177,26 @@ skill-validator check -o json my-skill/
     "section_count": 4,
     "list_item_count": 12
   },
+  "references_content_analysis": { "..." : "same shape as content_analysis" },
   "contamination_analysis": {
     "multi_interface_tools": ["mongodb"],
     "contamination_score": 0.35,
     "contamination_level": "medium",
     "language_mismatch": true,
     "scope_breadth": 4
-  }
+  },
+  "references_contamination_analysis": { "..." : "same shape as contamination_analysis" },
+  "reference_reports": [
+    {
+      "file": "guide.md",
+      "content_analysis": { "..." : "same shape" },
+      "contamination_analysis": { "..." : "same shape" }
+    }
+  ]
 }
 ```
 
-The `passed` field is `true` when `errors` is `0`. Token count, content analysis, and contamination analysis sections are omitted when not computed. Pipe to `jq` for post-processing:
+The `passed` field is `true` when `errors` is `0`. Token count, content analysis, and contamination analysis sections are omitted when not computed. The `reference_reports` array is only included with `--per-file`. Pipe to `jq` for post-processing:
 
 ```
 skill-validator check -o json my-skill/ | jq '.content_analysis'
@@ -256,7 +280,7 @@ These checks validate conformance with the [Agent Skills specification](https://
 
 ### Content analysis (`analyze content`)
 
-Computes content quality metrics ported from the [agent-skill-analysis](https://github.com/dacharyc/agent-skill-analysis) research project:
+Computes content quality metrics ported from the [agent-skill-analysis](https://github.com/dacharyc/agent-skill-analysis) research project. Analyzes SKILL.md and markdown files in `references/` (aggregate and per-file):
 
 - **Word count**: total words in SKILL.md
 - **Code block count / ratio**: number and proportion of fenced code blocks
@@ -272,7 +296,7 @@ Computes content quality metrics ported from the [agent-skill-analysis](https://
 
 ### Contamination analysis (`analyze contamination`)
 
-Detects cross-language contamination — where code examples in one language could cause incorrect generation in another context:
+Detects cross-language contamination — where code examples in one language could cause incorrect generation in another context. Analyzes SKILL.md and markdown files in `references/` (aggregate and per-file):
 
 - **Multi-interface tools**: detects tools with many language bindings (MongoDB, AWS, Docker, Kubernetes, Redis, etc.) by scanning the skill name and content
 - **Language categories**: maps code block languages to broad categories (shell, javascript, python, java, systems, config, etc.)

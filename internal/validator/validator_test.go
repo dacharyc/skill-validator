@@ -6,6 +6,201 @@ import (
 	"testing"
 )
 
+func TestLevelString(t *testing.T) {
+	tests := []struct {
+		level Level
+		want  string
+	}{
+		{Pass, "pass"},
+		{Info, "info"},
+		{Warning, "warning"},
+		{Error, "error"},
+		{Level(99), "unknown"},
+	}
+	for _, tt := range tests {
+		if got := tt.level.String(); got != tt.want {
+			t.Errorf("Level(%d).String() = %q, want %q", tt.level, got, tt.want)
+		}
+	}
+}
+
+func TestTally(t *testing.T) {
+	r := &Report{
+		Results: []Result{
+			{Level: Pass, Category: "A", Message: "ok"},
+			{Level: Error, Category: "B", Message: "bad"},
+			{Level: Warning, Category: "C", Message: "meh"},
+			{Level: Error, Category: "D", Message: "also bad"},
+			{Level: Info, Category: "E", Message: "fyi"},
+		},
+	}
+	r.Tally()
+	if r.Errors != 2 {
+		t.Errorf("Errors = %d, want 2", r.Errors)
+	}
+	if r.Warnings != 1 {
+		t.Errorf("Warnings = %d, want 1", r.Warnings)
+	}
+}
+
+func TestTally_Empty(t *testing.T) {
+	r := &Report{Errors: 5, Warnings: 3}
+	r.Tally()
+	if r.Errors != 0 {
+		t.Errorf("Errors = %d, want 0", r.Errors)
+	}
+	if r.Warnings != 0 {
+		t.Errorf("Warnings = %d, want 0", r.Warnings)
+	}
+}
+
+func TestLoadSkill(t *testing.T) {
+	dir := t.TempDir()
+	writeSkill(t, dir, "---\nname: test-skill\ndescription: A test\n---\n# Hello\n")
+
+	s, err := LoadSkill(dir)
+	if err != nil {
+		t.Fatalf("LoadSkill error: %v", err)
+	}
+	if s.Frontmatter.Name != "test-skill" {
+		t.Errorf("Name = %q, want test-skill", s.Frontmatter.Name)
+	}
+}
+
+func TestLoadSkill_Missing(t *testing.T) {
+	dir := t.TempDir()
+	_, err := LoadSkill(dir)
+	if err == nil {
+		t.Error("expected error for missing SKILL.md")
+	}
+}
+
+func TestReadSkillRaw(t *testing.T) {
+	dir := t.TempDir()
+	content := "---\nname: raw\n---\n# Raw Skill\nSome content.\n"
+	writeSkill(t, dir, content)
+
+	got := ReadSkillRaw(dir)
+	if got != content {
+		t.Errorf("ReadSkillRaw = %q, want %q", got, content)
+	}
+}
+
+func TestReadSkillRaw_Missing(t *testing.T) {
+	dir := t.TempDir()
+	got := ReadSkillRaw(dir)
+	if got != "" {
+		t.Errorf("ReadSkillRaw = %q, want empty", got)
+	}
+}
+
+func TestReadReferencesMarkdownFiles(t *testing.T) {
+	dir := t.TempDir()
+	refsDir := filepath.Join(dir, "references")
+	if err := os.MkdirAll(refsDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	os.WriteFile(filepath.Join(refsDir, "guide.md"), []byte("# Guide"), 0644)
+	os.WriteFile(filepath.Join(refsDir, "notes.md"), []byte("# Notes"), 0644)
+	os.WriteFile(filepath.Join(refsDir, "data.json"), []byte(`{"skip": true}`), 0644)
+	os.MkdirAll(filepath.Join(refsDir, "subdir"), 0755)
+
+	files := ReadReferencesMarkdownFiles(dir)
+	if files == nil {
+		t.Fatal("expected non-nil map")
+	}
+	if len(files) != 2 {
+		t.Errorf("expected 2 files, got %d", len(files))
+	}
+	if files["guide.md"] != "# Guide" {
+		t.Errorf("guide.md content = %q", files["guide.md"])
+	}
+	if files["notes.md"] != "# Notes" {
+		t.Errorf("notes.md content = %q", files["notes.md"])
+	}
+}
+
+func TestReadReferencesMarkdownFiles_NoDir(t *testing.T) {
+	dir := t.TempDir()
+	files := ReadReferencesMarkdownFiles(dir)
+	if files != nil {
+		t.Errorf("expected nil, got %v", files)
+	}
+}
+
+func TestReadReferencesMarkdownFiles_EmptyDir(t *testing.T) {
+	dir := t.TempDir()
+	os.MkdirAll(filepath.Join(dir, "references"), 0755)
+	files := ReadReferencesMarkdownFiles(dir)
+	if files != nil {
+		t.Errorf("expected nil for empty references dir, got %v", files)
+	}
+}
+
+func TestReadReferencesMarkdownFiles_OnlyNonMd(t *testing.T) {
+	dir := t.TempDir()
+	refsDir := filepath.Join(dir, "references")
+	os.MkdirAll(refsDir, 0755)
+	os.WriteFile(filepath.Join(refsDir, "data.json"), []byte("{}"), 0644)
+
+	files := ReadReferencesMarkdownFiles(dir)
+	if files != nil {
+		t.Errorf("expected nil when only non-.md files, got %v", files)
+	}
+}
+
+func TestAnalyzeReferences_WithFiles(t *testing.T) {
+	dir := t.TempDir()
+	refsDir := filepath.Join(dir, "references")
+	os.MkdirAll(refsDir, 0755)
+	os.WriteFile(filepath.Join(refsDir, "alpha.md"), []byte("# Alpha\nUse this tool."), 0644)
+	os.WriteFile(filepath.Join(refsDir, "beta.md"), []byte("# Beta\nAnother reference."), 0644)
+
+	rpt := &Report{SkillDir: dir}
+	AnalyzeReferences(dir, rpt)
+
+	if rpt.ReferencesContentReport == nil {
+		t.Fatal("expected aggregate ReferencesContentReport")
+	}
+	if rpt.ReferencesContaminationReport == nil {
+		t.Fatal("expected aggregate ReferencesContaminationReport")
+	}
+	if len(rpt.ReferenceReports) != 2 {
+		t.Fatalf("expected 2 per-file reports, got %d", len(rpt.ReferenceReports))
+	}
+	// Sorted alphabetically
+	if rpt.ReferenceReports[0].File != "alpha.md" {
+		t.Errorf("first file = %q, want alpha.md", rpt.ReferenceReports[0].File)
+	}
+	if rpt.ReferenceReports[1].File != "beta.md" {
+		t.Errorf("second file = %q, want beta.md", rpt.ReferenceReports[1].File)
+	}
+	for _, fr := range rpt.ReferenceReports {
+		if fr.ContentReport == nil {
+			t.Errorf("%s: expected ContentReport", fr.File)
+		}
+		if fr.ContaminationReport == nil {
+			t.Errorf("%s: expected ContaminationReport", fr.File)
+		}
+	}
+}
+
+func TestAnalyzeReferences_NoFiles(t *testing.T) {
+	dir := t.TempDir()
+	rpt := &Report{SkillDir: dir}
+	AnalyzeReferences(dir, rpt)
+
+	if rpt.ReferencesContentReport != nil {
+		t.Error("expected nil ReferencesContentReport")
+	}
+	if rpt.ReferencesContaminationReport != nil {
+		t.Error("expected nil ReferencesContaminationReport")
+	}
+	if len(rpt.ReferenceReports) != 0 {
+		t.Error("expected no ReferenceReports")
+	}
+}
+
 // writeSkill creates a SKILL.md file in the given directory.
 func writeSkill(t *testing.T, dir, content string) {
 	t.Helper()

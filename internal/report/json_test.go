@@ -22,7 +22,7 @@ func TestPrintJSON_Passed(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	if err := PrintJSON(&buf, r); err != nil {
+	if err := PrintJSON(&buf, r, false); err != nil {
 		t.Fatalf("PrintJSON error: %v", err)
 	}
 
@@ -71,7 +71,7 @@ func TestPrintJSON_Failed(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	if err := PrintJSON(&buf, r); err != nil {
+	if err := PrintJSON(&buf, r, false); err != nil {
 		t.Fatalf("PrintJSON error: %v", err)
 	}
 
@@ -115,7 +115,7 @@ func TestPrintJSON_LevelStrings(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	if err := PrintJSON(&buf, r); err != nil {
+	if err := PrintJSON(&buf, r, false); err != nil {
 		t.Fatalf("PrintJSON error: %v", err)
 	}
 
@@ -145,7 +145,7 @@ func TestPrintJSON_TokenCounts(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	if err := PrintJSON(&buf, r); err != nil {
+	if err := PrintJSON(&buf, r, false); err != nil {
 		t.Fatalf("PrintJSON error: %v", err)
 	}
 
@@ -182,7 +182,7 @@ func TestPrintJSON_NoTokenCounts(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	if err := PrintJSON(&buf, r); err != nil {
+	if err := PrintJSON(&buf, r, false); err != nil {
 		t.Fatalf("PrintJSON error: %v", err)
 	}
 
@@ -213,7 +213,7 @@ func TestPrintJSON_OtherTokenCounts(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	if err := PrintJSON(&buf, r); err != nil {
+	if err := PrintJSON(&buf, r, false); err != nil {
 		t.Fatalf("PrintJSON error: %v", err)
 	}
 
@@ -243,7 +243,7 @@ func TestPrintJSON_SpecialCharacters(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	if err := PrintJSON(&buf, r); err != nil {
+	if err := PrintJSON(&buf, r, false); err != nil {
 		t.Fatalf("PrintJSON error: %v", err)
 	}
 
@@ -276,7 +276,7 @@ func TestPrintMultiJSON_AllPassed(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	if err := PrintMultiJSON(&buf, mr); err != nil {
+	if err := PrintMultiJSON(&buf, mr, false); err != nil {
 		t.Fatalf("PrintMultiJSON error: %v", err)
 	}
 
@@ -331,7 +331,7 @@ func TestPrintMultiJSON_SomeFailed(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	if err := PrintMultiJSON(&buf, mr); err != nil {
+	if err := PrintMultiJSON(&buf, mr, false); err != nil {
 		t.Fatalf("PrintMultiJSON error: %v", err)
 	}
 
@@ -372,7 +372,7 @@ func TestPrintMultiJSON_IncludesTokenCounts(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	if err := PrintMultiJSON(&buf, mr); err != nil {
+	if err := PrintMultiJSON(&buf, mr, false); err != nil {
 		t.Fatalf("PrintMultiJSON error: %v", err)
 	}
 
@@ -412,7 +412,7 @@ func TestPrintJSON_ContaminationAnalysis(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	if err := PrintJSON(&buf, r); err != nil {
+	if err := PrintJSON(&buf, r, false); err != nil {
 		t.Fatalf("PrintJSON error: %v", err)
 	}
 
@@ -460,7 +460,7 @@ func TestPrintJSON_NoContaminationAnalysis(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	if err := PrintJSON(&buf, r); err != nil {
+	if err := PrintJSON(&buf, r, false); err != nil {
 		t.Fatalf("PrintJSON error: %v", err)
 	}
 
@@ -496,7 +496,7 @@ func TestPrintJSON_ContentAnalysis(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	if err := PrintJSON(&buf, r); err != nil {
+	if err := PrintJSON(&buf, r, false); err != nil {
 		t.Fatalf("PrintJSON error: %v", err)
 	}
 
@@ -536,7 +536,7 @@ func TestPrintJSON_NoContentAnalysis(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	if err := PrintJSON(&buf, r); err != nil {
+	if err := PrintJSON(&buf, r, false); err != nil {
 		t.Fatalf("PrintJSON error: %v", err)
 	}
 
@@ -576,7 +576,7 @@ func TestPrintMultiJSON_WithContamination(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	if err := PrintMultiJSON(&buf, mr); err != nil {
+	if err := PrintMultiJSON(&buf, mr, false); err != nil {
 		t.Fatalf("PrintMultiJSON error: %v", err)
 	}
 

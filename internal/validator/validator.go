@@ -3,6 +3,7 @@ package validator
 import (
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/dacharyc/skill-validator/internal/contamination"
@@ -49,16 +50,26 @@ type TokenCount struct {
 	Tokens int
 }
 
+// ReferenceFileReport holds per-file content and contamination analysis for a single reference file.
+type ReferenceFileReport struct {
+	File                string
+	ContentReport       *content.Report
+	ContaminationReport *contamination.Report
+}
+
 // Report holds all validation results and token counts.
 type Report struct {
-	SkillDir             string
-	Results              []Result
-	TokenCounts          []TokenCount
-	OtherTokenCounts     []TokenCount
-	ContentReport        *content.Report
-	ContaminationReport  *contamination.Report
-	Errors               int
-	Warnings             int
+	SkillDir                      string
+	Results                       []Result
+	TokenCounts                   []TokenCount
+	OtherTokenCounts              []TokenCount
+	ContentReport                 *content.Report
+	ReferencesContentReport       *content.Report
+	ContaminationReport           *contamination.Report
+	ReferencesContaminationReport *contamination.Report
+	ReferenceReports              []ReferenceFileReport
+	Errors                        int
+	Warnings                      int
 }
 
 // SkillMode indicates what kind of skill directory was detected.
@@ -130,6 +141,73 @@ func ReadSkillRaw(dir string) string {
 		return ""
 	}
 	return string(data)
+}
+
+// ReadReferencesMarkdownFiles reads all .md files from <dir>/references/ and returns
+// a map from filename to content. Returns nil if no references dir or no .md files
+// are found.
+func ReadReferencesMarkdownFiles(dir string) map[string]string {
+	refsDir := filepath.Join(dir, "references")
+	entries, err := os.ReadDir(refsDir)
+	if err != nil {
+		return nil
+	}
+
+	files := make(map[string]string)
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+		if !strings.HasSuffix(strings.ToLower(entry.Name()), ".md") {
+			continue
+		}
+		data, err := os.ReadFile(filepath.Join(refsDir, entry.Name()))
+		if err != nil {
+			continue
+		}
+		files[entry.Name()] = string(data)
+	}
+
+	if len(files) == 0 {
+		return nil
+	}
+	return files
+}
+
+// AnalyzeReferences runs content and contamination analysis on reference markdown
+// files. It populates the aggregate ReferencesContentReport, ReferencesContaminationReport,
+// and per-file ReferenceReports on the given report.
+func AnalyzeReferences(dir string, rpt *Report) {
+	files := ReadReferencesMarkdownFiles(dir)
+	if files == nil {
+		return
+	}
+
+	// Sort filenames for deterministic ordering
+	names := make([]string, 0, len(files))
+	for name := range files {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+
+	// Per-file analysis
+	var parts []string
+	for _, name := range names {
+		fileContent := files[name]
+		parts = append(parts, fileContent)
+
+		fr := ReferenceFileReport{File: name}
+		fr.ContentReport = content.Analyze(fileContent)
+		skillName := filepath.Base(dir)
+		fr.ContaminationReport = contamination.Analyze(skillName, fileContent, fr.ContentReport.CodeLanguages)
+		rpt.ReferenceReports = append(rpt.ReferenceReports, fr)
+	}
+
+	// Aggregate analysis on concatenated content
+	concatenated := strings.Join(parts, "\n")
+	rpt.ReferencesContentReport = content.Analyze(concatenated)
+	skillName := filepath.Base(dir)
+	rpt.ReferencesContaminationReport = contamination.Analyze(skillName, concatenated, rpt.ReferencesContentReport.CodeLanguages)
 }
 
 // Tally counts errors and warnings in the report.

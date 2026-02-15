@@ -22,7 +22,7 @@ func TestPrint_Passed(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	Print(&buf, r)
+	Print(&buf, r, false)
 	output := buf.String()
 
 	if !strings.Contains(output, "Validating skill: /tmp/my-skill") {
@@ -52,7 +52,7 @@ func TestPrint_WithErrors(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	Print(&buf, r)
+	Print(&buf, r, false)
 	output := buf.String()
 
 	if !strings.Contains(output, "1 error") {
@@ -84,7 +84,7 @@ func TestPrint_InfoLevel(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	Print(&buf, r)
+	Print(&buf, r, false)
 	output := buf.String()
 
 	if !strings.Contains(output, "ℹ") {
@@ -113,7 +113,7 @@ func TestPrint_Pluralization(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	Print(&buf, r)
+	Print(&buf, r, false)
 	output := buf.String()
 
 	if !strings.Contains(output, "2 errors") {
@@ -137,7 +137,7 @@ func TestPrint_TokenCounts(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	Print(&buf, r)
+	Print(&buf, r, false)
 	output := buf.String()
 
 	if !strings.Contains(output, "Tokens") {
@@ -170,7 +170,7 @@ func TestPrint_NoTokenCounts(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	Print(&buf, r)
+	Print(&buf, r, false)
 	output := buf.String()
 
 	if strings.Contains(output, "Tokens\n") {
@@ -189,7 +189,7 @@ func TestPrint_CategoryGrouping(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	Print(&buf, r)
+	Print(&buf, r, false)
 	output := buf.String()
 
 	// Structure should appear before Frontmatter (first-appearance order)
@@ -241,7 +241,7 @@ func TestPrint_OtherTokenCounts(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	Print(&buf, r)
+	Print(&buf, r, false)
 	output := buf.String()
 
 	if !strings.Contains(output, "Other files (outside standard structure)") {
@@ -276,7 +276,7 @@ func TestPrint_OtherTokenCountsColors(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	Print(&buf, r)
+	Print(&buf, r, false)
 	output := buf.String()
 
 	// small.md (500 tokens) should have no warning/error color on the count
@@ -319,7 +319,7 @@ func TestPrint_OtherTokenCountsTotalRed(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	Print(&buf, r)
+	Print(&buf, r, false)
 	output := buf.String()
 
 	for _, line := range strings.Split(output, "\n") {
@@ -341,7 +341,7 @@ func TestPrint_NoOtherTokenCounts(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	Print(&buf, r)
+	Print(&buf, r, false)
 	output := buf.String()
 
 	if strings.Contains(output, "Other files") {
@@ -376,7 +376,7 @@ func TestPrintMulti_AllPassed(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	PrintMulti(&buf, mr)
+	PrintMulti(&buf, mr, false)
 	output := buf.String()
 
 	if !strings.Contains(output, "Validating skill: /tmp/alpha") {
@@ -422,7 +422,7 @@ func TestPrintMulti_SomeFailed(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	PrintMulti(&buf, mr)
+	PrintMulti(&buf, mr, false)
 	output := buf.String()
 
 	if !strings.Contains(output, "2 skills validated") {
@@ -456,7 +456,7 @@ func TestPrintMulti_SingleSkill(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	PrintMulti(&buf, mr)
+	PrintMulti(&buf, mr, false)
 	output := buf.String()
 
 	// Singular: "1 skill validated"
@@ -487,7 +487,7 @@ func TestPrint_ContentAnalysis(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	Print(&buf, r)
+	Print(&buf, r, false)
 	output := buf.String()
 
 	if !strings.Contains(output, "Content Analysis") {
@@ -529,7 +529,7 @@ func TestPrint_NoContentAnalysis(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	Print(&buf, r)
+	Print(&buf, r, false)
 	output := buf.String()
 
 	if strings.Contains(output, "Content Analysis") {
@@ -552,7 +552,7 @@ func TestPrint_ContaminationAnalysis_Low(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	Print(&buf, r)
+	Print(&buf, r, false)
 	output := buf.String()
 
 	if !strings.Contains(output, "Contamination Analysis") {
@@ -600,7 +600,7 @@ func TestPrint_ContaminationAnalysis_Medium(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	Print(&buf, r)
+	Print(&buf, r, false)
 	output := buf.String()
 
 	if !strings.Contains(output, colorYellow+"medium") {
@@ -632,7 +632,7 @@ func TestPrint_ContaminationAnalysis_High(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	Print(&buf, r)
+	Print(&buf, r, false)
 	output := buf.String()
 
 	if !strings.Contains(output, colorRed+"high") {
@@ -656,7 +656,7 @@ func TestPrint_NoContaminationAnalysis(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	Print(&buf, r)
+	Print(&buf, r, false)
 	output := buf.String()
 
 	if strings.Contains(output, "Contamination Analysis") {
@@ -676,7 +676,7 @@ func TestPrint_ContaminationAnalysis_NoPrimaryCategory(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	Print(&buf, r)
+	Print(&buf, r, false)
 	output := buf.String()
 
 	if strings.Contains(output, "Primary language category:") {
@@ -713,7 +713,7 @@ func TestPrintMulti_AggregatedCounts(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	PrintMulti(&buf, mr)
+	PrintMulti(&buf, mr, false)
 	output := buf.String()
 
 	if !strings.Contains(output, "3 errors") {

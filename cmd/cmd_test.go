@@ -305,6 +305,17 @@ func TestCheckCommand_AllChecks(t *testing.T) {
 	if r.ContaminationReport == nil {
 		t.Error("expected ContaminationReport to be set")
 	}
+
+	// valid-skill has references/guide.md
+	if r.ReferencesContentReport == nil {
+		t.Error("expected ReferencesContentReport to be set for valid-skill")
+	}
+	if r.ReferencesContaminationReport == nil {
+		t.Error("expected ReferencesContaminationReport to be set for valid-skill")
+	}
+	if len(r.ReferenceReports) == 0 {
+		t.Error("expected per-file ReferenceReports to be set for valid-skill")
+	}
 }
 
 func TestCheckCommand_OnlyStructure(t *testing.T) {
@@ -339,8 +350,17 @@ func TestCheckCommand_OnlyStructure(t *testing.T) {
 	if r.ContentReport != nil {
 		t.Error("expected ContentReport to be nil when content is disabled")
 	}
+	if r.ReferencesContentReport != nil {
+		t.Error("expected ReferencesContentReport to be nil when content is disabled")
+	}
 	if r.ContaminationReport != nil {
 		t.Error("expected ContaminationReport to be nil when contamination is disabled")
+	}
+	if r.ReferencesContaminationReport != nil {
+		t.Error("expected ReferencesContaminationReport to be nil when contamination is disabled")
+	}
+	if len(r.ReferenceReports) != 0 {
+		t.Error("expected no ReferenceReports when both content and contamination are disabled")
 	}
 }
 
@@ -388,6 +408,25 @@ func TestCheckCommand_SkipContamination(t *testing.T) {
 	}
 	if r.ContaminationReport != nil {
 		t.Error("expected ContaminationReport to be nil when contamination is skipped")
+	}
+	// Content reference fields should be populated, but contamination ones nil
+	if r.ReferencesContentReport == nil {
+		t.Error("expected ReferencesContentReport when content is enabled")
+	}
+	if r.ReferencesContaminationReport != nil {
+		t.Error("expected ReferencesContaminationReport to be nil when contamination is skipped")
+	}
+	// Per-file reports should have content but not contamination
+	if len(r.ReferenceReports) == 0 {
+		t.Fatal("expected ReferenceReports when content is enabled")
+	}
+	for _, fr := range r.ReferenceReports {
+		if fr.ContentReport == nil {
+			t.Error("expected per-file ContentReport when content is enabled")
+		}
+		if fr.ContaminationReport != nil {
+			t.Error("expected nil per-file ContaminationReport when contamination is skipped")
+		}
 	}
 }
 
@@ -544,6 +583,32 @@ func TestReadSkillRaw(t *testing.T) {
 	}
 	if !strings.Contains(raw, "npm install express") {
 		t.Error("expected raw content to contain code block content")
+	}
+}
+
+func TestReadReferencesMarkdownFiles_ValidSkill(t *testing.T) {
+	dir := fixtureDir(t, "valid-skill")
+	files := validator.ReadReferencesMarkdownFiles(dir)
+	if files == nil {
+		t.Fatal("expected non-nil map for valid-skill with references")
+	}
+	if len(files) == 0 {
+		t.Fatal("expected at least one reference file")
+	}
+	guideContent, ok := files["guide.md"]
+	if !ok {
+		t.Fatal("expected guide.md in reference files map")
+	}
+	if !strings.Contains(guideContent, "Reference Guide") {
+		t.Error("expected guide.md content to contain 'Reference Guide'")
+	}
+}
+
+func TestReadReferencesMarkdownFiles_NoReferences(t *testing.T) {
+	dir := t.TempDir()
+	files := validator.ReadReferencesMarkdownFiles(dir)
+	if files != nil {
+		t.Errorf("expected nil for dir without references, got %d files", len(files))
 	}
 }
 
@@ -769,6 +834,20 @@ func TestRunContaminationAnalysis_ValidSkill(t *testing.T) {
 	if !hasPass {
 		t.Error("expected pass result with Contamination category")
 	}
+
+	// valid-skill has references/guide.md — analyze contamination should cover it
+	if r.ReferencesContentReport == nil {
+		t.Error("expected ReferencesContentReport to be set for valid-skill")
+	}
+	if r.ReferencesContaminationReport == nil {
+		t.Error("expected ReferencesContaminationReport to be set for valid-skill")
+	}
+	if len(r.ReferenceReports) == 0 {
+		t.Fatal("expected per-file ReferenceReports for valid-skill")
+	}
+	if r.ReferenceReports[0].File != "guide.md" {
+		t.Errorf("expected first reference file to be guide.md, got %s", r.ReferenceReports[0].File)
+	}
 }
 
 func TestRunContaminationAnalysis_RichSkill(t *testing.T) {
@@ -780,6 +859,17 @@ func TestRunContaminationAnalysis_RichSkill(t *testing.T) {
 	if r.ContaminationReport.ContaminationScore <= 0 {
 		t.Error("expected positive contamination score for rich-skill")
 	}
+
+	// rich-skill has no references directory
+	if r.ReferencesContentReport != nil {
+		t.Error("expected nil ReferencesContentReport for skill without references")
+	}
+	if r.ReferencesContaminationReport != nil {
+		t.Error("expected nil ReferencesContaminationReport for skill without references")
+	}
+	if len(r.ReferenceReports) != 0 {
+		t.Error("expected no ReferenceReports for skill without references")
+	}
 }
 
 func TestRunContaminationAnalysis_BrokenDir(t *testing.T) {
@@ -790,6 +880,12 @@ func TestRunContaminationAnalysis_BrokenDir(t *testing.T) {
 	}
 	if r.ContaminationReport != nil {
 		t.Error("expected nil ContaminationReport for broken dir")
+	}
+	if r.ReferencesContaminationReport != nil {
+		t.Error("expected nil ReferencesContaminationReport for broken dir")
+	}
+	if len(r.ReferenceReports) != 0 {
+		t.Error("expected no ReferenceReports for broken dir")
 	}
 }
 
@@ -805,6 +901,31 @@ func TestRunContentAnalysis_ValidSkill(t *testing.T) {
 	if r.Errors != 0 {
 		t.Errorf("expected 0 errors, got %d", r.Errors)
 	}
+
+	// valid-skill has references/guide.md, so aggregate reports should be set
+	if r.ReferencesContentReport == nil {
+		t.Fatal("expected ReferencesContentReport to be set for valid-skill")
+	}
+	if r.ReferencesContentReport.WordCount == 0 {
+		t.Error("expected non-zero word count in references content report")
+	}
+	if r.ReferencesContaminationReport == nil {
+		t.Fatal("expected ReferencesContaminationReport to be set for valid-skill")
+	}
+
+	// Per-file reports should also be populated
+	if len(r.ReferenceReports) == 0 {
+		t.Fatal("expected per-file ReferenceReports for valid-skill")
+	}
+	if r.ReferenceReports[0].File != "guide.md" {
+		t.Errorf("expected first reference file to be guide.md, got %s", r.ReferenceReports[0].File)
+	}
+	if r.ReferenceReports[0].ContentReport == nil {
+		t.Error("expected per-file ContentReport to be set")
+	}
+	if r.ReferenceReports[0].ContaminationReport == nil {
+		t.Error("expected per-file ContaminationReport to be set")
+	}
 }
 
 func TestRunContentAnalysis_BrokenDir(t *testing.T) {
@@ -815,6 +936,27 @@ func TestRunContentAnalysis_BrokenDir(t *testing.T) {
 	}
 	if r.ContentReport != nil {
 		t.Error("expected nil ContentReport for broken dir")
+	}
+	if r.ReferencesContentReport != nil {
+		t.Error("expected nil ReferencesContentReport for broken dir")
+	}
+	if r.ReferencesContaminationReport != nil {
+		t.Error("expected nil ReferencesContaminationReport for broken dir")
+	}
+	if len(r.ReferenceReports) != 0 {
+		t.Error("expected no ReferenceReports for broken dir")
+	}
+}
+
+func TestRunContentAnalysis_NoReferences(t *testing.T) {
+	dir := fixtureDir(t, "rich-skill")
+	r := runContentAnalysis(dir)
+	if r.ContentReport == nil {
+		t.Fatal("expected ContentReport to be set")
+	}
+	// rich-skill has no references directory, so ReferencesContentReport should be nil
+	if r.ReferencesContentReport != nil {
+		t.Error("expected nil ReferencesContentReport for skill without references")
 	}
 }
 
@@ -905,7 +1047,7 @@ func TestOutputJSON_FullCheck_ValidSkill(t *testing.T) {
 	r := runAllChecks(dir, enabled)
 
 	var buf bytes.Buffer
-	if err := report.PrintJSON(&buf, r); err != nil {
+	if err := report.PrintJSON(&buf, r, false); err != nil {
 		t.Fatalf("PrintJSON error: %v", err)
 	}
 
@@ -920,11 +1062,21 @@ func TestOutputJSON_FullCheck_ValidSkill(t *testing.T) {
 	if _, ok := parsed["content_analysis"]; !ok {
 		t.Error("expected content_analysis in JSON")
 	}
+	if _, ok := parsed["references_content_analysis"]; !ok {
+		t.Error("expected references_content_analysis in JSON for valid-skill")
+	}
 	if _, ok := parsed["contamination_analysis"]; !ok {
 		t.Error("expected contamination_analysis in JSON")
 	}
+	if _, ok := parsed["references_contamination_analysis"]; !ok {
+		t.Error("expected references_contamination_analysis in JSON for valid-skill")
+	}
 	if _, ok := parsed["token_counts"]; !ok {
 		t.Error("expected token_counts in JSON")
+	}
+	// Without --per-file, reference_reports should be absent
+	if _, ok := parsed["reference_reports"]; ok {
+		t.Error("expected no reference_reports in JSON without --per-file")
 	}
 }
 
@@ -939,7 +1091,7 @@ func TestOutputJSON_FullCheck_RichSkill(t *testing.T) {
 	r := runAllChecks(dir, enabled)
 
 	var buf bytes.Buffer
-	if err := report.PrintJSON(&buf, r); err != nil {
+	if err := report.PrintJSON(&buf, r, false); err != nil {
 		t.Fatalf("PrintJSON error: %v", err)
 	}
 
@@ -1001,7 +1153,7 @@ func TestOutputJSON_MultiSkill(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	if err := report.PrintMultiJSON(&buf, mr); err != nil {
+	if err := report.PrintMultiJSON(&buf, mr, false); err != nil {
 		t.Fatalf("PrintMultiJSON error: %v", err)
 	}
 
@@ -1023,6 +1175,113 @@ func TestOutputJSON_MultiSkill(t *testing.T) {
 		}
 		if _, ok := skill["content_analysis"]; !ok {
 			t.Errorf("skill %d: expected content_analysis in JSON", i)
+		}
+	}
+}
+
+func TestOutputJSON_PerFile_ValidSkill(t *testing.T) {
+	dir := fixtureDir(t, "valid-skill")
+	enabled := map[string]bool{
+		"structure":     true,
+		"links":         true,
+		"content":       true,
+		"contamination": true,
+	}
+	r := runAllChecks(dir, enabled)
+
+	var buf bytes.Buffer
+	if err := report.PrintJSON(&buf, r, true); err != nil {
+		t.Fatalf("PrintJSON error: %v", err)
+	}
+
+	var parsed map[string]any
+	if err := json.Unmarshal(buf.Bytes(), &parsed); err != nil {
+		t.Fatalf("invalid JSON: %v", err)
+	}
+
+	// With --per-file, reference_reports should be present
+	rr, ok := parsed["reference_reports"].([]any)
+	if !ok {
+		t.Fatal("expected reference_reports array in JSON with --per-file")
+	}
+	if len(rr) == 0 {
+		t.Fatal("expected at least one reference report")
+	}
+
+	first := rr[0].(map[string]any)
+	if first["file"].(string) != "guide.md" {
+		t.Errorf("expected file=guide.md, got %s", first["file"])
+	}
+	if _, ok := first["content_analysis"]; !ok {
+		t.Error("expected content_analysis in per-file report")
+	}
+	if _, ok := first["contamination_analysis"]; !ok {
+		t.Error("expected contamination_analysis in per-file report")
+	}
+}
+
+func TestRunContaminationAnalysis_ReferencesValidSkill(t *testing.T) {
+	dir := fixtureDir(t, "valid-skill")
+	r := runContaminationAnalysis(dir)
+
+	if r.ReferencesContaminationReport == nil {
+		t.Fatal("expected ReferencesContaminationReport for valid-skill")
+	}
+	if len(r.ReferenceReports) == 0 {
+		t.Fatal("expected per-file ReferenceReports for valid-skill")
+	}
+}
+
+func TestRunContaminationAnalysis_NoReferences(t *testing.T) {
+	dir := fixtureDir(t, "rich-skill")
+	r := runContaminationAnalysis(dir)
+
+	// rich-skill has no references directory
+	if r.ReferencesContaminationReport != nil {
+		t.Error("expected nil ReferencesContaminationReport for skill without references")
+	}
+	if len(r.ReferenceReports) != 0 {
+		t.Error("expected no ReferenceReports for skill without references")
+	}
+}
+
+func TestRunContentAnalysis_NoReferencesContamination(t *testing.T) {
+	dir := fixtureDir(t, "rich-skill")
+	r := runContentAnalysis(dir)
+
+	// rich-skill has no references directory
+	if r.ReferencesContaminationReport != nil {
+		t.Error("expected nil ReferencesContaminationReport for skill without references")
+	}
+	if len(r.ReferenceReports) != 0 {
+		t.Error("expected no ReferenceReports for skill without references")
+	}
+}
+
+func TestCheckCommand_OnlyContent_ReferencesHaveContentOnly(t *testing.T) {
+	dir := fixtureDir(t, "valid-skill")
+
+	enabled := map[string]bool{
+		"structure":     false,
+		"links":         false,
+		"content":       true,
+		"contamination": false,
+	}
+
+	r := runAllChecks(dir, enabled)
+
+	if r.ReferencesContentReport == nil {
+		t.Error("expected ReferencesContentReport when content is enabled")
+	}
+	if r.ReferencesContaminationReport != nil {
+		t.Error("expected nil ReferencesContaminationReport when contamination is disabled")
+	}
+	for _, fr := range r.ReferenceReports {
+		if fr.ContentReport == nil {
+			t.Error("expected per-file ContentReport when content is enabled")
+		}
+		if fr.ContaminationReport != nil {
+			t.Error("expected nil per-file ContaminationReport when contamination is disabled")
 		}
 	}
 }
