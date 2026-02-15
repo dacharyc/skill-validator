@@ -33,7 +33,7 @@ Commands map to skill development lifecycle stages:
 | Review | `validate links` | Do external links still resolve? (HTTP/HTTPS) |
 | Pre-publish | `check` | Run everything |
 
-All commands accept `-o text` (default) or `-o json` for output format.
+All commands accept `-o text` (default) or `-o json` for output format. Use `--version` to print the installed version.
 
 Exit codes: `0` = passed, `1` = validation errors, `2` = usage/tool error.
 
