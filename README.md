@@ -27,10 +27,10 @@ Commands map to skill development lifecycle stages:
 
 | Development stage | Command | What it answers |
 |---|---|---|
-| Scaffolding | `validate structure` | Does it conform to the spec and can agents use it? (structure, frontmatter, tokens, code fences) |
+| Scaffolding | `validate structure` | Does it conform to the spec and can agents use it? (structure, frontmatter, tokens, code fences, internal links) |
 | Writing content | `analyze content` | Is the instruction quality good? (density, specificity, imperative ratio) |
 | Adding examples | `analyze contamination` | Am I introducing cross-language contamination? |
-| Review | `validate links` | Do all the links still resolve? (HTTP and relative) |
+| Review | `validate links` | Do external links still resolve? (HTTP/HTTPS) |
 | Pre-publish | `check` | Run everything |
 
 All commands accept `-o text` (default) or `-o json` for output format.
@@ -43,7 +43,7 @@ Exit codes: `0` = passed, `1` = validation errors, `2` = usage/tool error.
 skill-validator validate structure <path>
 ```
 
-Checks spec compliance: directory structure, frontmatter fields, token limits, skill ratio, and code fence integrity.
+Checks spec compliance: directory structure, frontmatter fields, token limits, skill ratio, code fence integrity, and internal link validity.
 
 ```
 Validating skill: my-skill/
@@ -74,7 +74,7 @@ Result: passed
 skill-validator validate links <path>
 ```
 
-Validates links (relative and HTTP) in SKILL.md and references.
+Validates external (HTTP/HTTPS) links in SKILL.md. Internal (relative) links are checked by `validate structure`.
 
 ### analyze content
 
@@ -240,9 +240,14 @@ These checks validate conformance with the [Agent Skills specification](https://
 - An unclosed fence causes agents to misinterpret everything after it as code
 - Unclosed fences are reported as errors (not warnings) because they break agent usability
 
+**Internal link validation**
+- Relative links in SKILL.md are resolved against the skill directory and checked for existence
+- A broken internal link means the skill references a file that doesn't exist in the package -- this is a structural problem, not a network issue, so it's checked here rather than in `validate links`
+- Broken internal links are reported as errors
+
 ### Link validation (`validate links`)
 
-- Relative links are resolved against the skill directory and checked for existence
+- Checks external (HTTP/HTTPS) links only -- internal (relative) links are validated by `validate structure`
 - HTTP/HTTPS links are verified with a HEAD request (10s timeout, concurrent checks)
 - Template URLs using [RFC 6570](https://www.rfc-editor.org/rfc/rfc6570) syntax are skipped (e.g. `https://github.com/{OWNER}/{REPO}/pull/{PR}`)
 

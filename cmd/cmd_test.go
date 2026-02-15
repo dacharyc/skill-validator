@@ -111,16 +111,22 @@ func TestValidateLinks_ValidSkill(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// External link checks: valid-skill has no HTTP links, so no results
 	linkResults := links.CheckLinks(dir, s.Body)
-	// valid-skill has one relative link to references/guide.md
+	if linkResults != nil {
+		t.Errorf("expected nil for skill with no HTTP links, got %d results", len(linkResults))
+	}
+
+	// Internal links are now checked by structure validation
+	r := structure.Validate(dir)
 	foundLink := false
-	for _, r := range linkResults {
-		if r.Level == validator.Pass && strings.Contains(r.Message, "references/guide.md") {
+	for _, res := range r.Results {
+		if res.Level == validator.Pass && strings.Contains(res.Message, "references/guide.md") {
 			foundLink = true
 		}
 	}
 	if !foundLink {
-		t.Error("expected passing link check for references/guide.md")
+		t.Error("expected passing internal link check for references/guide.md in structure results")
 	}
 }
 
@@ -132,16 +138,22 @@ func TestValidateLinks_InvalidSkill(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// External link checks: invalid-skill has an HTTP link
 	linkResults := links.CheckLinks(dir, s.Body)
-	// invalid-skill has a broken relative link
+	if len(linkResults) == 0 {
+		t.Error("expected at least one external link check result")
+	}
+
+	// Internal links are now checked by structure validation
+	r := structure.Validate(dir)
 	foundBroken := false
-	for _, r := range linkResults {
-		if r.Level == validator.Error && strings.Contains(r.Message, "missing.md") {
+	for _, res := range r.Results {
+		if res.Level == validator.Error && strings.Contains(res.Message, "missing.md") {
 			foundBroken = true
 		}
 	}
 	if !foundBroken {
-		t.Error("expected broken link error for references/missing.md")
+		t.Error("expected broken internal link error for references/missing.md in structure results")
 	}
 }
 
@@ -283,9 +295,8 @@ func TestCheckCommand_AllChecks(t *testing.T) {
 	if !categories["Frontmatter"] {
 		t.Error("expected Frontmatter results")
 	}
-	if !categories["Links"] {
-		t.Error("expected Links results from link checks")
-	}
+	// valid-skill has no HTTP links, so no "Links" category results are expected.
+	// Internal links are checked by structure validation under the "Structure" category.
 
 	// Should have content and contamination reports
 	if r.ContentReport == nil {

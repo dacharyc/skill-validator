@@ -3,8 +3,6 @@ package links
 import (
 	"fmt"
 	"net/http"
-	"os"
-	"path/filepath"
 	"regexp"
 	"strings"
 	"sync"
@@ -25,10 +23,10 @@ type linkResult struct {
 	result validator.Result
 }
 
-// CheckLinks validates all links in the skill body.
+// CheckLinks validates external (HTTP/HTTPS) links in the skill body.
 func CheckLinks(dir string, body string) []validator.Result {
-	links := extractLinks(body)
-	if len(links) == 0 {
+	allLinks := ExtractLinks(body)
+	if len(allLinks) == 0 {
 		return nil
 	}
 
@@ -39,26 +37,19 @@ func CheckLinks(dir string, body string) []validator.Result {
 		wg        sync.WaitGroup
 	)
 
-	// Check relative and HTTP links
-	for _, link := range links {
+	// Collect HTTP links only
+	for _, link := range allLinks {
 		// Skip template URLs containing {placeholder} variables (RFC 6570 URI Templates)
 		if strings.Contains(link, "{") {
 			continue
 		}
 		if strings.HasPrefix(link, "http://") || strings.HasPrefix(link, "https://") {
 			httpLinks = append(httpLinks, link)
-			continue
 		}
-		if strings.HasPrefix(link, "mailto:") || strings.HasPrefix(link, "#") {
-			continue
-		}
-		// Relative link
-		resolved := filepath.Join(dir, link)
-		if _, err := os.Stat(resolved); os.IsNotExist(err) {
-			results = append(results, validator.Result{Level: validator.Error, Category: "Links", Message: fmt.Sprintf("%s (file not found)", link)})
-		} else {
-			results = append(results, validator.Result{Level: validator.Pass, Category: "Links", Message: fmt.Sprintf("%s (exists)", link)})
-		}
+	}
+
+	if len(httpLinks) == 0 {
+		return nil
 	}
 
 	// Check HTTP links concurrently
@@ -82,7 +73,8 @@ func CheckLinks(dir string, body string) []validator.Result {
 	return results
 }
 
-func extractLinks(body string) []string {
+// ExtractLinks extracts all unique links from a markdown body.
+func ExtractLinks(body string) []string {
 	seen := make(map[string]bool)
 	var links []string
 

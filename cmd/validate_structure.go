@@ -9,8 +9,8 @@ import (
 
 var validateStructureCmd = &cobra.Command{
 	Use:   "structure <path>",
-	Short: "Validate skill structure (spec compliance, tokens, code fences)",
-	Long:  "Checks that a skill directory conforms to the spec: structure, frontmatter fields, token limits, skill ratio, and code fence integrity.",
+	Short: "Validate skill structure (spec compliance, tokens, code fences, internal links)",
+	Long:  "Checks that a skill directory conforms to the spec: structure, frontmatter fields, token limits, skill ratio, code fence integrity, and internal link validity.",
 	Args:  cobra.ExactArgs(1),
 	RunE:  runValidateStructure,
 }

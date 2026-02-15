@@ -9,8 +9,8 @@ import (
 
 var validateLinksCmd = &cobra.Command{
 	Use:   "links <path>",
-	Short: "Check link validity (HTTP and relative)",
-	Long:  "Validates links (relative and HTTP) in SKILL.md and references.",
+	Short: "Check external link validity (HTTP/HTTPS)",
+	Long:  "Validates external (HTTP/HTTPS) links in SKILL.md. Internal (relative) links are checked by validate structure.",
 	Args:  cobra.ExactArgs(1),
 	RunE:  runValidateLinks,
 }

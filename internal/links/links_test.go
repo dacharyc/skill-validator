@@ -71,7 +71,7 @@ func requireContains(t *testing.T, s, substr string) {
 func TestExtractLinks(t *testing.T) {
 	t.Run("markdown links", func(t *testing.T) {
 		body := "See [guide](references/guide.md) and [docs](https://example.com/docs)."
-		links := extractLinks(body)
+		links := ExtractLinks(body)
 		if len(links) != 2 {
 			t.Fatalf("expected 2 links, got %d: %v", len(links), links)
 		}
@@ -85,7 +85,7 @@ func TestExtractLinks(t *testing.T) {
 
 	t.Run("bare URLs", func(t *testing.T) {
 		body := "Visit https://example.com for details.\nAlso http://other.com/page"
-		links := extractLinks(body)
+		links := ExtractLinks(body)
 		if len(links) != 2 {
 			t.Fatalf("expected 2 links, got %d: %v", len(links), links)
 		}
@@ -99,7 +99,7 @@ func TestExtractLinks(t *testing.T) {
 
 	t.Run("deduplication", func(t *testing.T) {
 		body := "[link1](https://example.com) and [link2](https://example.com) and https://example.com"
-		links := extractLinks(body)
+		links := ExtractLinks(body)
 		if len(links) != 1 {
 			t.Fatalf("expected 1 deduplicated link, got %d: %v", len(links), links)
 		}
@@ -107,7 +107,7 @@ func TestExtractLinks(t *testing.T) {
 
 	t.Run("no links", func(t *testing.T) {
 		body := "Just plain text with no links at all."
-		links := extractLinks(body)
+		links := ExtractLinks(body)
 		if len(links) != 0 {
 			t.Fatalf("expected 0 links, got %d: %v", len(links), links)
 		}
@@ -115,7 +115,7 @@ func TestExtractLinks(t *testing.T) {
 
 	t.Run("mixed link types", func(t *testing.T) {
 		body := "[file](scripts/run.sh)\n[site](https://example.com)\nmailto:user@example.com\n#anchor"
-		links := extractLinks(body)
+		links := ExtractLinks(body)
 		if len(links) != 2 {
 			t.Fatalf("expected 2 links (markdown only), got %d: %v", len(links), links)
 		}
@@ -123,7 +123,7 @@ func TestExtractLinks(t *testing.T) {
 
 	t.Run("empty link text", func(t *testing.T) {
 		body := "[](references/empty.md)"
-		links := extractLinks(body)
+		links := ExtractLinks(body)
 		if len(links) != 1 {
 			t.Fatalf("expected 1 link, got %d: %v", len(links), links)
 		}
@@ -133,28 +133,22 @@ func TestExtractLinks(t *testing.T) {
 	})
 }
 
-func TestCheckLinks_Relative(t *testing.T) {
-	t.Run("existing file", func(t *testing.T) {
+func TestCheckLinks_SkipsRelative(t *testing.T) {
+	t.Run("relative-only links returns nil", func(t *testing.T) {
 		dir := t.TempDir()
-		writeFile(t, dir, "references/guide.md", "content")
 		body := "See [guide](references/guide.md)."
 		results := CheckLinks(dir, body)
-		requireResult(t, results, validator.Pass, "references/guide.md (exists)")
-	})
-
-	t.Run("missing file", func(t *testing.T) {
-		dir := t.TempDir()
-		body := "See [guide](references/missing.md)."
-		results := CheckLinks(dir, body)
-		requireResult(t, results, validator.Error, "references/missing.md (file not found)")
+		if results != nil {
+			t.Errorf("expected nil for relative-only links, got %v", results)
+		}
 	})
 
 	t.Run("mailto and anchors are skipped", func(t *testing.T) {
 		dir := t.TempDir()
 		body := "[email](mailto:user@example.com) and [section](#heading)"
 		results := CheckLinks(dir, body)
-		if len(results) != 0 {
-			t.Errorf("expected 0 results for mailto/anchor links, got %d", len(results))
+		if results != nil {
+			t.Errorf("expected nil for mailto/anchor links, got %v", results)
 		}
 	})
 
@@ -162,8 +156,8 @@ func TestCheckLinks_Relative(t *testing.T) {
 		dir := t.TempDir()
 		body := "[PR](https://github.com/{OWNER}/{REPO}/pull/{PR}) and https://api.example.com/{version}/users/{id}"
 		results := CheckLinks(dir, body)
-		if len(results) != 0 {
-			t.Errorf("expected 0 results for template URLs, got %d", len(results))
+		if results != nil {
+			t.Errorf("expected nil for template URLs, got %v", results)
 		}
 	})
 
@@ -222,12 +216,14 @@ func TestCheckLinks_HTTP(t *testing.T) {
 		requireResultContaining(t, results, validator.Error, "HTTP 500")
 	})
 
-	t.Run("mixed relative and HTTP", func(t *testing.T) {
+	t.Run("mixed relative and HTTP only checks HTTP", func(t *testing.T) {
 		dir := t.TempDir()
 		writeFile(t, dir, "references/guide.md", "content")
 		body := "[guide](references/guide.md) and [site](" + server.URL + "/ok)"
 		results := CheckLinks(dir, body)
-		requireResult(t, results, validator.Pass, "references/guide.md (exists)")
+		if len(results) != 1 {
+			t.Fatalf("expected 1 result (HTTP only), got %d", len(results))
+		}
 		requireResultContaining(t, results, validator.Pass, "HTTP 200")
 	})
 }

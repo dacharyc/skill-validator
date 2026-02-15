@@ -63,6 +63,9 @@ func Validate(dir string) *validator.Report {
 	// Markdown structure checks (unclosed code fences)
 	report.Results = append(report.Results, CheckMarkdown(dir, s.Body)...)
 
+	// Internal link checks (broken relative links are a structural issue)
+	report.Results = append(report.Results, CheckInternalLinks(dir, s.Body)...)
+
 	report.Tally()
 	return report
 }
