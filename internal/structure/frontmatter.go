@@ -101,23 +101,50 @@ func CheckFrontmatter(s *skill.Skill) []validator.Result {
 var quotedStringPattern = regexp.MustCompile(`"[^"]*"`)
 
 func checkDescriptionKeywordStuffing(desc string) []validator.Result {
-	// Heuristic 1: Many quoted strings suggest keyword/trigger stuffing
+	// Heuristic 1: Many quoted strings with insufficient prose context suggest keyword stuffing.
+	// Descriptions that have substantial prose alongside quoted trigger lists are fine —
+	// the spec encourages keywords, and many good descriptions use a prose sentence
+	// followed by a supplementary trigger list.
 	quotes := quotedStringPattern.FindAllString(desc, -1)
 	if len(quotes) >= 5 {
-		return []validator.Result{{
-			Level:    validator.Warning,
-			Category: "Frontmatter",
-			Message: fmt.Sprintf(
-				"description contains %d quoted strings — this looks like keyword stuffing; "+
-					"per the spec, the description should concisely describe what the skill does "+
-					"and when to use it, not list trigger phrases",
-				len(quotes),
-			),
-		}}
+		// Strip all quoted strings to measure the remaining prose
+		prose := quotedStringPattern.ReplaceAllString(desc, "")
+		proseWordCount := 0
+		for _, w := range strings.Fields(prose) {
+			// Skip punctuation-only tokens (commas, periods, colons, etc.)
+			cleaned := strings.TrimFunc(w, func(r rune) bool {
+				return !((r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9'))
+			})
+			if len(cleaned) > 0 {
+				proseWordCount++
+			}
+		}
+		// If the prose (outside quotes) has fewer words than quoted strings,
+		// the description is dominated by keyword lists
+		if proseWordCount < len(quotes) {
+			return []validator.Result{{
+				Level:    validator.Warning,
+				Category: "Frontmatter",
+				Message: fmt.Sprintf(
+					"description contains %d quoted strings with little surrounding prose — "+
+						"this looks like keyword stuffing; per the spec, the description should "+
+						"concisely describe what the skill does and when to use it, not just list trigger phrases",
+					len(quotes),
+				),
+			}}
+		}
 	}
 
-	// Heuristic 2: Many comma-separated short segments suggest a keyword list
-	segments := strings.Split(desc, ",")
+	// Heuristic 2: Many comma-separated short segments suggest a bare keyword list.
+	// Strip quoted strings first so that prose + trigger-list descriptions aren't penalized.
+	descWithoutQuotes := quotedStringPattern.ReplaceAllString(desc, "")
+	allSegments := strings.Split(descWithoutQuotes, ",")
+	var segments []string
+	for _, seg := range allSegments {
+		if strings.TrimSpace(seg) != "" {
+			segments = append(segments, seg)
+		}
+	}
 	if len(segments) >= 8 {
 		shortCount := 0
 		for _, seg := range segments {

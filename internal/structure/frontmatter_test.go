@@ -130,12 +130,28 @@ func TestCheckFrontmatter_KeywordStuffing(t *testing.T) {
 		requireNoResultContaining(t, results, validator.Warning, "keyword")
 	})
 
-	t.Run("description with many quoted strings", func(t *testing.T) {
+	t.Run("description with many quoted strings and little prose", func(t *testing.T) {
 		desc := `MongoDB vector search. Triggers on "vector search", "vector index", "$vectorSearch", "embedding", "semantic search", "RAG", "numCandidates".`
 		s := makeSkill("/tmp/my-skill", "my-skill", desc)
 		results := CheckFrontmatter(s)
 		requireResultContaining(t, results, validator.Warning, "quoted strings")
 		requireResultContaining(t, results, validator.Warning, "what the skill does and when to use it")
+	})
+
+	t.Run("prose with supplementary trigger list is fine", func(t *testing.T) {
+		desc := `Azure Identity SDK for Python authentication. Use for DefaultAzureCredential, managed identity, service principals, and token caching. Triggers: "azure-identity", "DefaultAzureCredential", "authentication", "managed identity", "service principal", "credential".`
+		s := makeSkill("/tmp/my-skill", "my-skill", desc)
+		results := CheckFrontmatter(s)
+		requireNoResultContaining(t, results, validator.Warning, "quoted strings")
+		requireNoResultContaining(t, results, validator.Warning, "keyword")
+	})
+
+	t.Run("docx skill with trigger examples is fine", func(t *testing.T) {
+		desc := `Use this skill whenever the user wants to create, read, edit, or manipulate Word documents (.docx files). Triggers include: any mention of "Word doc", "word document", ".docx", "resume", "cover letter", or requests to produce professional documents with formatting.`
+		s := makeSkill("/tmp/my-skill", "my-skill", desc)
+		results := CheckFrontmatter(s)
+		requireNoResultContaining(t, results, validator.Warning, "quoted strings")
+		requireNoResultContaining(t, results, validator.Warning, "keyword")
 	})
 
 	t.Run("comma-separated keyword list", func(t *testing.T) {
@@ -160,6 +176,43 @@ func TestCheckFrontmatter_KeywordStuffing(t *testing.T) {
 		results := CheckFrontmatter(s)
 		requireResultContaining(t, results, validator.Warning, "quoted strings")
 		requireNoResultContaining(t, results, validator.Warning, "comma-separated segments")
+	})
+
+	t.Run("prose words equal to quote count is fine", func(t *testing.T) {
+		// 5 quotes, 5 prose words (Manage identity tokens using SDK) — boundary: equal should pass
+		desc := `Manage identity tokens using SDK. Triggers: "azure", "identity", "token", "credential", "auth".`
+		s := makeSkill("/tmp/my-skill", "my-skill", desc)
+		results := CheckFrontmatter(s)
+		requireNoResultContaining(t, results, validator.Warning, "quoted strings")
+	})
+
+	t.Run("all quoted strings no prose warns", func(t *testing.T) {
+		desc := `"vector search" "embeddings" "RAG" "similarity" "indexing"`
+		s := makeSkill("/tmp/my-skill", "my-skill", desc)
+		results := CheckFrontmatter(s)
+		requireResultContaining(t, results, validator.Warning, "quoted strings")
+	})
+
+	t.Run("four quoted strings is fine", func(t *testing.T) {
+		desc := `Use for "vector search", "embeddings", "RAG", and "similarity" queries.`
+		s := makeSkill("/tmp/my-skill", "my-skill", desc)
+		results := CheckFrontmatter(s)
+		requireNoResultContaining(t, results, validator.Warning, "quoted strings")
+	})
+
+	t.Run("bare keyword list with some quoted terms still warns", func(t *testing.T) {
+		desc := `MongoDB, Atlas, "Vector Search", embeddings, RAG, retrieval, indexing, HNSW, "quantization", similarity`
+		s := makeSkill("/tmp/my-skill", "my-skill", desc)
+		results := CheckFrontmatter(s)
+		requireResultContaining(t, results, validator.Warning, "comma-separated segments")
+	})
+
+	t.Run("segments below threshold after empty filtering is fine", func(t *testing.T) {
+		// Raw commas from quoted strings create empty segments; after filtering, only 4 real segments remain
+		desc := `Use this skill for Python authentication and credential management. Triggers: "azure", "identity", "token", "credential", "auth", "login".`
+		s := makeSkill("/tmp/my-skill", "my-skill", desc)
+		results := CheckFrontmatter(s)
+		requireNoResultContaining(t, results, validator.Warning, "comma-separated")
 	})
 
 	t.Run("many commas but long segments is fine", func(t *testing.T) {

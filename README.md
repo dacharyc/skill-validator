@@ -244,8 +244,8 @@ These checks validate conformance with the [Agent Skills specification](https://
 - Based on Anthropic's [skill-creator](https://github.com/anthropics/skills/blob/main/skills/skill-creator/SKILL.md): *"A skill should only contain essential files that directly support its functionality"*
 
 **Keyword stuffing detection**
-- Descriptions with 5+ quoted strings are flagged as likely trigger-phrase stuffing
-- Descriptions with 8+ comma-separated short segments are flagged as keyword lists
+- Descriptions with 5+ quoted strings are flagged when the surrounding prose has fewer words than the number of quoted strings — a prose sentence followed by a supplementary trigger list (e.g., `Triggers: "term1", "term2"`) is fine
+- Descriptions with 8+ comma-separated short segments (after excluding quoted strings) are flagged as keyword lists
 - Per the spec, the description should concisely describe what the skill does and when to use it
 
 **Token counting and limits**
