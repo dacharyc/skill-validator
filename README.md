@@ -3,9 +3,9 @@
 [![CI](https://github.com/dacharyc/skill-validator/actions/workflows/ci.yml/badge.svg)](https://github.com/dacharyc/skill-validator/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-A CLI tool that validates [Agent Skill](https://agentskills.io) packages.
+A CLI tool that validates and scores [Agent Skill](https://agentskills.io) packages.
 
-Spec compliance is table stakes. `skill-validator` goes further: it checks that links actually resolve, flags files that shouldn't be in a skill directory, reports token counts so you can see how much of an agent's context window your skill will consume, analyzes content quality metrics, and detects cross-language contamination. A spec-compliant skill that has broken links or a 60k-token reference file will technically pass the spec but perform poorly in practice.
+Spec compliance is table stakes. `skill-validator` goes further: it checks that links actually resolve, flags files that shouldn't be in a skill directory, reports token counts so you can see how much of an agent's context window your skill will consume, analyzes content quality metrics, detects cross-language contamination, and offers LLM-as-judge scoring to evaluate skill quality across dimensions like clarity, actionability, and novelty. A spec-compliant skill that has broken links or a 60k-token reference file will technically pass the spec but perform poorly in practice.
 
 ## Install
 
@@ -31,7 +31,9 @@ Commands map to skill development lifecycle stages:
 | Writing content | `analyze content` | Is the instruction quality good? (density, specificity, imperative ratio) |
 | Adding examples | `analyze contamination` | Am I introducing cross-language contamination? |
 | Review | `validate links` | Do external links still resolve? (HTTP/HTTPS) |
-| Pre-publish | `check` | Run everything |
+| Quality scoring | `score evaluate` | How does an LLM judge rate this skill? (clarity, actionability, novelty, etc.) |
+| Comparing models | `score report` | How do scores compare across different LLM providers/models? |
+| Pre-publish | `check` | Run everything (except LLM scoring) |
 
 All commands accept `-o text` (default) or `-o json` for output format. Use `--version` to print the installed version.
 
@@ -141,6 +143,80 @@ skill-validator check --per-file <path>
 Runs all checks (structure + links + content + contamination). Use `--only` or `--skip` to select specific check groups. The flags are mutually exclusive. Use `--per-file` to see per-file reference analysis alongside the aggregate.
 
 Valid check groups: `structure`, `links`, `content`, `contamination`.
+
+### score evaluate
+
+Uses an LLM-as-judge approach to score skill quality across multiple dimensions. This is based on findings from the [agent-skill-analysis](https://github.com/dacharyc/agent-skill-analysis) research project, which identified **novelty** as a key predictor of skill value — skills that provide genuinely novel information are more likely to improve LLM outputs, while skills that restate common knowledge can potentially degrade performance.
+
+```
+export ANTHROPIC_API_KEY=your-key-here
+skill-validator score evaluate <path>
+skill-validator score evaluate --skill-only <path>
+skill-validator score evaluate --refs-only <path>
+skill-validator score evaluate --display files <path>
+skill-validator score evaluate path/to/references/api-guide.md
+```
+
+**Provider support**: Requires an API key via environment variable. Use `--provider` to select the backend:
+
+| Provider | Env var | Default model | Covers |
+|---|---|---|---|
+| `anthropic` (default) | `ANTHROPIC_API_KEY` | `claude-sonnet-4-5-20250929` | Anthropic |
+| `openai` | `OPENAI_API_KEY` | `gpt-4o` | OpenAI, Ollama, Together, Groq, Azure, etc. |
+
+Use `--model` to override the default model and `--base-url` to point at any OpenAI-compatible endpoint (e.g. `http://localhost:11434/v1` for Ollama).
+
+```
+Scoring skill: my-skill/
+
+SKILL.md Scores
+  Clarity:              4/5
+  Actionability:        5/5
+  Token Efficiency:     3/5
+  Scope Discipline:     4/5
+  Directive Precision:  4/5
+  Novelty:              2/5
+  ──────────────────────────────
+  Overall:              3.67/5
+
+  "Clear instructions but mostly restates common React patterns."
+
+Reference Scores (2 files)
+  Clarity:              4/5
+  Instructional Value:  4/5
+  Token Efficiency:     4/5
+  Novelty:              3/5
+  Skill Relevance:      5/5
+  ──────────────────────────────
+  Overall:              4.00/5
+```
+
+**Targeting**:
+- Pass a skill directory to score everything (SKILL.md + references)
+- Use `--skill-only` to score just SKILL.md, `--refs-only` for just references
+- Pass a specific file path (e.g. `path/to/references/api-guide.md`) to score a single reference file — useful for iterating on one file without burning API calls on everything else
+
+**Content truncation**: By default, file content is truncated to 8,000 characters before sending to the LLM. Use `--full-content` to send the entire file — useful for large reference files where the scoring should account for all content, at the cost of higher token usage.
+
+**Caching**: Results are cached in `.score_cache/` inside the skill directory. Cache keys are based on provider, model, and file path, so different models produce separate cache entries while editing a file and re-running overwrites the previous result for that file. Use `--rescore` to force re-scoring and overwrite cached results.
+
+### score report
+
+```
+skill-validator score report <path>
+skill-validator score report --list <path>
+skill-validator score report --compare <path>
+skill-validator score report --model claude-sonnet-4-5-20250929 <path>
+```
+
+Views and compares cached LLM scores without making API calls.
+
+- **Default** (no flags): shows the most recent scores for each file
+- `--list`: tabular summary of all cached entries with metadata (model, timestamp, provider)
+- `--compare`: side-by-side comparison of dimension scores across different models
+- `--model`: filter to scores from a specific model
+
+The `--compare` flag is useful for understanding how different models perceive your skill's quality. For example, scoring with both Claude and GPT-4o can reveal whether novelty ratings are consistent across model families, or whether one model finds your instructions clearer than another.
 
 ### JSON output
 
@@ -306,6 +382,23 @@ Detects cross-language contamination — where code examples in one language cou
 - **Scope breadth**: number of distinct technology categories referenced
 - **Contamination score**: 3-factor formula — multi_interface (0.3) + mismatch (0.4) + breadth (0.3), capped at 1.0
 - **Contamination level**: high (≥0.5), medium (≥0.2), low (<0.2)
+
+### LLM scoring (`score evaluate`)
+
+Uses an LLM-as-judge approach ported from the [agent-skill-analysis](https://github.com/dacharyc/agent-skill-analysis) research project. The scoring prompts instruct the LLM to evaluate skill content on specific quality dimensions, returning structured JSON scores.
+
+**SKILL.md** is scored on 6 dimensions (1-5 each):
+- **Clarity**: How clear and unambiguous are the instructions?
+- **Actionability**: Can an agent follow them step-by-step?
+- **Token Efficiency**: Does every token earn its place in the context window?
+- **Scope Discipline**: Does it stay focused on its stated purpose?
+- **Directive Precision**: Does it use precise directives (must, always, never) vs vague suggestions?
+- **Novelty**: How much content goes beyond what an LLM already knows from training data?
+
+**Reference files** are scored on 5 dimensions (1-5 each):
+- **Clarity**, **Token Efficiency**, **Novelty** (same as above)
+- **Instructional Value**: Does it provide concrete, directly-applicable examples?
+- **Skill Relevance**: Does every section support the parent skill's purpose?
 
 ## Development
 
