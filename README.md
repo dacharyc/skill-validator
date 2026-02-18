@@ -67,7 +67,7 @@ go build -o skill-validator .
 ```yaml
 repos:
   - repo: https://github.com/dacharyc/skill-validator
-    rev: v0.1.0
+    rev: v0.5.0
     hooks:
       - id: skill-validator-claude
 ```
