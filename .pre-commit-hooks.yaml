@@ -1,0 +1,98 @@
+# Generic hook - supply command and path via args
+- id: skill-validator
+  name: Validate Agent Skills
+  entry: skill-validator
+  language: golang
+  pass_filenames: false
+
+# Platform-specific hooks (alphabetical by platform name)
+- id: skill-validator-amp
+  name: Validate Agent Skills (Amp)
+  entry: skill-validator check .agents/skills/
+  language: golang
+  files: "^\\.agents/skills/"
+  pass_filenames: false
+
+- id: skill-validator-cline
+  name: Validate Agent Skills (Cline)
+  entry: skill-validator check .cline/skills/
+  language: golang
+  files: "^\\.cline/skills/"
+  pass_filenames: false
+
+- id: skill-validator-claude
+  name: Validate Agent Skills (Claude)
+  entry: skill-validator check .claude/skills/
+  language: golang
+  files: "^\\.claude/skills/"
+  pass_filenames: false
+
+- id: skill-validator-codex
+  name: Validate Agent Skills (Codex)
+  entry: skill-validator check .codex/skills/
+  language: golang
+  files: "^\\.codex/skills/"
+  pass_filenames: false
+
+- id: skill-validator-copilot
+  name: Validate Agent Skills (Copilot)
+  entry: skill-validator check .github/skills/
+  language: golang
+  files: "^\\.github/skills/"
+  pass_filenames: false
+
+- id: skill-validator-cursor
+  name: Validate Agent Skills (Cursor)
+  entry: skill-validator check .cursor/skills/
+  language: golang
+  files: "^\\.cursor/skills/"
+  pass_filenames: false
+
+- id: skill-validator-gemini
+  name: Validate Agent Skills (Gemini)
+  entry: skill-validator check .agent/skills/
+  language: golang
+  files: "^\\.agent/skills/"
+  pass_filenames: false
+
+- id: skill-validator-goose
+  name: Validate Agent Skills (Goose)
+  entry: skill-validator check .goose/skills/
+  language: golang
+  files: "^\\.goose/skills/"
+  pass_filenames: false
+
+- id: skill-validator-kiro
+  name: Validate Agent Skills (Kiro)
+  entry: skill-validator check .kiro/skills/
+  language: golang
+  files: "^\\.kiro/skills/"
+  pass_filenames: false
+
+- id: skill-validator-mistral-vibe
+  name: Validate Agent Skills (Mistral Vibe)
+  entry: skill-validator check .vibe/skills/
+  language: golang
+  files: "^\\.vibe/skills/"
+  pass_filenames: false
+
+- id: skill-validator-roo-code
+  name: Validate Agent Skills (Roo Code)
+  entry: skill-validator check .roo/skills/
+  language: golang
+  files: "^\\.roo/skills/"
+  pass_filenames: false
+
+- id: skill-validator-trae
+  name: Validate Agent Skills (Trae)
+  entry: skill-validator check .trae/skills/
+  language: golang
+  files: "^\\.trae/skills/"
+  pass_filenames: false
+
+- id: skill-validator-windsurf
+  name: Validate Agent Skills (Windsurf)
+  entry: skill-validator check .windsurf/skills/
+  language: golang
+  files: "^\\.windsurf/skills/"
+  pass_filenames: false

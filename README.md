@@ -9,6 +9,8 @@ Spec compliance is table stakes. `skill-validator` goes further: it checks that 
 
 ## Install
 
+### Using Go
+
 ```
 go install github.com/dacharyc/skill-validator@latest
 ```
@@ -19,6 +21,28 @@ Or build from source:
 git clone https://github.com/dacharyc/skill-validator.git
 cd skill-validator
 go build -o skill-validator .
+```
+
+### Pre-commit hook
+
+`skill-validator` supports [pre-commit](https://pre-commit.com). Platform-specific hooks are provided for all major agent platforms, so the correct skills directory is used automatically. For example, the following configuration runs the skill-validator [`check`](#check) command on the `".claude/skills/"` path:
+
+```yaml
+repos:
+  - repo: https://github.com/dacharyc/skill-validator
+    rev: v0.1.0
+    hooks:
+      - id: skill-validator-claude
+```
+
+Available platform hooks: `skill-validator-amp`, `skill-validator-cline`, `skill-validator-claude`, `skill-validator-codex`, `skill-validator-copilot`, `skill-validator-cursor`, `skill-validator-gemini`, `skill-validator-goose`, `skill-validator-kiro`, `skill-validator-mistral-vibe`, `skill-validator-roo-code`, `skill-validator-trae`, `skill-validator-windsurf`.
+
+A generic `skill-validator` hook is also available if you want to specify a custom command override and/or custom path — supply the command and path via `args`:
+
+```yaml
+hooks:
+  - id: skill-validator
+    args: ["check", "path/to/skills/"]
 ```
 
 ## Commands
