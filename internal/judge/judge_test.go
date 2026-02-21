@@ -303,7 +303,7 @@ func TestParseRefScores(t *testing.T) {
 // --- Client construction tests ---
 
 func TestNewClient_Anthropic(t *testing.T) {
-	c, err := NewClient("anthropic", "test-key", "", "")
+	c, err := NewClient("anthropic", "test-key", "", "", "auto")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -316,7 +316,7 @@ func TestNewClient_Anthropic(t *testing.T) {
 }
 
 func TestNewClient_OpenAI(t *testing.T) {
-	c, err := NewClient("openai", "test-key", "", "")
+	c, err := NewClient("openai", "test-key", "", "", "auto")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -329,7 +329,7 @@ func TestNewClient_OpenAI(t *testing.T) {
 }
 
 func TestNewClient_CustomModel(t *testing.T) {
-	c, err := NewClient("openai", "test-key", "http://localhost:11434/v1", "llama3")
+	c, err := NewClient("openai", "test-key", "http://localhost:11434/v1", "llama3", "auto")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -339,14 +339,14 @@ func TestNewClient_CustomModel(t *testing.T) {
 }
 
 func TestNewClient_NoKey(t *testing.T) {
-	_, err := NewClient("anthropic", "", "", "")
+	_, err := NewClient("anthropic", "", "", "", "auto")
 	if err == nil {
 		t.Error("expected error for empty API key")
 	}
 }
 
 func TestNewClient_InvalidProvider(t *testing.T) {
-	_, err := NewClient("invalid", "key", "", "")
+	_, err := NewClient("invalid", "key", "", "", "auto")
 	if err == nil {
 		t.Error("expected error for invalid provider")
 	}
@@ -463,7 +463,7 @@ func TestAnthropicClient_Complete(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client, err := NewClient("anthropic", "test-key", server.URL, "test-model")
+	client, err := NewClient("anthropic", "test-key", server.URL, "test-model", "auto")
 	if err != nil {
 		t.Fatalf("NewClient failed: %v", err)
 	}
@@ -484,7 +484,7 @@ func TestAnthropicClient_APIError(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client, _ := NewClient("anthropic", "key", server.URL, "model")
+	client, _ := NewClient("anthropic", "key", server.URL, "model", "auto")
 	_, err := client.Complete(context.Background(), "sys", "user")
 	if err == nil {
 		t.Fatal("expected error for 400 response")
@@ -498,7 +498,7 @@ func TestAnthropicClient_EmptyContent(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client, _ := NewClient("anthropic", "key", server.URL, "model")
+	client, _ := NewClient("anthropic", "key", server.URL, "model", "auto")
 	_, err := client.Complete(context.Background(), "sys", "user")
 	if err == nil {
 		t.Fatal("expected error for empty content")
@@ -512,7 +512,7 @@ func TestAnthropicClient_ErrorField(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client, _ := NewClient("anthropic", "key", server.URL, "model")
+	client, _ := NewClient("anthropic", "key", server.URL, "model", "auto")
 	_, err := client.Complete(context.Background(), "sys", "user")
 	if err == nil {
 		t.Fatal("expected error for error field in response")
@@ -539,7 +539,7 @@ func TestOpenAIClient_Complete(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client, err := NewClient("openai", "test-key", server.URL, "test-model")
+	client, err := NewClient("openai", "test-key", server.URL, "test-model", "auto")
 	if err != nil {
 		t.Fatalf("NewClient failed: %v", err)
 	}
@@ -560,7 +560,7 @@ func TestOpenAIClient_APIError(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client, _ := NewClient("openai", "bad-key", server.URL, "model")
+	client, _ := NewClient("openai", "bad-key", server.URL, "model", "auto")
 	_, err := client.Complete(context.Background(), "sys", "user")
 	if err == nil {
 		t.Fatal("expected error for 401 response")
@@ -577,7 +577,7 @@ func TestOpenAIClient_EmptyChoices(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client, _ := NewClient("openai", "key", server.URL, "model")
+	client, _ := NewClient("openai", "key", server.URL, "model", "auto")
 	_, err := client.Complete(context.Background(), "sys", "user")
 	if err == nil {
 		t.Fatal("expected error for empty choices")
@@ -592,7 +592,7 @@ func TestOpenAIClient_ErrorField(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client, _ := NewClient("openai", "key", server.URL, "model")
+	client, _ := NewClient("openai", "key", server.URL, "model", "auto")
 	_, err := client.Complete(context.Background(), "sys", "user")
 	if err == nil {
 		t.Fatal("expected error for error field in response")

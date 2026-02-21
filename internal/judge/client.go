@@ -23,7 +23,7 @@ type LLMClient interface {
 // NewClient creates an LLMClient for the given provider.
 // If model is empty, a default is chosen per provider.
 // For the openai provider, baseURL defaults to "https://api.openai.com/v1" if empty.
-func NewClient(provider, apiKey, baseURL, model string) (LLMClient, error) {
+func NewClient(provider, apiKey, baseURL, model, maxTokensStyle string) (LLMClient, error) {
 	if apiKey == "" {
 		return nil, fmt.Errorf("API key is required")
 	}
@@ -46,7 +46,7 @@ func NewClient(provider, apiKey, baseURL, model string) (LLMClient, error) {
 			baseURL = "https://api.openai.com/v1"
 		}
 		baseURL = strings.TrimRight(baseURL, "/")
-		return &openaiClient{apiKey: apiKey, baseURL: baseURL, model: model}, nil
+		return &openaiClient{apiKey: apiKey, baseURL: baseURL, model: model, maxTokensStyle: maxTokensStyle}, nil
 	default:
 		return nil, fmt.Errorf("unsupported provider %q (use \"anthropic\" or \"openai\")", provider)
 	}
@@ -142,18 +142,36 @@ func (c *anthropicClient) Complete(ctx context.Context, systemPrompt, userConten
 // --- OpenAI-compatible client ---
 
 type openaiClient struct {
-	apiKey  string
-	baseURL string
-	model   string
+	apiKey         string
+	baseURL        string
+	model          string
+	maxTokensStyle string
 }
 
 func (c *openaiClient) Provider() string   { return "openai" }
 func (c *openaiClient) ModelName() string   { return c.model }
 
 type openaiRequest struct {
-	Model     string           `json:"model"`
-	MaxTokens int              `json:"max_tokens"`
-	Messages  []openaiMessage  `json:"messages"`
+	Model              string          `json:"model"`
+	MaxTokens          int             `json:"max_tokens,omitempty"`
+	MaxCompletionTokens int            `json:"max_completion_tokens,omitempty"`
+	Messages           []openaiMessage `json:"messages"`
+}
+
+// useMaxCompletionTokens reports whether the given model requires
+// "max_completion_tokens" instead of the older "max_tokens" parameter.
+// OpenAI's o-series reasoning models and gpt-5+ models require this.
+func useMaxCompletionTokens(model string) bool {
+	m := strings.ToLower(model)
+	// o1, o3, o4-mini, etc.
+	if strings.HasPrefix(m, "o") {
+		return true
+	}
+	// gpt-5 and later
+	if strings.HasPrefix(m, "gpt-5") {
+		return true
+	}
+	return false
 }
 
 type openaiMessage struct {
@@ -179,9 +197,20 @@ func (c *openaiClient) Complete(ctx context.Context, systemPrompt, userContent s
 	}
 
 	reqBody := openaiRequest{
-		Model:     c.model,
-		MaxTokens: 500,
-		Messages:  messages,
+		Model:    c.model,
+		Messages: messages,
+	}
+	switch c.maxTokensStyle {
+	case "max_completion_tokens":
+		reqBody.MaxCompletionTokens = 500
+	case "max_tokens":
+		reqBody.MaxTokens = 500
+	default: // "auto" or empty
+		if useMaxCompletionTokens(c.model) {
+			reqBody.MaxCompletionTokens = 500
+		} else {
+			reqBody.MaxTokens = 500
+		}
 	}
 
 	body, err := json.Marshal(reqBody)

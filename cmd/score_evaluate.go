@@ -23,8 +23,9 @@ var (
 	evalRescore   bool
 	evalSkillOnly bool
 	evalRefsOnly  bool
-	evalDisplay    string
-	evalFullContent bool
+	evalDisplay        string
+	evalFullContent    bool
+	evalMaxTokensStyle string
 )
 
 var scoreEvaluateCmd = &cobra.Command{
@@ -53,6 +54,7 @@ func init() {
 	scoreEvaluateCmd.Flags().BoolVar(&evalRefsOnly, "refs-only", false, "score only reference files, skip SKILL.md")
 	scoreEvaluateCmd.Flags().StringVar(&evalDisplay, "display", "aggregate", "reference score display: aggregate or files")
 	scoreEvaluateCmd.Flags().BoolVar(&evalFullContent, "full-content", false, "send full file content to LLM (default: truncate to 8,000 chars)")
+	scoreEvaluateCmd.Flags().StringVar(&evalMaxTokensStyle, "max-tokens-style", "auto", "token parameter style: auto, max_tokens, or max_completion_tokens")
 	scoreCmd.AddCommand(scoreEvaluateCmd)
 }
 
@@ -78,13 +80,21 @@ func runScoreEvaluate(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("--display must be \"aggregate\" or \"files\"")
 	}
 
+	// Validate --max-tokens-style
+	switch evalMaxTokensStyle {
+	case "auto", "max_tokens", "max_completion_tokens":
+		// valid
+	default:
+		return fmt.Errorf("--max-tokens-style must be \"auto\", \"max_tokens\", or \"max_completion_tokens\"")
+	}
+
 	// Resolve API key
 	apiKey, err := resolveAPIKey(evalProvider)
 	if err != nil {
 		return err
 	}
 
-	client, err := judge.NewClient(evalProvider, apiKey, evalBaseURL, evalModel)
+	client, err := judge.NewClient(evalProvider, apiKey, evalBaseURL, evalModel, evalMaxTokensStyle)
 	if err != nil {
 		return err
 	}

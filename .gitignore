@@ -1,2 +1,8 @@
+# JetBrains IDE files
+.idea/
+
+# Binary
 skill-validator
+
+# Test reports
 coverage.out

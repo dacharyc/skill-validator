@@ -227,7 +227,13 @@ skill-validator score evaluate path/to/references/api-guide.md
 | `anthropic` (default) | `ANTHROPIC_API_KEY` | `claude-sonnet-4-5-20250929` | Anthropic |
 | `openai` | `OPENAI_API_KEY` | `gpt-4o` | OpenAI, Ollama, Together, Groq, Azure, etc. |
 
-Use `--model` to override the default model and `--base-url` to point at any OpenAI-compatible endpoint (e.g. `http://localhost:11434/v1` for Ollama).
+Use `--model` to override the default model and `--base-url` to point at any OpenAI-compatible endpoint (e.g. `http://localhost:11434/v1` for Ollama). If the endpoint requires a specific token limit parameter, use `--max-tokens-style` to override auto-detection:
+
+| Value | Behavior |
+|---|---|
+| `auto` (default) | Uses `max_completion_tokens` for o-series and gpt-5+ models, `max_tokens` for everything else |
+| `max_tokens` | Always sends `max_tokens` (needed by some OpenAI-compatible providers like Ollama) |
+| `max_completion_tokens` | Always sends `max_completion_tokens` |
 
 ```
 Scoring skill: my-skill/
@@ -258,6 +264,31 @@ Reference Scores (2 files)
 - Pass a skill directory to score everything (SKILL.md + references)
 - Use `--skill-only` to score just SKILL.md, `--refs-only` for just references
 - Pass a specific file path (e.g. `path/to/references/api-guide.md`) to score a single reference file — useful for iterating on one file without burning API calls on everything else
+
+**Troubleshooting**: If you see an error like this:
+
+```
+Error scoring mongodb-schema-design: scoring SKILL.md: scoring SKILL.md: API returned status 400: {
+  "error": {
+    "message": "Unsupported parameter: 'max_tokens' is not supported with this model. Use 'max_completion_tokens' instead.",
+    "type": "invalid_request_error",
+    "param": "max_tokens",
+    "code": "unsupported_parameter"
+  }
+}
+```
+
+The model requires a different token limit parameter than what auto-detection selected. Use `--max-tokens-style` to force the correct one. The error message tells you which parameter the model expects:
+
+```
+# Error says to use max_completion_tokens
+skill-validator score evaluate --provider openai --model o3 --max-tokens-style max_completion_tokens <path>
+
+# Error says to use max_tokens (e.g. with some OpenAI-compatible providers)
+skill-validator score evaluate --provider openai --base-url http://localhost:11434/v1 --max-tokens-style max_tokens <path>
+```
+
+Auto-detection works for most OpenAI models, but OpenAI-compatible providers (Ollama, vLLM, Groq, etc.) vary in which parameter they support. When in doubt, check your provider's documentation.
 
 **Content truncation**: By default, file content is truncated to 8,000 characters before sending to the LLM. Use `--full-content` to send the entire file — useful for large reference files where the scoring should account for all content, at the cost of higher token usage.
 
