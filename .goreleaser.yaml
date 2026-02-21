@@ -15,7 +15,8 @@ archives:
   - format: tar.gz
 
 brews:
-  - repository:
+  - directory: Formula
+    repository:
       owner: dacharyc
       name: homebrew-tap
       token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
