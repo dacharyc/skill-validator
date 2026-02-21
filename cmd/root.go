@@ -11,7 +11,7 @@ import (
 	"github.com/dacharyc/skill-validator/internal/validator"
 )
 
-const version = "v0.4.0"
+const version = "v0.5.0"
 
 func getVersion() string {
 	if info, ok := debug.ReadBuildInfo(); ok && info.Main.Version != "" && info.Main.Version != "(devel)" {

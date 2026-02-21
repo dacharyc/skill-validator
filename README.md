@@ -7,7 +7,46 @@ A CLI tool that validates and scores [Agent Skill](https://agentskills.io) packa
 
 Spec compliance is table stakes. `skill-validator` goes further: it checks that links actually resolve, flags files that shouldn't be in a skill directory, reports token counts so you can see how much of an agent's context window your skill will consume, analyzes content quality metrics, detects cross-language contamination, and offers LLM-as-judge scoring to evaluate skill quality across dimensions like clarity, actionability, and novelty. A spec-compliant skill that has broken links or a 60k-token reference file will technically pass the spec but perform poorly in practice.
 
+## Table of Contents
+
+- [Install](#install)
+  - [Homebrew](#homebrew)
+  - [Using Go](#using-go)
+  - [Pre-commit hook](#pre-commit-hook)
+- [Command Usage](#command-usage)
+  - [validate structure](#validate-structure)
+  - [validate links](#validate-links)
+  - [analyze content](#analyze-content)
+  - [analyze contamination](#analyze-contamination)
+  - [check](#check)
+  - [score evaluate](#score-evaluate)
+  - [score report](#score-report)
+  - [JSON output](#json-output)
+  - [Multi-skill directories](#multi-skill-directories)
+- [What it checks & why](#what-it-checks)
+  - [Structure validation](#structure-validation-validate-structure)
+  - [Link validation](#link-validation-validate-links)
+  - [Content analysis](#content-analysis-analyze-content)
+  - [Contamination analysis](#contamination-analysis-analyze-contamination)
+  - [LLM scoring](#llm-scoring-score-evaluate)
+- [Development](#development)
+
 ## Install
+
+You can install in three ways:
+
+- [Homebrew](#homebrew)
+- [Using Go](#using-go)
+- [Pre-commit hook](#pre-commit-hook)
+
+### Homebrew
+
+```
+brew tap dacharyc/tap
+brew install skill-validator
+```
+
+### Using Go
 
 ```
 go install github.com/dacharyc/skill-validator@latest
@@ -21,23 +60,47 @@ cd skill-validator
 go build -o skill-validator .
 ```
 
-## Commands
+### Pre-commit hook
+
+`skill-validator` supports [pre-commit](https://pre-commit.com). Platform-specific hooks are provided for all major agent platforms, so the correct skills directory is used automatically. For example, the following configuration runs the skill-validator [`check`](#check) command on the `".claude/skills/"` path:
+
+```yaml
+repos:
+  - repo: https://github.com/dacharyc/skill-validator
+    rev: v0.5.0
+    hooks:
+      - id: skill-validator-claude
+```
+
+Available platform hooks: `skill-validator-amp`, `skill-validator-cline`, `skill-validator-claude`, `skill-validator-codex`, `skill-validator-copilot`, `skill-validator-cursor`, `skill-validator-gemini`, `skill-validator-goose`, `skill-validator-kiro`, `skill-validator-mistral-vibe`, `skill-validator-roo-code`, `skill-validator-trae`, `skill-validator-windsurf`.
+
+A generic `skill-validator` hook is also available if you want to specify a custom command override and/or custom path — supply the command and path via `args`:
+
+```yaml
+hooks:
+  - id: skill-validator
+    args: ["check", "path/to/skills/"]
+```
+
+## Command Usage
 
 Commands map to skill development lifecycle stages:
 
 | Development stage | Command | What it answers |
 |---|---|---|
-| Scaffolding | `validate structure` | Does it conform to the spec and can agents use it? (structure, frontmatter, tokens, code fences, internal links) |
-| Writing content | `analyze content` | Is the instruction quality good? (density, specificity, imperative ratio) |
-| Adding examples | `analyze contamination` | Am I introducing cross-language contamination? |
-| Review | `validate links` | Do external links still resolve? (HTTP/HTTPS) |
-| Quality scoring | `score evaluate` | How does an LLM judge rate this skill? (clarity, actionability, novelty, etc.) |
-| Comparing models | `score report` | How do scores compare across different LLM providers/models? |
-| Pre-publish | `check` | Run everything (except LLM scoring) |
+| Scaffolding | [`validate structure`](#validate-structure) | Does it conform to the spec and can agents use it? (structure, frontmatter, tokens, code fences, internal links) |
+| Writing content | [`analyze content`](#analyze-content) | Is the instruction quality good? (density, specificity, imperative ratio) |
+| Adding examples | [`analyze contamination`](#analyze-contamination) | Am I introducing cross-language contamination? |
+| Review | [`validate links`](#validate-links) | Do external links still resolve? (HTTP/HTTPS) |
+| Quality scoring | [`score evaluate`](#score-evaluate) | How does an LLM judge rate this skill? (clarity, actionability, novelty, etc.) |
+| Comparing models | [`score report`](#score-report) | How do scores compare across different LLM providers/models? |
+| Pre-publish | [`check`](#check) | Run everything (except LLM scoring) |
 
 All commands accept `-o text` (default) or `-o json` for output format. Use `--version` to print the installed version.
 
 Exit codes: `0` = passed, `1` = validation errors, `2` = usage/tool error.
+
+For more details about how the commands are implemented and what they provide, refer to [What it Checks](#what-it-checks).
 
 ### validate structure
 
@@ -305,6 +368,12 @@ If no `SKILL.md` is found at the root or in any immediate subdirectory, the vali
 
 ## What it checks
 
+- [Structure validation](#structure-validation-validate-structure)
+- [Link validation](#link-validation-validate-links)
+- [Content analysis](#content-analysis-analyze-content)
+- [Contamination analysis](#contamination-analysis-analyze-contamination)
+- [LLM scoring](#llm-scoring-score-evaluate)
+
 ### Structure validation (`validate structure`)
 
 These checks validate conformance with the [Agent Skills specification](https://agentskills.io/specification) and perform additional checks:
@@ -318,6 +387,9 @@ These checks validate conformance with the [Agent Skills specification](https://
 - Unknown files suggest moving content into `references/` or `assets/` as appropriate
 - Unknown directories report how many files they contain and suggest standard alternatives (when applicable)
 - Based on Anthropic's [skill-creator](https://github.com/anthropics/skills/blob/main/skills/skill-creator/SKILL.md): *"A skill should only contain essential files that directly support its functionality"*
+
+> [!TIP]
+> Extraneous file detection and recognized directories are based on the Agent Skills specification. Platform support for the spec may vary; some platforms show using different directory structures and additional files at skill root. Adhering to the spec is the best way to validate skill content is portable across platforms, so skill-validator checks against the spec.
 
 **Keyword stuffing detection**
 - Descriptions with 5+ quoted strings are flagged when the surrounding prose has fewer words than the number of quoted strings — a prose sentence followed by a supplementary trigger list (e.g., `Triggers: "term1", "term2"`) is fine

@@ -1,0 +1,28 @@
+version: 2
+
+builds:
+  - binary: skill-validator
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - darwin
+      - linux
+    goarch:
+      - amd64
+      - arm64
+
+archives:
+  - format: tar.gz
+
+brews:
+  - repository:
+      owner: dacharyc
+      name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
+    homepage: https://github.com/dacharyc/skill-validator
+    description: CLI tool that validates and scores Agent Skill packages
+    license: MIT
+    install: |
+      bin.install "skill-validator"
+    test: |
+      assert_match version.to_s, shell_output("#{bin}/skill-validator --version")
