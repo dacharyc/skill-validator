@@ -32,7 +32,7 @@ func fixtureDir(t *testing.T, name string) string {
 func TestValidateCommand_ValidSkill(t *testing.T) {
 	dir := fixtureDir(t, "valid-skill")
 
-	r := structure.Validate(dir)
+	r := structure.Validate(dir, structure.Options{})
 	if r.Errors != 0 {
 		t.Errorf("expected 0 errors, got %d", r.Errors)
 		for _, res := range r.Results {
@@ -83,7 +83,7 @@ func TestValidateCommand_ValidSkill(t *testing.T) {
 func TestValidateCommand_InvalidSkill(t *testing.T) {
 	dir := fixtureDir(t, "invalid-skill")
 
-	r := structure.Validate(dir)
+	r := structure.Validate(dir, structure.Options{})
 	if r.Errors == 0 {
 		t.Error("expected errors for invalid skill")
 	}
@@ -97,7 +97,7 @@ func TestValidateCommand_MultiSkill(t *testing.T) {
 		t.Fatalf("expected MultiSkill, got %d", mode)
 	}
 
-	mr := structure.ValidateMulti(dirs)
+	mr := structure.ValidateMulti(dirs, structure.Options{})
 	if len(mr.Skills) != 3 {
 		t.Fatalf("expected 3 skills, got %d", len(mr.Skills))
 	}
@@ -118,7 +118,7 @@ func TestValidateLinks_ValidSkill(t *testing.T) {
 	}
 
 	// Internal links are now checked by structure validation
-	r := structure.Validate(dir)
+	r := structure.Validate(dir, structure.Options{})
 	foundLink := false
 	for _, res := range r.Results {
 		if res.Level == validator.Pass && strings.Contains(res.Message, "references/guide.md") {
@@ -145,7 +145,7 @@ func TestValidateLinks_InvalidSkill(t *testing.T) {
 	}
 
 	// Internal links are now checked by structure validation
-	r := structure.Validate(dir)
+	r := structure.Validate(dir, structure.Options{})
 	foundBroken := false
 	for _, res := range r.Results {
 		if res.Level == validator.Error && strings.Contains(res.Message, "missing.md") {
@@ -273,7 +273,7 @@ func TestCheckCommand_AllChecks(t *testing.T) {
 		"contamination": true,
 	}
 
-	r := runAllChecks(dir, enabled)
+	r := runAllChecks(dir, enabled, structure.Options{})
 
 	if r.Errors != 0 {
 		t.Errorf("expected 0 errors, got %d", r.Errors)
@@ -340,7 +340,7 @@ func TestCheckCommand_OnlyStructure(t *testing.T) {
 		"contamination": false,
 	}
 
-	r := runAllChecks(dir, enabled)
+	r := runAllChecks(dir, enabled, structure.Options{})
 
 	// Should have Markdown results (code fence checks are part of structure now)
 	hasMarkdown := false
@@ -386,7 +386,7 @@ func TestCheckCommand_OnlyLinks(t *testing.T) {
 		"contamination": false,
 	}
 
-	r := runAllChecks(dir, enabled)
+	r := runAllChecks(dir, enabled, structure.Options{})
 
 	// Should NOT have structure results
 	for _, res := range r.Results {
@@ -413,7 +413,7 @@ func TestCheckCommand_SkipContamination(t *testing.T) {
 		"contamination": false,
 	}
 
-	r := runAllChecks(dir, enabled)
+	r := runAllChecks(dir, enabled, structure.Options{})
 
 	if r.ContentReport == nil {
 		t.Error("expected ContentReport when content is enabled")
@@ -452,7 +452,7 @@ func TestCheckCommand_OnlyContentContamination(t *testing.T) {
 		"contamination": true,
 	}
 
-	r := runAllChecks(dir, enabled)
+	r := runAllChecks(dir, enabled, structure.Options{})
 
 	if r.ContentReport == nil {
 		t.Error("expected ContentReport")
@@ -488,7 +488,7 @@ func TestCheckCommand_BrokenFrontmatter_AllChecks(t *testing.T) {
 		"contamination": true,
 	}
 
-	r := runAllChecks(dir, enabled)
+	r := runAllChecks(dir, enabled, structure.Options{})
 
 	// Should have a frontmatter parse error from structure
 	if r.Errors == 0 {
@@ -546,7 +546,7 @@ func TestCheckCommand_BrokenFrontmatter_OnlyContent(t *testing.T) {
 		"contamination": false,
 	}
 
-	r := runAllChecks(dir, enabled)
+	r := runAllChecks(dir, enabled, structure.Options{})
 
 	// Content analysis should work even without structure
 	if r.ContentReport == nil {
@@ -570,7 +570,7 @@ func TestCheckCommand_BrokenFrontmatter_OnlyContamination(t *testing.T) {
 		"contamination": true,
 	}
 
-	r := runAllChecks(dir, enabled)
+	r := runAllChecks(dir, enabled, structure.Options{})
 
 	// Contamination analysis should work even without content analysis enabled
 	if r.ContaminationReport == nil {
@@ -697,7 +697,7 @@ func TestCheckCommand_JSONOutput(t *testing.T) {
 		"contamination": true,
 	}
 
-	r := runAllChecks(dir, enabled)
+	r := runAllChecks(dir, enabled, structure.Options{})
 
 	// Render as JSON and verify structure
 	var buf bytes.Buffer
@@ -1025,7 +1025,7 @@ func TestRunAllChecks_MultiSkill(t *testing.T) {
 
 	mr := &validator.MultiReport{}
 	for _, d := range dirs {
-		r := runAllChecks(d, enabled)
+		r := runAllChecks(d, enabled, structure.Options{})
 		mr.Skills = append(mr.Skills, r)
 		mr.Errors += r.Errors
 		mr.Warnings += r.Warnings
@@ -1056,7 +1056,7 @@ func TestOutputJSON_FullCheck_ValidSkill(t *testing.T) {
 		"content":       true,
 		"contamination": true,
 	}
-	r := runAllChecks(dir, enabled)
+	r := runAllChecks(dir, enabled, structure.Options{})
 
 	var buf bytes.Buffer
 	if err := report.PrintJSON(&buf, r, false); err != nil {
@@ -1100,7 +1100,7 @@ func TestOutputJSON_FullCheck_RichSkill(t *testing.T) {
 		"content":       true,
 		"contamination": true,
 	}
-	r := runAllChecks(dir, enabled)
+	r := runAllChecks(dir, enabled, structure.Options{})
 
 	var buf bytes.Buffer
 	if err := report.PrintJSON(&buf, r, false); err != nil {
@@ -1158,7 +1158,7 @@ func TestOutputJSON_MultiSkill(t *testing.T) {
 
 	mr := &validator.MultiReport{}
 	for _, d := range dirs {
-		r := runAllChecks(d, enabled)
+		r := runAllChecks(d, enabled, structure.Options{})
 		mr.Skills = append(mr.Skills, r)
 		mr.Errors += r.Errors
 		mr.Warnings += r.Warnings
@@ -1199,7 +1199,7 @@ func TestOutputJSON_PerFile_ValidSkill(t *testing.T) {
 		"content":       true,
 		"contamination": true,
 	}
-	r := runAllChecks(dir, enabled)
+	r := runAllChecks(dir, enabled, structure.Options{})
 
 	var buf bytes.Buffer
 	if err := report.PrintJSON(&buf, r, true); err != nil {
@@ -1280,7 +1280,7 @@ func TestCheckCommand_OnlyContent_ReferencesHaveContentOnly(t *testing.T) {
 		"contamination": false,
 	}
 
-	r := runAllChecks(dir, enabled)
+	r := runAllChecks(dir, enabled, structure.Options{})
 
 	if r.ReferencesContentReport == nil {
 		t.Error("expected ReferencesContentReport when content is enabled")

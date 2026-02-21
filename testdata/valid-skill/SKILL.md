@@ -16,6 +16,8 @@ This is a valid skill that should pass all validation checks.
 
 Follow the instructions in the [reference guide](references/guide.md) to get started.
 
+Use the [asset template](assets/template.md) as a starting point and run scripts/setup.sh to configure.
+
 ## Notes
 
 This skill demonstrates proper structure and frontmatter.

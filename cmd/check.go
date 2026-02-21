@@ -15,9 +15,10 @@ import (
 )
 
 var (
-	checkOnly    string
-	checkSkip    string
-	perFileCheck bool
+	checkOnly        string
+	checkSkip        string
+	perFileCheck     bool
+	checkSkipOrphans bool
 )
 
 var checkCmd = &cobra.Command{
@@ -32,6 +33,8 @@ func init() {
 	checkCmd.Flags().StringVar(&checkOnly, "only", "", "comma-separated list of check groups to run: structure,links,content,contamination")
 	checkCmd.Flags().StringVar(&checkSkip, "skip", "", "comma-separated list of check groups to skip: structure,links,content,contamination")
 	checkCmd.Flags().BoolVar(&perFileCheck, "per-file", false, "show per-file reference analysis")
+	checkCmd.Flags().BoolVar(&checkSkipOrphans, "skip-orphans", false,
+		"skip orphan file detection (unreferenced files in scripts/, references/, assets/)")
 	rootCmd.AddCommand(checkCmd)
 }
 
@@ -57,14 +60,16 @@ func runCheck(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	structOpts := structure.Options{SkipOrphans: checkSkipOrphans}
+
 	switch mode {
 	case validator.SingleSkill:
-		r := runAllChecks(dirs[0], enabled)
+		r := runAllChecks(dirs[0], enabled, structOpts)
 		return outputReportWithPerFile(r, perFileCheck)
 	case validator.MultiSkill:
 		mr := &validator.MultiReport{}
 		for _, dir := range dirs {
-			r := runAllChecks(dir, enabled)
+			r := runAllChecks(dir, enabled, structOpts)
 			mr.Skills = append(mr.Skills, r)
 			mr.Errors += r.Errors
 			mr.Warnings += r.Warnings
@@ -109,12 +114,12 @@ func resolveCheckGroups(only, skip string) (map[string]bool, error) {
 	return enabled, nil
 }
 
-func runAllChecks(dir string, enabled map[string]bool) *validator.Report {
+func runAllChecks(dir string, enabled map[string]bool, structOpts structure.Options) *validator.Report {
 	rpt := &validator.Report{SkillDir: dir}
 
 	// Structure validation (spec compliance, tokens, code fences)
 	if enabled["structure"] {
-		vr := structure.Validate(dir)
+		vr := structure.Validate(dir, structOpts)
 		rpt.Results = append(rpt.Results, vr.Results...)
 		rpt.TokenCounts = vr.TokenCounts
 		rpt.OtherTokenCounts = vr.OtherTokenCounts

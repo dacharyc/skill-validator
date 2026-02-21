@@ -88,7 +88,7 @@ Commands map to skill development lifecycle stages:
 
 | Development stage | Command | What it answers |
 |---|---|---|
-| Scaffolding | [`validate structure`](#validate-structure) | Does it conform to the spec and can agents use it? (structure, frontmatter, tokens, code fences, internal links) |
+| Scaffolding | [`validate structure`](#validate-structure) | Does it conform to the spec and can agents use it? (structure, frontmatter, tokens, code fences, internal links, orphan files) |
 | Writing content | [`analyze content`](#analyze-content) | Is the instruction quality good? (density, specificity, imperative ratio) |
 | Adding examples | [`analyze contamination`](#analyze-contamination) | Am I introducing cross-language contamination? |
 | Review | [`validate links`](#validate-links) | Do external links still resolve? (HTTP/HTTPS) |
@@ -106,9 +106,10 @@ For more details about how the commands are implemented and what they provide, r
 
 ```
 skill-validator validate structure <path>
+skill-validator validate structure --skip-orphans <path>
 ```
 
-Checks spec compliance: directory structure, frontmatter fields, token limits, skill ratio, code fence integrity, and internal link validity.
+Checks spec compliance: directory structure, frontmatter fields, token limits, skill ratio, code fence integrity, internal link validity, and orphan file detection. Use `--skip-orphans` to suppress warnings about unreferenced files in `scripts/`, `references/`, and `assets/`.
 
 ```
 Validating skill: my-skill/
@@ -201,9 +202,10 @@ skill-validator check <path>
 skill-validator check --only structure,links <path>
 skill-validator check --skip contamination <path>
 skill-validator check --per-file <path>
+skill-validator check --skip-orphans <path>
 ```
 
-Runs all checks (structure + links + content + contamination). Use `--only` or `--skip` to select specific check groups. The flags are mutually exclusive. Use `--per-file` to see per-file reference analysis alongside the aggregate.
+Runs all checks (structure + links + content + contamination). Use `--only` or `--skip` to select specific check groups. The flags are mutually exclusive. Use `--per-file` to see per-file reference analysis alongside the aggregate. Use `--skip-orphans` to suppress orphan file warnings in the structure check.
 
 Valid check groups: `structure`, `links`, `content`, `contamination`.
 
@@ -409,7 +411,7 @@ If no `SKILL.md` is found at the root or in any immediate subdirectory, the vali
 
 These checks validate conformance with the [Agent Skills specification](https://agentskills.io/specification) and perform additional checks:
 
-- **Structure**: `SKILL.md` exists; only recognized directories (`scripts/`, `references/`, `assets/`); no deep nesting
+- **Structure**: `SKILL.md` exists; only recognized directories (`scripts/`, `references/`, `assets/`); no deep nesting; no orphan files
 - **Frontmatter**: required fields (`name`, `description`) are present and valid; `name` is lowercase alphanumeric with hyphens (1-64 chars) and matches the directory name; optional fields (`license`, `compatibility`, `metadata`, `allowed-tools`) conform to expected types and lengths; unrecognized fields are flagged
 
 **Extraneous file detection**
@@ -448,6 +450,20 @@ These checks validate conformance with the [Agent Skills specification](https://
 - Relative links in SKILL.md are resolved against the skill directory and checked for existence
 - A broken internal link means the skill references a file that doesn't exist in the package -- this is a structural problem, not a network issue, so it's checked here rather than in `validate links`
 - Broken internal links are reported as errors
+
+**Orphan file detection**
+- Files in `scripts/`, `references/`, and `assets/` use progressive disclosure: they're only loaded when an agent encounters a reference to them. If a file is never mentioned anywhere reachable from SKILL.md, an agent has no signal to load it.
+- The checker walks a reachability graph starting from the SKILL.md body using string containment (not just markdown links). If the relative path `references/guide.md` appears anywhere in a file's text, it counts as referenced. This catches markdown links, bare path mentions, inline code, and code blocks.
+- Reachability is transitive: if SKILL.md references `references/guide.md`, and that file mentions `scripts/extract.py`, the script is considered reachable (reported as an indirect reference).
+- Root-level files next to SKILL.md (e.g., `FORMS.md`, `package.json`) participate as intermediaries. If SKILL.md mentions `FORMS.md` and that file references scripts, those scripts are considered reachable. Root file matching is case-insensitive to handle casing differences between references and filenames.
+- Directory-relative paths are resolved: if `references/guide.md` references `images/diagram.png`, the checker resolves that to `references/images/diagram.png`.
+- Files referenced without their extension (e.g., `scripts/check_fields` instead of `scripts/check_fields.py`) get a specific warning identifying the source file and suggesting the author include the extension so agents can reliably locate the file.
+- Python import chains are resolved: if a reached `.py` file contains `from helpers.merge_runs import merge`, the checker resolves this to `helpers/merge_runs.py` relative to the importing file's directory. Relative imports (`.module`, `..module`) are handled with correct Python package semantics. This prevents false positives from Python modules that are imported by referenced scripts but never mentioned by file path.
+- `__init__.py` files are excluded from orphan checks entirely since they are Python package markers that are never referenced by name. However, they still act as bridge files for package imports: if `pack.py` does `from validators import X` and `validators/__init__.py` re-exports from `.base` and `.docx`, those sibling modules are considered reachable.
+- Result levels:
+  - **Pass**: all files in a directory are referenced
+  - **Warning**: file is unreferenced (potential orphan) or referenced without its file extension
+- Root-level files are not checked for orphan status since they already get non-standard structure warnings from the extraneous file check
 
 ### Link validation (`validate links`)
 

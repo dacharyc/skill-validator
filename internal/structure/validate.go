@@ -7,11 +7,16 @@ import (
 	"github.com/dacharyc/skill-validator/internal/validator"
 )
 
+// Options configures which checks Validate runs.
+type Options struct {
+	SkipOrphans bool
+}
+
 // ValidateMulti validates each directory and returns an aggregated report.
-func ValidateMulti(dirs []string) *validator.MultiReport {
+func ValidateMulti(dirs []string, opts Options) *validator.MultiReport {
 	mr := &validator.MultiReport{}
 	for _, dir := range dirs {
-		r := Validate(dir)
+		r := Validate(dir, opts)
 		mr.Skills = append(mr.Skills, r)
 		mr.Errors += r.Errors
 		mr.Warnings += r.Warnings
@@ -20,7 +25,7 @@ func ValidateMulti(dirs []string) *validator.MultiReport {
 }
 
 // Validate runs all checks against the skill in the given directory.
-func Validate(dir string) *validator.Report {
+func Validate(dir string, opts Options) *validator.Report {
 	report := &validator.Report{SkillDir: dir}
 
 	// Structure checks
@@ -65,6 +70,11 @@ func Validate(dir string) *validator.Report {
 
 	// Internal link checks (broken relative links are a structural issue)
 	report.Results = append(report.Results, CheckInternalLinks(dir, s.Body)...)
+
+	// Orphan file checks (files in recognized dirs that are never referenced)
+	if !opts.SkipOrphans {
+		report.Results = append(report.Results, CheckOrphanFiles(dir, s.Body)...)
+	}
 
 	report.Tally()
 	return report

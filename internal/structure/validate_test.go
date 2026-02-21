@@ -11,7 +11,7 @@ func TestValidate(t *testing.T) {
 	t.Run("valid skill", func(t *testing.T) {
 		dir := t.TempDir()
 		writeSkill(t, dir, "---\nname: "+dirName(dir)+"\ndescription: A valid skill\n---\n# Body\n")
-		report := Validate(dir)
+		report := Validate(dir, Options{})
 		if report.Errors != 0 {
 			t.Errorf("expected 0 errors, got %d", report.Errors)
 			for _, r := range report.Results {
@@ -24,7 +24,7 @@ func TestValidate(t *testing.T) {
 
 	t.Run("missing SKILL.md stops early", func(t *testing.T) {
 		dir := t.TempDir()
-		report := Validate(dir)
+		report := Validate(dir, Options{})
 		if report.Errors != 1 {
 			t.Errorf("expected 1 error, got %d", report.Errors)
 		}
@@ -41,7 +41,7 @@ func TestValidate(t *testing.T) {
 		dir := t.TempDir()
 		// Invalid name, missing description, broken link
 		writeSkill(t, dir, "---\nname: BAD\ndescription: \"\"\n---\n[broken](references/nope.md)\n")
-		report := Validate(dir)
+		report := Validate(dir, Options{})
 		if report.Errors < 3 {
 			t.Errorf("expected at least 3 errors, got %d", report.Errors)
 			for _, r := range report.Results {
@@ -56,7 +56,7 @@ func TestValidate(t *testing.T) {
 		dir := t.TempDir()
 		writeSkill(t, dir, "---\nname: "+dirName(dir)+"\ndescription: desc\ncustom: field\n---\n# Body\n")
 		writeFile(t, dir, "extras/file.txt", "content")
-		report := Validate(dir)
+		report := Validate(dir, Options{})
 		if report.Warnings < 1 {
 			t.Errorf("expected at least 1 warning, got %d", report.Warnings)
 		}
@@ -66,7 +66,7 @@ func TestValidate(t *testing.T) {
 		dir := t.TempDir()
 		writeSkill(t, dir, "---\nname: "+dirName(dir)+"\ndescription: desc\n---\n# Body content\n")
 		writeFile(t, dir, "references/ref.md", "Reference text.")
-		report := Validate(dir)
+		report := Validate(dir, Options{})
 		if len(report.TokenCounts) != 2 {
 			t.Errorf("expected 2 token counts, got %d", len(report.TokenCounts))
 		}
@@ -77,7 +77,7 @@ func TestValidate(t *testing.T) {
 		writeSkill(t, dir, "---\nname: "+dirName(dir)+"\ndescription: desc\n---\n# Body content\n")
 		writeFile(t, dir, "AGENTS.md", "Some agent content here.")
 		writeFile(t, dir, "rules/rule1.md", "Rule one.")
-		report := Validate(dir)
+		report := Validate(dir, Options{})
 		if len(report.OtherTokenCounts) != 2 {
 			t.Errorf("expected 2 other token counts, got %d", len(report.OtherTokenCounts))
 			for _, c := range report.OtherTokenCounts {
@@ -90,7 +90,7 @@ func TestValidate(t *testing.T) {
 		dir := t.TempDir()
 		writeSkill(t, dir, "---\nname: "+dirName(dir)+"\ndescription: desc\n---\n# Body content\n")
 		writeFile(t, dir, "references/ref.md", "Reference text.")
-		report := Validate(dir)
+		report := Validate(dir, Options{})
 		if len(report.OtherTokenCounts) != 0 {
 			t.Errorf("expected 0 other token counts, got %d", len(report.OtherTokenCounts))
 		}
@@ -101,7 +101,7 @@ func TestValidate(t *testing.T) {
 		writeSkill(t, dir, "---\nname: "+dirName(dir)+"\ndescription: desc\n---\n# Body\n")
 		// Add a massive amount of non-standard content
 		writeFile(t, dir, "AGENTS.md", generateContent(30_000))
-		report := Validate(dir)
+		report := Validate(dir, Options{})
 		requireResultContaining(t, report.Results, validator.Error, "doesn't appear to be structured as a skill")
 		requireResultContaining(t, report.Results, validator.Error, "build pipeline issue")
 	})
@@ -110,14 +110,14 @@ func TestValidate(t *testing.T) {
 		dir := t.TempDir()
 		writeSkill(t, dir, "---\nname: "+dirName(dir)+"\ndescription: desc\n---\n# Body\n")
 		writeFile(t, dir, "extra.md", "A small extra file.")
-		report := Validate(dir)
+		report := Validate(dir, Options{})
 		requireNoResultContaining(t, report.Results, validator.Error, "doesn't appear to be structured as a skill")
 	})
 
 	t.Run("unparseable frontmatter", func(t *testing.T) {
 		dir := t.TempDir()
 		writeSkill(t, dir, "---\n: invalid: yaml: [broken\n---\nBody\n")
-		report := Validate(dir)
+		report := Validate(dir, Options{})
 		if report.Errors != 1 {
 			t.Errorf("expected 1 error, got %d", report.Errors)
 		}
@@ -133,7 +133,7 @@ func TestValidateMulti(t *testing.T) {
 	badDir := filepath.Join(dir, "bad")
 	writeSkill(t, badDir, "---\nname: BAD\ndescription: \"\"\n---\n# Body\n")
 
-	mr := ValidateMulti([]string{goodDir, badDir})
+	mr := ValidateMulti([]string{goodDir, badDir}, Options{})
 
 	if len(mr.Skills) != 2 {
 		t.Fatalf("expected 2 skills, got %d", len(mr.Skills))
@@ -163,7 +163,7 @@ func TestValidate_MultiSkillFixture(t *testing.T) {
 		t.Fatalf("expected 3 skill dirs, got %d: %v", len(dirs), dirs)
 	}
 
-	mr := ValidateMulti(dirs)
+	mr := ValidateMulti(dirs, Options{})
 	if len(mr.Skills) != 3 {
 		t.Fatalf("expected 3 skills, got %d", len(mr.Skills))
 	}
