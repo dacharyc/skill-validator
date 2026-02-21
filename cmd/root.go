@@ -4,21 +4,12 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"runtime/debug"
-
 	"github.com/spf13/cobra"
 
 	"github.com/dacharyc/skill-validator/internal/validator"
 )
 
-const version = "v0.5.0"
-
-func getVersion() string {
-	if info, ok := debug.ReadBuildInfo(); ok && info.Main.Version != "" && info.Main.Version != "(devel)" {
-		return info.Main.Version
-	}
-	return version
-}
+const version = "v0.5.1"
 
 var outputFormat string
 
@@ -29,7 +20,7 @@ var rootCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.Version = getVersion()
+	rootCmd.Version = version
 	rootCmd.PersistentFlags().StringVarP(&outputFormat, "output", "o", "text", "output format: text or json")
 }
 
