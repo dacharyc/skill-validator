@@ -437,6 +437,10 @@ func printEvalResult(result *skillEvalResult) {
 		if result.SkillScores.BriefAssessment != "" {
 			fmt.Printf("\n  %s\"%s\"%s\n", evalColorCyan, result.SkillScores.BriefAssessment, evalColorReset)
 		}
+
+		if result.SkillScores.NovelInfo != "" {
+			fmt.Printf("  %sNovel details: %s%s\n", evalColorCyan, result.SkillScores.NovelInfo, evalColorReset)
+		}
 	}
 
 	if evalDisplay == "files" && len(result.RefResults) > 0 {
@@ -452,6 +456,10 @@ func printEvalResult(result *skillEvalResult) {
 
 			if ref.Scores.BriefAssessment != "" {
 				fmt.Printf("\n  %s\"%s\"%s\n", evalColorCyan, ref.Scores.BriefAssessment, evalColorReset)
+			}
+
+			if ref.Scores.NovelInfo != "" {
+				fmt.Printf("  %sNovel details: %s%s\n", evalColorCyan, ref.Scores.NovelInfo, evalColorReset)
 			}
 		}
 	}

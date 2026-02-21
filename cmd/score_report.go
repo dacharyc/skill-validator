@@ -287,6 +287,10 @@ func printCachedSkillScores(r *judge.CachedResult) {
 	if scores.BriefAssessment != "" {
 		fmt.Printf("\n  %s\"%s\"%s\n", evalColorCyan, scores.BriefAssessment, evalColorReset)
 	}
+
+	if scores.NovelInfo != "" {
+		fmt.Printf("  %sNovel details: %s%s\n", evalColorCyan, scores.NovelInfo, evalColorReset)
+	}
 }
 
 func printCachedRefScores(r *judge.CachedResult) {
@@ -310,5 +314,9 @@ func printCachedRefScores(r *judge.CachedResult) {
 
 	if scores.BriefAssessment != "" {
 		fmt.Printf("\n  %s\"%s\"%s\n", evalColorCyan, scores.BriefAssessment, evalColorReset)
+	}
+
+	if scores.NovelInfo != "" {
+		fmt.Printf("  %sNovel details: %s%s\n", evalColorCyan, scores.NovelInfo, evalColorReset)
 	}
 }

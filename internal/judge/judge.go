@@ -10,14 +10,15 @@ import (
 
 // SkillScores holds the LLM judge scores for a SKILL.md file.
 type SkillScores struct {
-	Clarity            int     `json:"clarity"`
-	Actionability      int     `json:"actionability"`
-	TokenEfficiency    int     `json:"token_efficiency"`
-	ScopeDiscipline    int     `json:"scope_discipline"`
-	DirectivePrecision int     `json:"directive_precision"`
-	Novelty            int     `json:"novelty"`
-	Overall            float64 `json:"overall"`
-	BriefAssessment    string  `json:"brief_assessment"`
+	Clarity              int     `json:"clarity"`
+	Actionability        int     `json:"actionability"`
+	TokenEfficiency      int     `json:"token_efficiency"`
+	ScopeDiscipline      int     `json:"scope_discipline"`
+	DirectivePrecision   int     `json:"directive_precision"`
+	Novelty              int     `json:"novelty"`
+	Overall              float64 `json:"overall"`
+	BriefAssessment      string  `json:"brief_assessment"`
+	NovelInfo            string  `json:"novel_info,omitempty"`
 }
 
 // RefScores holds the LLM judge scores for a reference file.
@@ -29,6 +30,7 @@ type RefScores struct {
 	SkillRelevance     int     `json:"skill_relevance"`
 	Overall            float64 `json:"overall"`
 	BriefAssessment    string  `json:"brief_assessment"`
+	NovelInfo          string  `json:"novel_info,omitempty"`
 }
 
 var skillDims = []string{"clarity", "actionability", "token_efficiency", "scope_discipline", "directive_precision", "novelty"}
@@ -48,12 +50,12 @@ const skillJudgePrompt = `You are evaluating the quality of an "Agent Skill" —
 
 **Scoring dimensions:**
 
-1. **Clarity** (1-5): How clear and unambiguous are the instructions? Are there vague or confusing passages?
+1. **Clarity** (1-5): How clear and unambiguous are the instructions? Are there vague or confusing passages? If the skill depends on specific tools, runtimes, or prerequisites, are they explicitly declared so an agent knows what must be available before proceeding?
    - 1: Mostly vague, unclear instructions; an agent would frequently misinterpret intent
    - 2: Several unclear passages that would cause an agent to guess or ask for clarification
    - 3: Generally clear with some ambiguities; an agent could follow most instructions but would stumble on a few
    - 4: Clear throughout with only minor phrasing that could be tightened; an agent would rarely misinterpret
-   - 5: Crystal clear, no room for misinterpretation; every instruction has exactly one reading
+   - 5: Crystal clear, no room for misinterpretation; every instruction has exactly one reading; any dependencies are explicitly stated
 
 2. **Actionability** (1-5): How actionable are the instructions for an AI agent? Can an agent follow them step-by-step?
    - 1: Abstract advice, no concrete steps; an agent could not act on these instructions
@@ -76,12 +78,12 @@ const skillJudgePrompt = `You are evaluating the quality of an "Agent Skill" —
    - 4: Well-focused on its purpose with only brief mentions of adjacent concerns that are clearly delineated
    - 5: Tightly scoped to a single purpose and technology; no content an agent could misapply
 
-5. **Directive Precision** (1-5): Does the skill use precise, unambiguous directives (must, always, never, ensure) or does it hedge with vague suggestions (consider, may, could, possibly)?
+5. **Directive Precision** (1-5): Does the skill use precise, unambiguous directives (must, always, never, ensure) or does it hedge with vague suggestions (consider, may, could, possibly)? Are conditional sections clearly gated with explicit criteria for when to continue, skip, or abort?
    - 1: Mostly vague suggestions and hedged language; an agent would not know what is required vs. optional
    - 2: More hedging than precision; important instructions are often phrased as suggestions
    - 3: Mix of precise directives and vague guidance; critical steps are usually precise but supporting guidance hedges
-   - 4: Mostly precise directives with occasional hedging on less critical points
-   - 5: Consistently precise, imperative directives throughout; every instruction is unambiguous about whether it is required
+   - 4: Mostly precise directives with occasional hedging on less critical points; conditional sections have reasonably clear gates
+   - 5: Consistently precise, imperative directives throughout; every instruction is unambiguous about whether it is required; conditional paths have explicit continue/abort criteria
 
 6. **Novelty** (1-5): How much of this skill's content provides information beyond what you would already know from training data? Does it convey project-specific conventions, proprietary APIs, internal workflows, or non-obvious domain knowledge — or does it mostly restate common programming knowledge you already have?
    - 1: Almost entirely common knowledge any LLM would already know; standard library docs, basic patterns, introductory tutorials
@@ -157,6 +159,10 @@ Respond with ONLY a JSON object in this exact format:
   "brief_assessment": "<1-2 sentence summary>"
 }`
 
+const novelInfoPrompt = `You just scored a document on novelty. It scored high (3+/5), meaning it likely contains project-specific or proprietary information not available in public training data.
+
+In 1-2 sentences, identify which specific details are novel — for example, proprietary API names or signatures, internal conventions, unpublished workflows, organization-specific patterns, or non-standard configuration details. Focus on what a human reviewer should fact-check. Respond with plain text only, no JSON.`
+
 // DefaultMaxContentLen is the default maximum content length sent to the judge (characters).
 // Use 0 to disable truncation.
 const DefaultMaxContentLen = 8000
@@ -192,6 +198,15 @@ func ScoreSkill(ctx context.Context, content string, client LLMClient, maxLen in
 	}
 
 	scores.Overall = computeSkillOverall(scores)
+
+	// Follow-up call for high-novelty skills
+	if scores.Novelty >= 3 {
+		novelText, err := client.Complete(ctx, novelInfoPrompt, userContent)
+		if err == nil {
+			scores.NovelInfo = strings.TrimSpace(novelText)
+		}
+	}
+
 	return scores, nil
 }
 
@@ -234,6 +249,15 @@ func ScoreReference(ctx context.Context, content, skillName, skillDesc string, c
 	}
 
 	scores.Overall = computeRefOverall(scores)
+
+	// Follow-up call for high-novelty references
+	if scores.Novelty >= 3 {
+		novelText, err := client.Complete(ctx, novelInfoPrompt, userContent)
+		if err == nil {
+			scores.NovelInfo = strings.TrimSpace(novelText)
+		}
+	}
+
 	return scores, nil
 }
 

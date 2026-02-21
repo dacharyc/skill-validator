@@ -246,11 +246,12 @@ SKILL.md Scores
   Token Efficiency:     3/5
   Scope Discipline:     4/5
   Directive Precision:  4/5
-  Novelty:              2/5
+  Novelty:              4/5
   ──────────────────────────────
-  Overall:              3.67/5
+  Overall:              4.00/5
 
-  "Clear instructions but mostly restates common React patterns."
+  "Well-structured skill with clear proprietary API conventions."
+  Novel details: References internal FooService API endpoints and a custom retry policy not in public documentation.
 
 Reference Scores (2 files)
   Clarity:              4/5
@@ -518,6 +519,8 @@ Uses an LLM-as-judge approach ported from the [agent-skill-analysis](https://git
 - **Clarity**, **Token Efficiency**, **Novelty** (same as above)
 - **Instructional Value**: Does it provide concrete, directly-applicable examples?
 - **Skill Relevance**: Does every section support the parent skill's purpose?
+
+**Novel detail follow-up**: When a skill or reference file scores 3 or higher on novelty, a separate follow-up call identifies which specific details are novel (proprietary APIs, internal conventions, unpublished workflows, etc.) in 1-2 sentences. This gives human reviewers a targeted signal for fact-checking without inflating novelty scores. The follow-up is non-fatal; if it fails, scores are returned normally. The result appears as "Novel details:" in text output and as `novel_info` in JSON/cached output.
 
 ## Development
 

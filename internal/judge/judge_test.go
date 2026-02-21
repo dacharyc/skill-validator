@@ -800,6 +800,8 @@ func TestScoreReference_RetryOnMissingDims(t *testing.T) {
 		responses: []string{
 			`{"clarity": 4, "instructional_value": 3, "token_efficiency": 3, "brief_assessment": "First."}`,
 			`{"clarity": 4, "instructional_value": 3, "token_efficiency": 3, "novelty": 5, "skill_relevance": 4, "brief_assessment": "Retry."}`,
+			// Third call: novel info follow-up (novelty=5 >= 3)
+			`Documents a proprietary internal API endpoint.`,
 		},
 		callCount: &callCount,
 	}
@@ -808,8 +810,8 @@ func TestScoreReference_RetryOnMissingDims(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if callCount != 2 {
-		t.Errorf("expected 2 API calls, got %d", callCount)
+	if callCount != 3 {
+		t.Errorf("expected 3 API calls (initial + retry + novel info), got %d", callCount)
 	}
 	if scores.Novelty != 5 {
 		t.Errorf("novelty = %d, want 5 (from retry)", scores.Novelty)
@@ -822,6 +824,73 @@ func TestScoreReference_APIError(t *testing.T) {
 	_, err := ScoreReference(context.Background(), "test", "skill", "desc", client, DefaultMaxContentLen)
 	if err == nil {
 		t.Fatal("expected error")
+	}
+}
+
+// --- NovelInfo follow-up tests for references ---
+
+func TestScoreReference_NovelInfoFollowUp(t *testing.T) {
+	callCount := 0
+	client := &sequentialMockClient{
+		responses: []string{
+			`{"clarity": 4, "instructional_value": 4, "token_efficiency": 3, "novelty": 4, "skill_relevance": 4, "brief_assessment": "Good ref."}`,
+			`References proprietary FooService API endpoints and internal authentication token format not in public docs.`,
+		},
+		callCount: &callCount,
+	}
+
+	scores, err := ScoreReference(context.Background(), "test", "my-skill", "A test skill", client, DefaultMaxContentLen)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if callCount != 2 {
+		t.Errorf("expected 2 API calls (scoring + novel info), got %d", callCount)
+	}
+	if scores.NovelInfo == "" {
+		t.Error("expected NovelInfo to be populated for novelty >= 3")
+	}
+}
+
+func TestScoreReference_NovelInfoSkippedLowNovelty(t *testing.T) {
+	callCount := 0
+	client := &sequentialMockClient{
+		responses: []string{
+			`{"clarity": 4, "instructional_value": 4, "token_efficiency": 3, "novelty": 2, "skill_relevance": 4, "brief_assessment": "Standard ref."}`,
+		},
+		callCount: &callCount,
+	}
+
+	scores, err := ScoreReference(context.Background(), "test", "my-skill", "A test skill", client, DefaultMaxContentLen)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if callCount != 1 {
+		t.Errorf("expected 1 API call (no novel info follow-up), got %d", callCount)
+	}
+	if scores.NovelInfo != "" {
+		t.Errorf("expected empty NovelInfo for novelty < 3, got %q", scores.NovelInfo)
+	}
+}
+
+func TestScoreReference_NovelInfoFailureNonFatal(t *testing.T) {
+	callCount := 0
+	client := &sequentialMockClient{
+		responses: []string{
+			`{"clarity": 4, "instructional_value": 4, "token_efficiency": 3, "novelty": 5, "skill_relevance": 4, "brief_assessment": "Novel ref."}`,
+		},
+		errors:    []error{nil, fmt.Errorf("network timeout")},
+		callCount: &callCount,
+	}
+
+	scores, err := ScoreReference(context.Background(), "test", "my-skill", "desc", client, DefaultMaxContentLen)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if scores.Novelty != 5 {
+		t.Errorf("novelty = %d, want 5", scores.Novelty)
+	}
+	if scores.NovelInfo != "" {
+		t.Errorf("expected empty NovelInfo on follow-up failure, got %q", scores.NovelInfo)
 	}
 }
 
@@ -911,6 +980,186 @@ func (m *sequentialMockClient) Complete(_ context.Context, _, _ string) (string,
 
 func (m *sequentialMockClient) Provider() string  { return "mock" }
 func (m *sequentialMockClient) ModelName() string { return "mock-model" }
+
+// --- capturingMockClient records arguments for each call ---
+
+type capturedCall struct {
+	systemPrompt string
+	userContent  string
+}
+
+type capturingMockClient struct {
+	responses []string
+	errors    []error
+	calls     []capturedCall
+}
+
+func (m *capturingMockClient) Complete(_ context.Context, system, user string) (string, error) {
+	idx := len(m.calls)
+	m.calls = append(m.calls, capturedCall{systemPrompt: system, userContent: user})
+
+	var err error
+	if idx < len(m.errors) {
+		err = m.errors[idx]
+	}
+	if err != nil {
+		return "", err
+	}
+
+	if idx < len(m.responses) {
+		return m.responses[idx], nil
+	}
+	return "", fmt.Errorf("no more mock responses (call %d)", idx)
+}
+
+func (m *capturingMockClient) Provider() string  { return "mock" }
+func (m *capturingMockClient) ModelName() string { return "mock-model" }
+
+// --- Prompt and content passing tests ---
+
+func TestScoreSkill_PassesCorrectPromptAndContent(t *testing.T) {
+	client := &capturingMockClient{
+		responses: []string{
+			`{"clarity": 4, "actionability": 5, "token_efficiency": 3, "scope_discipline": 4, "directive_precision": 4, "novelty": 4, "brief_assessment": "Good."}`,
+			`Novel details here.`,
+		},
+	}
+
+	_, err := ScoreSkill(context.Background(), "my skill content", client, DefaultMaxContentLen)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if len(client.calls) != 2 {
+		t.Fatalf("expected 2 calls, got %d", len(client.calls))
+	}
+
+	// First call: scoring
+	if client.calls[0].systemPrompt != skillJudgePrompt {
+		t.Errorf("first call should use skillJudgePrompt, got %.80s...", client.calls[0].systemPrompt)
+	}
+	expectedUser := "CONTENT TO EVALUATE:\n\nmy skill content"
+	if client.calls[0].userContent != expectedUser {
+		t.Errorf("first call user content = %q, want %q", client.calls[0].userContent, expectedUser)
+	}
+
+	// Second call: novel info follow-up
+	if client.calls[1].systemPrompt != novelInfoPrompt {
+		t.Errorf("second call should use novelInfoPrompt, got %.80s...", client.calls[1].systemPrompt)
+	}
+	// Same user content for both calls
+	if client.calls[1].userContent != expectedUser {
+		t.Errorf("second call user content = %q, want %q", client.calls[1].userContent, expectedUser)
+	}
+}
+
+func TestScoreReference_PassesCorrectPromptAndContent(t *testing.T) {
+	client := &capturingMockClient{
+		responses: []string{
+			`{"clarity": 4, "instructional_value": 4, "token_efficiency": 3, "novelty": 4, "skill_relevance": 4, "brief_assessment": "Good."}`,
+			`Novel API details here.`,
+		},
+	}
+
+	_, err := ScoreReference(context.Background(), "my ref content", "test-skill", "A test skill", client, DefaultMaxContentLen)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if len(client.calls) != 2 {
+		t.Fatalf("expected 2 calls, got %d", len(client.calls))
+	}
+
+	// First call: scoring with ref judge prompt containing skill name/desc
+	expectedSystem := fmt.Sprintf(refJudgePromptTemplate, "test-skill", "A test skill")
+	if client.calls[0].systemPrompt != expectedSystem {
+		t.Errorf("first call should use refJudgePromptTemplate, got %.80s...", client.calls[0].systemPrompt)
+	}
+	expectedUser := "CONTENT TO EVALUATE:\n\nmy ref content"
+	if client.calls[0].userContent != expectedUser {
+		t.Errorf("first call user content = %q, want %q", client.calls[0].userContent, expectedUser)
+	}
+
+	// Second call: novel info follow-up
+	if client.calls[1].systemPrompt != novelInfoPrompt {
+		t.Errorf("second call should use novelInfoPrompt, got %.80s...", client.calls[1].systemPrompt)
+	}
+	if client.calls[1].userContent != expectedUser {
+		t.Errorf("second call user content = %q, want %q", client.calls[1].userContent, expectedUser)
+	}
+}
+
+// --- NovelInfo follow-up tests ---
+
+func TestScoreSkill_NovelInfoFollowUp(t *testing.T) {
+	callCount := 0
+	client := &sequentialMockClient{
+		responses: []string{
+			// First call: all dims present, novelty=4 triggers follow-up
+			`{"clarity": 4, "actionability": 5, "token_efficiency": 3, "scope_discipline": 4, "directive_precision": 4, "novelty": 4, "brief_assessment": "Good skill."}`,
+			// Second call: novel info plain text
+			`This skill references a proprietary internal API called FooService and documents an unpublished retry convention.`,
+		},
+		callCount: &callCount,
+	}
+
+	scores, err := ScoreSkill(context.Background(), "test content", client, DefaultMaxContentLen)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if callCount != 2 {
+		t.Errorf("expected 2 API calls (scoring + novel info), got %d", callCount)
+	}
+	if scores.NovelInfo == "" {
+		t.Error("expected NovelInfo to be populated for novelty >= 3")
+	}
+	if scores.NovelInfo != "This skill references a proprietary internal API called FooService and documents an unpublished retry convention." {
+		t.Errorf("unexpected NovelInfo: %s", scores.NovelInfo)
+	}
+}
+
+func TestScoreSkill_NovelInfoSkippedLowNovelty(t *testing.T) {
+	callCount := 0
+	client := &sequentialMockClient{
+		responses: []string{
+			`{"clarity": 4, "actionability": 5, "token_efficiency": 3, "scope_discipline": 4, "directive_precision": 4, "novelty": 2, "brief_assessment": "Common knowledge."}`,
+		},
+		callCount: &callCount,
+	}
+
+	scores, err := ScoreSkill(context.Background(), "test content", client, DefaultMaxContentLen)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if callCount != 1 {
+		t.Errorf("expected 1 API call (no novel info follow-up for low novelty), got %d", callCount)
+	}
+	if scores.NovelInfo != "" {
+		t.Errorf("expected empty NovelInfo for novelty < 3, got %q", scores.NovelInfo)
+	}
+}
+
+func TestScoreSkill_NovelInfoFailureNonFatal(t *testing.T) {
+	callCount := 0
+	client := &sequentialMockClient{
+		responses: []string{
+			`{"clarity": 4, "actionability": 5, "token_efficiency": 3, "scope_discipline": 4, "directive_precision": 4, "novelty": 4, "brief_assessment": "Novel skill."}`,
+		},
+		errors:    []error{nil, fmt.Errorf("network timeout")},
+		callCount: &callCount,
+	}
+
+	scores, err := ScoreSkill(context.Background(), "test content", client, DefaultMaxContentLen)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if scores.Clarity != 4 {
+		t.Errorf("clarity = %d, want 4", scores.Clarity)
+	}
+	if scores.NovelInfo != "" {
+		t.Errorf("expected empty NovelInfo on follow-up failure, got %q", scores.NovelInfo)
+	}
+}
 
 // --- ListCached skips non-json and subdirectories ---
 
