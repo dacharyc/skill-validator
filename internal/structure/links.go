@@ -34,6 +34,11 @@ func CheckInternalLinks(dir string, body string) []validator.Result {
 		if strings.HasPrefix(link, "mailto:") || strings.HasPrefix(link, "#") {
 			continue
 		}
+		// Strip fragment identifier (e.g. "guide.md#heading" → "guide.md")
+		link, _, _ = strings.Cut(link, "#")
+		if link == "" {
+			continue
+		}
 		// Relative link — check file existence
 		resolved := filepath.Join(dir, link)
 		if _, err := os.Stat(resolved); os.IsNotExist(err) {
