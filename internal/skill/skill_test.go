@@ -8,11 +8,11 @@ import (
 
 func TestSplitFrontmatter(t *testing.T) {
 	tests := []struct {
-		name    string
-		input   string
-		wantFM  string
+		name     string
+		input    string
+		wantFM   string
 		wantBody string
-		wantErr bool
+		wantErr  bool
 	}{
 		{
 			name:     "valid frontmatter and body",
@@ -89,7 +89,7 @@ func TestLoad(t *testing.T) {
 	t.Run("valid skill", func(t *testing.T) {
 		dir := t.TempDir()
 		content := "---\nname: my-skill\ndescription: A test skill\nlicense: MIT\n---\n# My Skill\n"
-		if err := os.WriteFile(filepath.Join(dir, "SKILL.md"), []byte(content), 0644); err != nil {
+		if err := os.WriteFile(filepath.Join(dir, "SKILL.md"), []byte(content), 0o644); err != nil {
 			t.Fatal(err)
 		}
 
@@ -125,7 +125,7 @@ func TestLoad(t *testing.T) {
 	t.Run("invalid YAML", func(t *testing.T) {
 		dir := t.TempDir()
 		content := "---\n: invalid: yaml: [broken\n---\nBody\n"
-		if err := os.WriteFile(filepath.Join(dir, "SKILL.md"), []byte(content), 0644); err != nil {
+		if err := os.WriteFile(filepath.Join(dir, "SKILL.md"), []byte(content), 0o644); err != nil {
 			t.Fatal(err)
 		}
 		_, err := Load(dir)
@@ -137,7 +137,7 @@ func TestLoad(t *testing.T) {
 	t.Run("unterminated frontmatter", func(t *testing.T) {
 		dir := t.TempDir()
 		content := "---\nname: test\n# No closing delimiter\n"
-		if err := os.WriteFile(filepath.Join(dir, "SKILL.md"), []byte(content), 0644); err != nil {
+		if err := os.WriteFile(filepath.Join(dir, "SKILL.md"), []byte(content), 0o644); err != nil {
 			t.Fatal(err)
 		}
 		_, err := Load(dir)
@@ -149,7 +149,7 @@ func TestLoad(t *testing.T) {
 	t.Run("no frontmatter", func(t *testing.T) {
 		dir := t.TempDir()
 		content := "# Just a body\n"
-		if err := os.WriteFile(filepath.Join(dir, "SKILL.md"), []byte(content), 0644); err != nil {
+		if err := os.WriteFile(filepath.Join(dir, "SKILL.md"), []byte(content), 0o644); err != nil {
 			t.Fatal(err)
 		}
 		s, err := Load(dir)
@@ -167,7 +167,7 @@ func TestLoad(t *testing.T) {
 	t.Run("allowed-tools as string", func(t *testing.T) {
 		dir := t.TempDir()
 		content := "---\nname: my-skill\ndescription: A test skill\nallowed-tools: Read Write Bash\n---\n# My Skill\n"
-		if err := os.WriteFile(filepath.Join(dir, "SKILL.md"), []byte(content), 0644); err != nil {
+		if err := os.WriteFile(filepath.Join(dir, "SKILL.md"), []byte(content), 0o644); err != nil {
 			t.Fatal(err)
 		}
 
@@ -186,7 +186,7 @@ func TestLoad(t *testing.T) {
 	t.Run("allowed-tools as inline list", func(t *testing.T) {
 		dir := t.TempDir()
 		content := "---\nname: my-skill\ndescription: A test skill\nallowed-tools: [Read, Write, Bash]\n---\n# My Skill\n"
-		if err := os.WriteFile(filepath.Join(dir, "SKILL.md"), []byte(content), 0644); err != nil {
+		if err := os.WriteFile(filepath.Join(dir, "SKILL.md"), []byte(content), 0o644); err != nil {
 			t.Fatal(err)
 		}
 
@@ -205,7 +205,7 @@ func TestLoad(t *testing.T) {
 	t.Run("allowed-tools as block list", func(t *testing.T) {
 		dir := t.TempDir()
 		content := "---\nname: my-skill\ndescription: A test skill\nallowed-tools:\n  - Read\n  - Bash\n  - Grep\n---\n# My Skill\n"
-		if err := os.WriteFile(filepath.Join(dir, "SKILL.md"), []byte(content), 0644); err != nil {
+		if err := os.WriteFile(filepath.Join(dir, "SKILL.md"), []byte(content), 0o644); err != nil {
 			t.Fatal(err)
 		}
 
@@ -224,7 +224,7 @@ func TestLoad(t *testing.T) {
 	t.Run("allowed-tools absent", func(t *testing.T) {
 		dir := t.TempDir()
 		content := "---\nname: my-skill\ndescription: A test skill\n---\n# My Skill\n"
-		if err := os.WriteFile(filepath.Join(dir, "SKILL.md"), []byte(content), 0644); err != nil {
+		if err := os.WriteFile(filepath.Join(dir, "SKILL.md"), []byte(content), 0o644); err != nil {
 			t.Fatal(err)
 		}
 
@@ -240,7 +240,7 @@ func TestLoad(t *testing.T) {
 	t.Run("metadata parsing", func(t *testing.T) {
 		dir := t.TempDir()
 		content := "---\nname: test\ndescription: desc\nmetadata:\n  author: alice\n  version: \"1.0\"\n---\nBody\n"
-		if err := os.WriteFile(filepath.Join(dir, "SKILL.md"), []byte(content), 0644); err != nil {
+		if err := os.WriteFile(filepath.Join(dir, "SKILL.md"), []byte(content), 0o644); err != nil {
 			t.Fatal(err)
 		}
 		s, err := Load(dir)
@@ -259,7 +259,7 @@ func TestLoad(t *testing.T) {
 func TestUnrecognizedFields(t *testing.T) {
 	dir := t.TempDir()
 	content := "---\nname: test\ndescription: desc\ncustom-field: value\nanother: thing\n---\nBody\n"
-	if err := os.WriteFile(filepath.Join(dir, "SKILL.md"), []byte(content), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "SKILL.md"), []byte(content), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	s, err := Load(dir)

@@ -66,7 +66,7 @@ func CheckFrontmatter(s *skill.Skill) []validator.Result {
 	// Check optional metadata
 	if s.RawFrontmatter["metadata"] != nil {
 		// Verify it's a map[string]string
-		if m, ok := s.RawFrontmatter["metadata"].(map[string]interface{}); ok {
+		if m, ok := s.RawFrontmatter["metadata"].(map[string]any); ok {
 			allStrings := true
 			for k, v := range m {
 				if _, ok := v.(string); !ok {
@@ -110,7 +110,7 @@ func checkDescriptionKeywordStuffing(desc string) []validator.Result {
 		// Strip all quoted strings to measure the remaining prose
 		prose := quotedStringPattern.ReplaceAllString(desc, "")
 		proseWordCount := 0
-		for _, w := range strings.Fields(prose) {
+		for w := range strings.FieldsSeq(prose) {
 			// Skip punctuation-only tokens (commas, periods, colons, etc.)
 			cleaned := strings.TrimFunc(w, func(r rune) bool {
 				return !((r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9'))

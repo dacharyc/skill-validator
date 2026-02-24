@@ -159,7 +159,7 @@ func pluralS(n int) string {
 	return "s"
 }
 
-func checkNesting(dir string, prefix string) []validator.Result {
+func checkNesting(dir, prefix string) []validator.Result {
 	var results []validator.Result
 	entries, err := os.ReadDir(dir)
 	if err != nil {

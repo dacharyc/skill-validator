@@ -24,7 +24,7 @@ type linkResult struct {
 }
 
 // CheckLinks validates external (HTTP/HTTPS) links in the skill body.
-func CheckLinks(dir string, body string) []validator.Result {
+func CheckLinks(dir, body string) []validator.Result {
 	allLinks := ExtractLinks(body)
 	if len(allLinks) == 0 {
 		return nil

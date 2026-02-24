@@ -24,7 +24,7 @@ const (
 	otherTotalHardLimit = 100_000
 )
 
-func CheckTokens(dir string, body string) ([]validator.Result, []validator.TokenCount, []validator.TokenCount) {
+func CheckTokens(dir, body string) ([]validator.Result, []validator.TokenCount, []validator.TokenCount) {
 	var results []validator.Result
 	var counts []validator.TokenCount
 
@@ -203,7 +203,7 @@ func countAssetFiles(dir string, enc tokenizer.Codec) []validator.TokenCount {
 	var counts []validator.TokenCount
 	assetsDir := filepath.Join(dir, "assets")
 
-	filepath.Walk(assetsDir, func(path string, info os.FileInfo, err error) error {
+	_ = filepath.Walk(assetsDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return nil
 		}
@@ -276,7 +276,7 @@ func countFilesInDir(rootDir, dirName string, enc tokenizer.Codec) []validator.T
 	var counts []validator.TokenCount
 	fullDir := filepath.Join(rootDir, dirName)
 
-	filepath.Walk(fullDir, func(path string, info os.FileInfo, err error) error {
+	_ = filepath.Walk(fullDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return nil
 		}

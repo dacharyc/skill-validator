@@ -680,10 +680,7 @@ func TestResolveCheckGroups(t *testing.T) {
 	})
 
 	t.Run("mutual exclusion", func(t *testing.T) {
-		// This is checked in runCheck, but test the logic anyway
-		if checkOnly != "" && checkSkip != "" {
-			// Reset for test isolation
-		}
+		// This is checked in runCheck; covered by integration tests
 	})
 }
 
@@ -707,7 +704,7 @@ func TestCheckCommand_JSONOutput(t *testing.T) {
 	// Build a simplified JSON to verify fields exist
 	type jsonCheck struct {
 		ContentAnalysis       *content.Report       `json:"content_analysis,omitempty"`
-		ContaminationAnalysis *contamination.Report  `json:"contamination_analysis,omitempty"`
+		ContaminationAnalysis *contamination.Report `json:"contamination_analysis,omitempty"`
 	}
 
 	out := jsonCheck{

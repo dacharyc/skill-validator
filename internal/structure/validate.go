@@ -80,7 +80,7 @@ func Validate(dir string, opts Options) *validator.Report {
 	return report
 }
 
-func checkSkillRatio(standard []validator.TokenCount, other []validator.TokenCount) []validator.Result {
+func checkSkillRatio(standard, other []validator.TokenCount) []validator.Result {
 	standardTotal := 0
 	for _, tc := range standard {
 		standardTotal += tc.Tokens

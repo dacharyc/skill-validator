@@ -97,13 +97,21 @@ func TestReadSkillRaw_Missing(t *testing.T) {
 func TestReadReferencesMarkdownFiles(t *testing.T) {
 	dir := t.TempDir()
 	refsDir := filepath.Join(dir, "references")
-	if err := os.MkdirAll(refsDir, 0755); err != nil {
+	if err := os.MkdirAll(refsDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	os.WriteFile(filepath.Join(refsDir, "guide.md"), []byte("# Guide"), 0644)
-	os.WriteFile(filepath.Join(refsDir, "notes.md"), []byte("# Notes"), 0644)
-	os.WriteFile(filepath.Join(refsDir, "data.json"), []byte(`{"skip": true}`), 0644)
-	os.MkdirAll(filepath.Join(refsDir, "subdir"), 0755)
+	if err := os.WriteFile(filepath.Join(refsDir, "guide.md"), []byte("# Guide"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(refsDir, "notes.md"), []byte("# Notes"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(refsDir, "data.json"), []byte(`{"skip": true}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(refsDir, "subdir"), 0o755); err != nil {
+		t.Fatal(err)
+	}
 
 	files := ReadReferencesMarkdownFiles(dir)
 	if files == nil {
@@ -130,7 +138,9 @@ func TestReadReferencesMarkdownFiles_NoDir(t *testing.T) {
 
 func TestReadReferencesMarkdownFiles_EmptyDir(t *testing.T) {
 	dir := t.TempDir()
-	os.MkdirAll(filepath.Join(dir, "references"), 0755)
+	if err := os.MkdirAll(filepath.Join(dir, "references"), 0o755); err != nil {
+		t.Fatal(err)
+	}
 	files := ReadReferencesMarkdownFiles(dir)
 	if files != nil {
 		t.Errorf("expected nil for empty references dir, got %v", files)
@@ -140,8 +150,12 @@ func TestReadReferencesMarkdownFiles_EmptyDir(t *testing.T) {
 func TestReadReferencesMarkdownFiles_OnlyNonMd(t *testing.T) {
 	dir := t.TempDir()
 	refsDir := filepath.Join(dir, "references")
-	os.MkdirAll(refsDir, 0755)
-	os.WriteFile(filepath.Join(refsDir, "data.json"), []byte("{}"), 0644)
+	if err := os.MkdirAll(refsDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(refsDir, "data.json"), []byte("{}"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 
 	files := ReadReferencesMarkdownFiles(dir)
 	if files != nil {
@@ -152,9 +166,15 @@ func TestReadReferencesMarkdownFiles_OnlyNonMd(t *testing.T) {
 func TestAnalyzeReferences_WithFiles(t *testing.T) {
 	dir := t.TempDir()
 	refsDir := filepath.Join(dir, "references")
-	os.MkdirAll(refsDir, 0755)
-	os.WriteFile(filepath.Join(refsDir, "alpha.md"), []byte("# Alpha\nUse this tool."), 0644)
-	os.WriteFile(filepath.Join(refsDir, "beta.md"), []byte("# Beta\nAnother reference."), 0644)
+	if err := os.MkdirAll(refsDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(refsDir, "alpha.md"), []byte("# Alpha\nUse this tool."), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(refsDir, "beta.md"), []byte("# Beta\nAnother reference."), 0o644); err != nil {
+		t.Fatal(err)
+	}
 
 	rpt := &Report{SkillDir: dir}
 	AnalyzeReferences(dir, rpt)
@@ -204,10 +224,10 @@ func TestAnalyzeReferences_NoFiles(t *testing.T) {
 // writeSkill creates a SKILL.md file in the given directory.
 func writeSkill(t *testing.T, dir, content string) {
 	t.Helper()
-	if err := os.MkdirAll(dir, 0755); err != nil {
+	if err := os.MkdirAll(dir, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(dir, "SKILL.md"), []byte(content), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "SKILL.md"), []byte(content), 0o644); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -286,7 +306,7 @@ func TestDetectSkills(t *testing.T) {
 	t.Run("ignores subdirs without SKILL.md", func(t *testing.T) {
 		dir := t.TempDir()
 		// Create a subdir without SKILL.md
-		if err := os.MkdirAll(filepath.Join(dir, "no-skill"), 0755); err != nil {
+		if err := os.MkdirAll(filepath.Join(dir, "no-skill"), 0o755); err != nil {
 			t.Fatal(err)
 		}
 		writeSkill(t, filepath.Join(dir, "has-skill"), "---\nname: has-skill\n---\n")
@@ -309,7 +329,7 @@ func TestDetectSkills(t *testing.T) {
 		writeSkill(t, realDir, "---\nname: real\n---\n")
 		// Create a parent with a symlink
 		parent := filepath.Join(dir, "parent")
-		if err := os.MkdirAll(parent, 0755); err != nil {
+		if err := os.MkdirAll(parent, 0o755); err != nil {
 			t.Fatal(err)
 		}
 		if err := os.Symlink(realDir, filepath.Join(parent, "linked")); err != nil {

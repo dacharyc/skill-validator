@@ -15,7 +15,7 @@ func makeSkill(dir, name, desc string) *skill.Skill {
 			Name:        name,
 			Description: desc,
 		},
-		RawFrontmatter: map[string]interface{}{},
+		RawFrontmatter: map[string]any{},
 	}
 	if name != "" {
 		s.RawFrontmatter["name"] = name
@@ -242,7 +242,7 @@ func TestCheckFrontmatter_Compatibility(t *testing.T) {
 func TestCheckFrontmatter_Metadata(t *testing.T) {
 	t.Run("valid string metadata", func(t *testing.T) {
 		s := makeSkill("/tmp/my-skill", "my-skill", "desc")
-		s.RawFrontmatter["metadata"] = map[string]interface{}{
+		s.RawFrontmatter["metadata"] = map[string]any{
 			"author":  "alice",
 			"version": "1.0",
 		}
@@ -252,7 +252,7 @@ func TestCheckFrontmatter_Metadata(t *testing.T) {
 
 	t.Run("metadata with non-string value", func(t *testing.T) {
 		s := makeSkill("/tmp/my-skill", "my-skill", "desc")
-		s.RawFrontmatter["metadata"] = map[string]interface{}{
+		s.RawFrontmatter["metadata"] = map[string]any{
 			"count": 42,
 		}
 		results := CheckFrontmatter(s)

@@ -104,11 +104,6 @@ func outputReportCompare(results []*judge.CachedResult, skillDir string) error {
 		return outputReportCompareJSON(results)
 	}
 
-	// Group by file, then by model
-	type fileModel struct {
-		file  string
-		model string
-	}
 	byFile := make(map[string][]*judge.CachedResult)
 	for _, r := range results {
 		byFile[r.File] = append(byFile[r.File], r)
@@ -124,11 +119,6 @@ func outputReportCompare(results []*judge.CachedResult, skillDir string) error {
 
 	for _, file := range files {
 		entries := byFile[file]
-		if len(entries) < 2 && !reportList {
-			// Only show comparison when there are multiple entries
-			// but still show if explicitly listing
-		}
-
 		fmt.Printf("\n%s%s%s\n", evalColorBold, file, evalColorReset)
 
 		// Get unique models
@@ -178,12 +168,12 @@ func printCompareRow(label string, entries []*judge.CachedResult, models []strin
 	fmt.Printf("  %-22s", label)
 
 	// Build model→scores map using the most recent entry per model
-	modelScores := make(map[string]map[string]interface{})
+	modelScores := make(map[string]map[string]any)
 	for _, e := range entries {
 		if _, ok := modelScores[e.Model]; ok {
 			continue // already have a newer one (results are sorted newest-first)
 		}
-		var scores map[string]interface{}
+		var scores map[string]any
 		if err := json.Unmarshal(e.Scores, &scores); err == nil {
 			modelScores[e.Model] = scores
 		}

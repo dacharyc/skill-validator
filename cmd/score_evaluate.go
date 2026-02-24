@@ -17,12 +17,12 @@ import (
 )
 
 var (
-	evalProvider  string
-	evalModel     string
-	evalBaseURL   string
-	evalRescore   bool
-	evalSkillOnly bool
-	evalRefsOnly  bool
+	evalProvider       string
+	evalModel          string
+	evalBaseURL        string
+	evalRescore        bool
+	evalSkillOnly      bool
+	evalRefsOnly       bool
 	evalDisplay        string
 	evalFullContent    bool
 	evalMaxTokensStyle string
@@ -60,9 +60,9 @@ func init() {
 
 // skillEvalResult holds the complete scoring output for one skill.
 type skillEvalResult struct {
-	SkillDir    string
-	SkillScores *judge.SkillScores
-	RefResults  []refEvalResult
+	SkillDir     string
+	SkillScores  *judge.SkillScores
+	RefResults   []refEvalResult
 	RefAggregate *judge.RefScores
 }
 
@@ -352,7 +352,7 @@ func runScoreSingleFile(ctx context.Context, absPath string, client judge.LLMCli
 func findParentSkillDir(filePath string) (string, error) {
 	dir := filepath.Dir(filePath)
 	// Check up to 3 levels
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		if _, err := os.Stat(filepath.Join(dir, "SKILL.md")); err == nil {
 			return dir, nil
 		}
@@ -485,10 +485,7 @@ func printDimScore(name string, score int) {
 	} else if score <= 3 {
 		color = evalColorYellow
 	}
-	padding := 22 - len(name)
-	if padding < 1 {
-		padding = 1
-	}
+	padding := max(22-len(name), 1)
 	fmt.Printf("  %s:%s%s%d/5%s\n", name, strings.Repeat(" ", padding), color, score, evalColorReset)
 }
 
@@ -528,10 +525,7 @@ func outputEvalJSON(results []*skillEvalResult) error {
 			RefAggregate: r.RefAggregate,
 		}
 		for _, ref := range r.RefResults {
-			skill.RefScores = append(skill.RefScores, evalJSONRef{
-				File:   ref.File,
-				Scores: ref.Scores,
-			})
+			skill.RefScores = append(skill.RefScores, evalJSONRef(ref))
 		}
 		out.Skills[i] = skill
 	}

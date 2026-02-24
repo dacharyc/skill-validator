@@ -10,7 +10,7 @@ import (
 )
 
 // CheckMarkdown validates markdown structure in the skill.
-func CheckMarkdown(dir string, body string) []validator.Result {
+func CheckMarkdown(dir, body string) []validator.Result {
 	var results []validator.Result
 
 	// Check SKILL.md body

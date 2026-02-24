@@ -10,15 +10,15 @@ import (
 
 // SkillScores holds the LLM judge scores for a SKILL.md file.
 type SkillScores struct {
-	Clarity              int     `json:"clarity"`
-	Actionability        int     `json:"actionability"`
-	TokenEfficiency      int     `json:"token_efficiency"`
-	ScopeDiscipline      int     `json:"scope_discipline"`
-	DirectivePrecision   int     `json:"directive_precision"`
-	Novelty              int     `json:"novelty"`
-	Overall              float64 `json:"overall"`
-	BriefAssessment      string  `json:"brief_assessment"`
-	NovelInfo            string  `json:"novel_info,omitempty"`
+	Clarity            int     `json:"clarity"`
+	Actionability      int     `json:"actionability"`
+	TokenEfficiency    int     `json:"token_efficiency"`
+	ScopeDiscipline    int     `json:"scope_discipline"`
+	DirectivePrecision int     `json:"directive_precision"`
+	Novelty            int     `json:"novelty"`
+	Overall            float64 `json:"overall"`
+	BriefAssessment    string  `json:"brief_assessment"`
+	NovelInfo          string  `json:"novel_info,omitempty"`
 }
 
 // RefScores holds the LLM judge scores for a reference file.
@@ -33,8 +33,10 @@ type RefScores struct {
 	NovelInfo          string  `json:"novel_info,omitempty"`
 }
 
-var skillDims = []string{"clarity", "actionability", "token_efficiency", "scope_discipline", "directive_precision", "novelty"}
-var refDims = []string{"clarity", "instructional_value", "token_efficiency", "novelty", "skill_relevance"}
+var (
+	skillDims = []string{"clarity", "actionability", "token_efficiency", "scope_discipline", "directive_precision", "novelty"}
+	refDims   = []string{"clarity", "instructional_value", "token_efficiency", "novelty", "skill_relevance"}
+)
 
 // SkillDimensions returns the dimension names for SKILL.md scoring.
 func SkillDimensions() []string { return skillDims }

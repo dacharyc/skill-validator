@@ -27,9 +27,15 @@ func TestCheckStructure(t *testing.T) {
 	t.Run("recognized directories", func(t *testing.T) {
 		dir := t.TempDir()
 		writeFile(t, dir, "SKILL.md", "content")
-		os.MkdirAll(filepath.Join(dir, "scripts"), 0755)
-		os.MkdirAll(filepath.Join(dir, "references"), 0755)
-		os.MkdirAll(filepath.Join(dir, "assets"), 0755)
+		if err := os.MkdirAll(filepath.Join(dir, "scripts"), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.MkdirAll(filepath.Join(dir, "references"), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.MkdirAll(filepath.Join(dir, "assets"), 0o755); err != nil {
+			t.Fatal(err)
+		}
 		results := CheckStructure(dir)
 		requireResult(t, results, validator.Pass, "SKILL.md found")
 		requireNoLevel(t, results, validator.Warning)
@@ -38,7 +44,9 @@ func TestCheckStructure(t *testing.T) {
 	t.Run("unknown directory empty", func(t *testing.T) {
 		dir := t.TempDir()
 		writeFile(t, dir, "SKILL.md", "content")
-		os.MkdirAll(filepath.Join(dir, "extras"), 0755)
+		if err := os.MkdirAll(filepath.Join(dir, "extras"), 0o755); err != nil {
+			t.Fatal(err)
+		}
 		results := CheckStructure(dir)
 		requireResult(t, results, validator.Warning, "unknown directory: extras/")
 	})
@@ -58,7 +66,9 @@ func TestCheckStructure(t *testing.T) {
 	t.Run("unknown directory hint omits references when it exists", func(t *testing.T) {
 		dir := t.TempDir()
 		writeFile(t, dir, "SKILL.md", "content")
-		os.MkdirAll(filepath.Join(dir, "references"), 0755)
+		if err := os.MkdirAll(filepath.Join(dir, "references"), 0o755); err != nil {
+			t.Fatal(err)
+		}
 		writeFile(t, dir, "extras/file.md", "content")
 		results := CheckStructure(dir)
 		requireResultContaining(t, results, validator.Warning, "should this be assets/?")
@@ -68,7 +78,9 @@ func TestCheckStructure(t *testing.T) {
 	t.Run("unknown directory hint omits assets when it exists", func(t *testing.T) {
 		dir := t.TempDir()
 		writeFile(t, dir, "SKILL.md", "content")
-		os.MkdirAll(filepath.Join(dir, "assets"), 0755)
+		if err := os.MkdirAll(filepath.Join(dir, "assets"), 0o755); err != nil {
+			t.Fatal(err)
+		}
 		writeFile(t, dir, "extras/file.md", "content")
 		results := CheckStructure(dir)
 		requireResultContaining(t, results, validator.Warning, "should this be references/?")
@@ -78,8 +90,12 @@ func TestCheckStructure(t *testing.T) {
 	t.Run("unknown directory hint omitted when both exist", func(t *testing.T) {
 		dir := t.TempDir()
 		writeFile(t, dir, "SKILL.md", "content")
-		os.MkdirAll(filepath.Join(dir, "references"), 0755)
-		os.MkdirAll(filepath.Join(dir, "assets"), 0755)
+		if err := os.MkdirAll(filepath.Join(dir, "references"), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.MkdirAll(filepath.Join(dir, "assets"), 0o755); err != nil {
+			t.Fatal(err)
+		}
 		writeFile(t, dir, "extras/file.md", "content")
 		results := CheckStructure(dir)
 		requireResultContaining(t, results, validator.Warning, "won't discover these files")
@@ -142,7 +158,9 @@ func TestCheckStructure(t *testing.T) {
 	t.Run("deep nesting", func(t *testing.T) {
 		dir := t.TempDir()
 		writeFile(t, dir, "SKILL.md", "content")
-		os.MkdirAll(filepath.Join(dir, "references", "subdir"), 0755)
+		if err := os.MkdirAll(filepath.Join(dir, "references", "subdir"), 0o755); err != nil {
+			t.Fatal(err)
+		}
 		results := CheckStructure(dir)
 		requireResult(t, results, validator.Warning, "deep nesting detected: references/subdir/")
 	})
@@ -151,7 +169,9 @@ func TestCheckStructure(t *testing.T) {
 		dir := t.TempDir()
 		writeFile(t, dir, "SKILL.md", "content")
 		writeFile(t, dir, ".hidden", "secret")
-		os.MkdirAll(filepath.Join(dir, ".git"), 0755)
+		if err := os.MkdirAll(filepath.Join(dir, ".git"), 0o755); err != nil {
+			t.Fatal(err)
+		}
 		results := CheckStructure(dir)
 		requireResult(t, results, validator.Pass, "SKILL.md found")
 		requireNoLevel(t, results, validator.Warning)
@@ -160,7 +180,9 @@ func TestCheckStructure(t *testing.T) {
 	t.Run("hidden dirs inside recognized dirs are skipped", func(t *testing.T) {
 		dir := t.TempDir()
 		writeFile(t, dir, "SKILL.md", "content")
-		os.MkdirAll(filepath.Join(dir, "references", ".hidden"), 0755)
+		if err := os.MkdirAll(filepath.Join(dir, "references", ".hidden"), 0o755); err != nil {
+			t.Fatal(err)
+		}
 		results := CheckStructure(dir)
 		requireNoLevel(t, results, validator.Warning)
 	})

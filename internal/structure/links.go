@@ -13,7 +13,7 @@ import (
 // CheckInternalLinks validates relative (internal) links in the skill body.
 // Broken internal links indicate a structural problem: the skill references
 // files that don't exist in the package.
-func CheckInternalLinks(dir string, body string) []validator.Result {
+func CheckInternalLinks(dir, body string) []validator.Result {
 	allLinks := links.ExtractLinks(body)
 	if len(allLinks) == 0 {
 		return nil
