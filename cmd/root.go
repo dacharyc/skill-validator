@@ -10,7 +10,7 @@ import (
 	"github.com/dacharyc/skill-validator/internal/validator"
 )
 
-const version = "v0.6.0"
+const version = "v0.7.0"
 
 var outputFormat string
 
