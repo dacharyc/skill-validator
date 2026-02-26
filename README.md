@@ -24,6 +24,7 @@ Spec compliance is table stakes. `skill-validator` goes further: it checks that 
   - [JSON output](#json-output)
   - [Markdown output](#markdown-output)
   - [GitHub Actions annotations](#github-actions-annotations)
+  - [CI workflow example](#ci-workflow-example)
   - [Multi-skill directories](#multi-skill-directories)
 - [What it checks & why](#what-it-checks)
   - [Structure validation](#structure-validation-validate-structure)
@@ -468,6 +469,49 @@ File paths are relative to the working directory (the repository root in CI). Re
 
 ```
 skill-validator check --emit-annotations --strict -o markdown my-skill/ >> $GITHUB_STEP_SUMMARY
+```
+
+### CI workflow example
+
+Here's a complete GitHub Actions workflow that validates skills on every pull request. It uses `--strict` for a binary pass/fail, `--emit-annotations` to surface errors and warnings inline in the PR diff, and appends a markdown report to the job summary:
+
+```yaml
+name: Validate Skills
+on:
+  pull_request:
+    paths:
+      - "skills/**"
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install skill-validator
+        run: |
+          brew install dacharyc/tap/skill-validator
+
+      - name: Validate skills
+        run: |
+          skill-validator check --strict --emit-annotations skills/
+          skill-validator check --strict -o markdown skills/ >> "$GITHUB_STEP_SUMMARY"
+```
+
+The first `check` line runs validation with text output and annotations; the second appends a markdown report to the GitHub Actions step summary. If you only need one of these (annotations in the diff or the summary report), drop the other line.
+
+For in-progress skills where you want warnings to be non-blocking, remove `--strict` so warnings exit with code 2 instead of failing the job. You can make this conditional per directory:
+
+```yaml
+      - name: Validate published skills
+        run: |
+          skill-validator check --strict --emit-annotations skills/published/
+          skill-validator check --strict -o markdown skills/published/ >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Validate draft skills
+        run: |
+          skill-validator check --emit-annotations skills/drafts/
+          skill-validator check -o markdown skills/drafts/ >> "$GITHUB_STEP_SUMMARY"
 ```
 
 ### Multi-skill directories
