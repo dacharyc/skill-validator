@@ -25,8 +25,8 @@ type Frontmatter struct {
 // The spec defines it as a space-delimited string, but many skills use
 // a YAML list instead. This type accepts both.
 type AllowedTools struct {
-	Value  string // normalized space-delimited string
-	WasList bool  // true if the original YAML used a sequence
+	Value   string // normalized space-delimited string
+	WasList bool   // true if the original YAML used a sequence
 }
 
 // UnmarshalYAML implements custom unmarshaling for AllowedTools to accept
@@ -57,11 +57,11 @@ func (a AllowedTools) IsEmpty() bool {
 
 // Skill represents a parsed skill package.
 type Skill struct {
-	Dir           string
-	Frontmatter   Frontmatter
-	RawFrontmatter map[string]interface{}
-	Body          string
-	RawContent    string
+	Dir            string
+	Frontmatter    Frontmatter
+	RawFrontmatter map[string]any
+	Body           string
+	RawContent     string
 }
 
 var knownFrontmatterFields = map[string]bool{
@@ -144,13 +144,13 @@ func splitFrontmatter(content string) (frontmatter, body string, err error) {
 		return frontmatter, body, nil
 	}
 
-	idx := strings.Index(rest, "\n---")
-	if idx == -1 {
+	before, after, ok := strings.Cut(rest, "\n---")
+	if !ok {
 		return "", "", fmt.Errorf("unterminated frontmatter: missing closing ---")
 	}
 
-	frontmatter = strings.TrimRight(rest[:idx], "\r")
-	body = rest[idx+4:] // skip \n---
+	frontmatter = strings.TrimRight(before, "\r")
+	body = after // skip \n---
 	// Strip leading newline from body
 	if len(body) > 0 && body[0] == '\n' {
 		body = body[1:]

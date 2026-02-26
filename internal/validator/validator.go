@@ -15,7 +15,7 @@ import (
 type Level int
 
 const (
-	Pass    Level = iota
+	Pass Level = iota
 	Info
 	Warning
 	Error
@@ -76,7 +76,7 @@ type Report struct {
 type SkillMode int
 
 const (
-	NoSkill    SkillMode = iota
+	NoSkill SkillMode = iota
 	SingleSkill
 	MultiSkill
 )

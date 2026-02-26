@@ -92,7 +92,7 @@ func resolveCheckGroups(only, skip string) (map[string]bool, error) {
 		for k := range enabled {
 			enabled[k] = false
 		}
-		for _, g := range strings.Split(only, ",") {
+		for g := range strings.SplitSeq(only, ",") {
 			g = strings.TrimSpace(g)
 			if !validGroups[g] {
 				return nil, fmt.Errorf("unknown check group %q (valid: structure, links, content, contamination)", g)
@@ -102,7 +102,7 @@ func resolveCheckGroups(only, skip string) (map[string]bool, error) {
 	}
 
 	if skip != "" {
-		for _, g := range strings.Split(skip, ",") {
+		for g := range strings.SplitSeq(skip, ",") {
 			g = strings.TrimSpace(g)
 			if !validGroups[g] {
 				return nil, fmt.Errorf("unknown check group %q (valid: structure, links, content, contamination)", g)

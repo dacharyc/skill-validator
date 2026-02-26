@@ -116,7 +116,7 @@ type Report struct {
 // Analyze computes contamination metrics for a skill.
 // name is the skill name, content is the SKILL.md content,
 // codeLanguages are the language identifiers extracted from code blocks.
-func Analyze(name string, content string, codeLanguages []string) *Report {
+func Analyze(name, content string, codeLanguages []string) *Report {
 	if codeLanguages == nil {
 		codeLanguages = []string{}
 	}

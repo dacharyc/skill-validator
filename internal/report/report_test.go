@@ -281,7 +281,7 @@ func TestPrint_OtherTokenCountsColors(t *testing.T) {
 
 	// small.md (500 tokens) should have no warning/error color on the count
 	// Find the line with small.md and check it doesn't have yellow or red before "500"
-	for _, line := range strings.Split(output, "\n") {
+	for line := range strings.SplitSeq(output, "\n") {
 		if strings.Contains(line, "small.md") {
 			if strings.Contains(line, "\033[33m500") || strings.Contains(line, "\033[31m500") {
 				t.Error("small.md count should not be colored")
@@ -322,7 +322,7 @@ func TestPrint_OtherTokenCountsTotalRed(t *testing.T) {
 	Print(&buf, r, false)
 	output := buf.String()
 
-	for _, line := range strings.Split(output, "\n") {
+	for line := range strings.SplitSeq(output, "\n") {
 		if strings.Contains(line, "Total (other)") {
 			if !strings.Contains(line, "\033[31m110,000") {
 				t.Errorf("total over 100k should be red, got line: %q", line)

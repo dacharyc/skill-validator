@@ -22,7 +22,7 @@ type queueItem struct {
 
 // CheckOrphanFiles walks scripts/, references/, and assets/ to find files
 // that are never referenced (directly or transitively) from SKILL.md.
-func CheckOrphanFiles(dir string, body string) []validator.Result {
+func CheckOrphanFiles(dir, body string) []validator.Result {
 	// Inventory: collect all files in recognized directories.
 	inventory := inventoryFiles(dir)
 	if len(inventory) == 0 {

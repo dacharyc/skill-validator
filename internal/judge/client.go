@@ -60,8 +60,8 @@ type anthropicClient struct {
 	baseURL string
 }
 
-func (c *anthropicClient) Provider() string   { return "anthropic" }
-func (c *anthropicClient) ModelName() string   { return c.model }
+func (c *anthropicClient) Provider() string  { return "anthropic" }
+func (c *anthropicClient) ModelName() string { return c.model }
 
 type anthropicRequest struct {
 	Model     string             `json:"model"`
@@ -148,14 +148,14 @@ type openaiClient struct {
 	maxTokensStyle string
 }
 
-func (c *openaiClient) Provider() string   { return "openai" }
-func (c *openaiClient) ModelName() string   { return c.model }
+func (c *openaiClient) Provider() string  { return "openai" }
+func (c *openaiClient) ModelName() string { return c.model }
 
 type openaiRequest struct {
-	Model              string          `json:"model"`
-	MaxTokens          int             `json:"max_tokens,omitempty"`
-	MaxCompletionTokens int            `json:"max_completion_tokens,omitempty"`
-	Messages           []openaiMessage `json:"messages"`
+	Model               string          `json:"model"`
+	MaxTokens           int             `json:"max_tokens,omitempty"`
+	MaxCompletionTokens int             `json:"max_completion_tokens,omitempty"`
+	Messages            []openaiMessage `json:"messages"`
 }
 
 // useMaxCompletionTokens reports whether the given model requires

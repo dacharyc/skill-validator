@@ -187,8 +187,12 @@ func TestListCached(t *testing.T) {
 		Scores: json.RawMessage(`{}`),
 	}
 
-	SaveCache(dir, "key1", r1)
-	SaveCache(dir, "key2", r2)
+	if err := SaveCache(dir, "key1", r1); err != nil {
+		t.Fatal(err)
+	}
+	if err := SaveCache(dir, "key2", r2); err != nil {
+		t.Fatal(err)
+	}
 
 	results, err := ListCached(dir)
 	if err != nil {
@@ -768,7 +772,7 @@ func TestScoreSkill_RetryFails_ReturnsPartial(t *testing.T) {
 		responses: []string{
 			`{"clarity": 4, "actionability": 5, "token_efficiency": 3, "directive_precision": 4, "brief_assessment": "Partial."}`,
 		},
-		errors: []error{nil, fmt.Errorf("network error")},
+		errors:    []error{nil, fmt.Errorf("network error")},
 		callCount: &callCount,
 	}
 
@@ -1167,19 +1171,27 @@ func TestListCached_SkipsNonJSON(t *testing.T) {
 	dir := t.TempDir()
 
 	// Write a valid cache entry
-	SaveCache(dir, "valid", &CachedResult{
+	if err := SaveCache(dir, "valid", &CachedResult{
 		Provider: "test", Model: "model", File: "SKILL.md",
 		ScoredAt: time.Now(), Scores: json.RawMessage(`{}`),
-	})
+	}); err != nil {
+		t.Fatal(err)
+	}
 
 	// Write a non-json file
-	os.WriteFile(filepath.Join(dir, "notes.txt"), []byte("not json"), 0o644)
+	if err := os.WriteFile(filepath.Join(dir, "notes.txt"), []byte("not json"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 
 	// Write invalid json
-	os.WriteFile(filepath.Join(dir, "bad.json"), []byte("not valid json"), 0o644)
+	if err := os.WriteFile(filepath.Join(dir, "bad.json"), []byte("not valid json"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 
 	// Create a subdirectory
-	os.Mkdir(filepath.Join(dir, "subdir"), 0o755)
+	if err := os.Mkdir(filepath.Join(dir, "subdir"), 0o755); err != nil {
+		t.Fatal(err)
+	}
 
 	results, err := ListCached(dir)
 	if err != nil {

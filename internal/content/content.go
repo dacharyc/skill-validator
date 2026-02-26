@@ -36,14 +36,14 @@ var imperativeVerbs = map[string]bool{
 }
 
 var (
-	codeBlockPattern  = regexp.MustCompile("(?s)```[\\w]*\\n(.*?)```")
-	codeLangPattern   = regexp.MustCompile("```(\\w+)")
-	codeBlockStrip    = regexp.MustCompile("(?s)```[\\w]*\\n.*?```")
-	inlineCodeStrip   = regexp.MustCompile("`[^`]+`")
-	sentenceSplitPat  = regexp.MustCompile(`[.!?]\s+|[.!?]$|\n\n+`)
-	leadingFormatPat  = regexp.MustCompile(`^[#*\->\s]+`)
-	sectionPattern    = regexp.MustCompile(`(?m)^#{2,}\s+`)
-	listItemPattern   = regexp.MustCompile(`(?m)^[\s]*[-*+]\s+|^\s*\d+\.\s+`)
+	codeBlockPattern = regexp.MustCompile("(?s)```[\\w]*\\n(.*?)```")
+	codeLangPattern  = regexp.MustCompile("```(\\w+)")
+	codeBlockStrip   = regexp.MustCompile("(?s)```[\\w]*\\n.*?```")
+	inlineCodeStrip  = regexp.MustCompile("`[^`]+`")
+	sentenceSplitPat = regexp.MustCompile(`[.!?]\s+|[.!?]$|\n\n+`)
+	leadingFormatPat = regexp.MustCompile(`^[#*\->\s]+`)
+	sectionPattern   = regexp.MustCompile(`(?m)^#{2,}\s+`)
+	listItemPattern  = regexp.MustCompile(`(?m)^[\s]*[-*+]\s+|^\s*\d+\.\s+`)
 )
 
 // Report holds content analysis metrics for a skill.

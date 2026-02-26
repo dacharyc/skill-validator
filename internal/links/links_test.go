@@ -15,25 +15,11 @@ import (
 func writeFile(t *testing.T, dir, relPath, content string) {
 	t.Helper()
 	full := filepath.Join(dir, relPath)
-	if err := os.MkdirAll(filepath.Dir(full), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(full), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(full, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(full, []byte(content), 0o644); err != nil {
 		t.Fatal(err)
-	}
-}
-
-// requireResult asserts that at least one result has the exact level and message.
-func requireResult(t *testing.T, results []validator.Result, level validator.Level, message string) {
-	t.Helper()
-	for _, r := range results {
-		if r.Level == level && r.Message == message {
-			return
-		}
-	}
-	t.Errorf("expected result with level=%d message=%q, got:", level, message)
-	for _, r := range results {
-		t.Logf("  level=%d category=%s message=%q", r.Level, r.Category, r.Message)
 	}
 }
 
@@ -48,16 +34,6 @@ func requireResultContaining(t *testing.T, results []validator.Result, level val
 	t.Errorf("expected result with level=%d message containing %q, got:", level, substr)
 	for _, r := range results {
 		t.Logf("  level=%d category=%s message=%q", r.Level, r.Category, r.Message)
-	}
-}
-
-// requireNoLevel asserts that no result has the given level.
-func requireNoLevel(t *testing.T, results []validator.Result, level validator.Level) {
-	t.Helper()
-	for _, r := range results {
-		if r.Level == level {
-			t.Errorf("unexpected result with level=%d: category=%s message=%q", level, r.Category, r.Message)
-		}
 	}
 }
 

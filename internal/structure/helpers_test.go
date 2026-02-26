@@ -13,10 +13,10 @@ import (
 func writeFile(t *testing.T, dir, relPath, content string) {
 	t.Helper()
 	full := filepath.Join(dir, relPath)
-	if err := os.MkdirAll(filepath.Dir(full), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(full), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(full, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(full, []byte(content), 0o644); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -77,13 +77,5 @@ func requireNoResultContaining(t *testing.T, results []validator.Result, level v
 		if r.Level == level && strings.Contains(r.Message, substr) {
 			t.Errorf("unexpected result with level=%d message containing %q: %q", level, substr, r.Message)
 		}
-	}
-}
-
-// requireContains asserts that s contains substr.
-func requireContains(t *testing.T, s, substr string) {
-	t.Helper()
-	if !strings.Contains(s, substr) {
-		t.Errorf("expected %q to contain %q", s, substr)
 	}
 }

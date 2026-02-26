@@ -25,8 +25,8 @@ type jsonReport struct {
 }
 
 type jsonReferenceFileReport struct {
-	File                  string               `json:"file"`
-	ContentAnalysis       *content.Report      `json:"content_analysis,omitempty"`
+	File                  string                `json:"file"`
+	ContentAnalysis       *content.Report       `json:"content_analysis,omitempty"`
 	ContaminationAnalysis *contamination.Report `json:"contamination_analysis,omitempty"`
 }
 
