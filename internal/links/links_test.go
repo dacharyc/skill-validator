@@ -206,7 +206,7 @@ func TestCheckLinks_HTTP(t *testing.T) {
 
 func TestCheckHTTPLink(t *testing.T) {
 	t.Run("connection refused", func(t *testing.T) {
-		result := checkHTTPLink("http://127.0.0.1:1")
+		result := checkHTTPLink(validator.ResultContext{Category: "Links", File: "SKILL.md"}, "http://127.0.0.1:1")
 		if result.Level != validator.Error {
 			t.Errorf("expected Error level, got %d", result.Level)
 		}
@@ -225,7 +225,7 @@ func TestCheckHTTPLink(t *testing.T) {
 		server := httptest.NewServer(mux)
 		defer server.Close()
 
-		result := checkHTTPLink(server.URL + "/redirect")
+		result := checkHTTPLink(validator.ResultContext{Category: "Links", File: "SKILL.md"}, server.URL+"/redirect")
 		if result.Level != validator.Pass {
 			t.Errorf("expected Pass for followed redirect, got level=%d message=%q", result.Level, result.Message)
 		}
@@ -238,7 +238,7 @@ func TestCheckHTTPLink(t *testing.T) {
 		}))
 		defer server.Close()
 
-		result := checkHTTPLink(server.URL)
+		result := checkHTTPLink(validator.ResultContext{Category: "Links", File: "SKILL.md"}, server.URL)
 		if result.Level != validator.Error {
 			t.Errorf("expected Error for broken redirect target, got level=%d message=%q", result.Level, result.Message)
 		}
@@ -251,7 +251,7 @@ func TestCheckHTTPLink(t *testing.T) {
 		}))
 		defer server.Close()
 
-		result := checkHTTPLink(server.URL + "/loop")
+		result := checkHTTPLink(validator.ResultContext{Category: "Links", File: "SKILL.md"}, server.URL+"/loop")
 		if result.Level != validator.Error {
 			t.Errorf("expected Error for redirect loop, got level=%d message=%q", result.Level, result.Message)
 		}
@@ -264,7 +264,7 @@ func TestCheckHTTPLink(t *testing.T) {
 		}))
 		defer server.Close()
 
-		result := checkHTTPLink(server.URL)
+		result := checkHTTPLink(validator.ResultContext{Category: "Links", File: "SKILL.md"}, server.URL)
 		if result.Level != validator.Info {
 			t.Errorf("expected Info level for 403, got %d", result.Level)
 		}
@@ -272,7 +272,7 @@ func TestCheckHTTPLink(t *testing.T) {
 	})
 
 	t.Run("invalid URL", func(t *testing.T) {
-		result := checkHTTPLink("http://invalid host with spaces/")
+		result := checkHTTPLink(validator.ResultContext{Category: "Links", File: "SKILL.md"}, "http://invalid host with spaces/")
 		if result.Level != validator.Error {
 			t.Errorf("expected Error for invalid URL, got level=%d", result.Level)
 		}

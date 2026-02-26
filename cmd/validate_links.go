@@ -47,9 +47,8 @@ func runLinkChecks(dir string) *validator.Report {
 
 	s, err := validator.LoadSkill(dir)
 	if err != nil {
-		rpt.Results = append(rpt.Results, validator.Result{
-			Level: validator.Error, Category: "Links", Message: err.Error(),
-		})
+		rpt.Results = append(rpt.Results,
+			validator.ResultContext{Category: "Links"}.Error(err.Error()))
 		rpt.Errors = 1
 		return rpt
 	}
@@ -68,9 +67,8 @@ func runLinkChecks(dir string) *validator.Report {
 
 	// If no results at all, add a pass result
 	if len(rpt.Results) == 0 {
-		rpt.Results = append(rpt.Results, validator.Result{
-			Level: validator.Pass, Category: "Links", Message: "all link checks passed",
-		})
+		rpt.Results = append(rpt.Results,
+			validator.ResultContext{Category: "Links"}.Pass("all link checks passed"))
 	}
 
 	return rpt

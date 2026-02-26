@@ -53,9 +53,8 @@ func runContaminationAnalysis(dir string) *validator.Report {
 
 	s, err := validator.LoadSkill(dir)
 	if err != nil {
-		rpt.Results = append(rpt.Results, validator.Result{
-			Level: validator.Error, Category: "Contamination", Message: err.Error(),
-		})
+		rpt.Results = append(rpt.Results,
+			validator.ResultContext{Category: "Contamination"}.Error(err.Error()))
 		rpt.Errors = 1
 		return rpt
 	}
@@ -65,9 +64,8 @@ func runContaminationAnalysis(dir string) *validator.Report {
 	skillName := filepath.Base(dir)
 	rpt.ContaminationReport = contamination.Analyze(skillName, s.RawContent, cr.CodeLanguages)
 
-	rpt.Results = append(rpt.Results, validator.Result{
-		Level: validator.Pass, Category: "Contamination", Message: "contamination analysis complete",
-	})
+	rpt.Results = append(rpt.Results,
+		validator.ResultContext{Category: "Contamination"}.Pass("contamination analysis complete"))
 
 	validator.AnalyzeReferences(dir, rpt)
 

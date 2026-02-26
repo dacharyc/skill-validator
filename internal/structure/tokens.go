@@ -1,7 +1,6 @@
 package structure
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -25,12 +24,13 @@ const (
 )
 
 func CheckTokens(dir, body string) ([]validator.Result, []validator.TokenCount, []validator.TokenCount) {
+	ctx := validator.ResultContext{Category: "Tokens"}
 	var results []validator.Result
 	var counts []validator.TokenCount
 
 	enc, err := tokenizer.Get(tokenizer.O200kBase)
 	if err != nil {
-		results = append(results, validator.Result{Level: validator.Error, Category: "Tokens", Message: fmt.Sprintf("failed to initialize tokenizer: %v", err)})
+		results = append(results, ctx.Errorf("failed to initialize tokenizer: %v", err))
 		return results, counts, nil
 	}
 
@@ -41,13 +41,13 @@ func CheckTokens(dir, body string) ([]validator.Result, []validator.TokenCount, 
 
 	// Warn if body exceeds 5000 tokens
 	if bodyCount > 5000 {
-		results = append(results, validator.Result{Level: validator.Warning, Category: "Tokens", Message: fmt.Sprintf("SKILL.md body is %d tokens (spec recommends < 5000)", bodyCount)})
+		results = append(results, ctx.WarnFilef("SKILL.md", "SKILL.md body is %d tokens (spec recommends < 5000)", bodyCount))
 	}
 
 	// Warn if SKILL.md exceeds 500 lines
 	lineCount := strings.Count(body, "\n") + 1
 	if lineCount > 500 {
-		results = append(results, validator.Result{Level: validator.Warning, Category: "Tokens", Message: fmt.Sprintf("SKILL.md body is %d lines (spec recommends < 500)", lineCount)})
+		results = append(results, ctx.WarnFilef("SKILL.md", "SKILL.md body is %d lines (spec recommends < 500)", lineCount))
 	}
 
 	// Count tokens for files in references/
@@ -61,7 +61,8 @@ func CheckTokens(dir, body string) ([]validator.Result, []validator.TokenCount, 
 			path := filepath.Join(refsDir, entry.Name())
 			data, err := os.ReadFile(path)
 			if err != nil {
-				results = append(results, validator.Result{Level: validator.Warning, Category: "Tokens", Message: fmt.Sprintf("could not read %s: %v", filepath.Join("references", entry.Name()), err)})
+				relPath := filepath.Join("references", entry.Name())
+				results = append(results, ctx.WarnFilef(relPath, "could not read %s: %v", relPath, err))
 				continue
 			}
 			tokens, _, _ := enc.Encode(string(data))
@@ -75,50 +76,34 @@ func CheckTokens(dir, body string) ([]validator.Result, []validator.TokenCount, 
 
 			// Per-file limits
 			if fileTokens > refFileHardLimit {
-				results = append(results, validator.Result{
-					Level:    validator.Error,
-					Category: "Tokens",
-					Message: fmt.Sprintf(
-						"%s is %d tokens — this will consume 12-20%% of a typical context window "+
-							"and meaningfully degrade agent performance; split into smaller focused files",
-						relPath, fileTokens,
-					),
-				})
+				results = append(results, ctx.ErrorFilef(relPath,
+					"%s is %d tokens — this will consume 12-20%% of a typical context window "+
+						"and meaningfully degrade agent performance; split into smaller focused files",
+					relPath, fileTokens,
+				))
 			} else if fileTokens > refFileSoftLimit {
-				results = append(results, validator.Result{
-					Level:    validator.Warning,
-					Category: "Tokens",
-					Message: fmt.Sprintf(
-						"%s is %d tokens — consider splitting into smaller focused files "+
-							"so agents load only what they need",
-						relPath, fileTokens,
-					),
-				})
+				results = append(results, ctx.WarnFilef(relPath,
+					"%s is %d tokens — consider splitting into smaller focused files "+
+						"so agents load only what they need",
+					relPath, fileTokens,
+				))
 			}
 		}
 	}
 
 	// Aggregate reference limits
 	if refTotal > refTotalHardLimit {
-		results = append(results, validator.Result{
-			Level:    validator.Error,
-			Category: "Tokens",
-			Message: fmt.Sprintf(
-				"total reference files: %d tokens — this will consume 25-40%% of a typical "+
-					"context window; reduce content or split into a skill with fewer references",
-				refTotal,
-			),
-		})
+		results = append(results, ctx.Errorf(
+			"total reference files: %d tokens — this will consume 25-40%% of a typical "+
+				"context window; reduce content or split into a skill with fewer references",
+			refTotal,
+		))
 	} else if refTotal > refTotalSoftLimit {
-		results = append(results, validator.Result{
-			Level:    validator.Warning,
-			Category: "Tokens",
-			Message: fmt.Sprintf(
-				"total reference files: %d tokens — agents may load multiple references "+
-					"in one session, consider whether all this content is essential",
-				refTotal,
-			),
-		})
+		results = append(results, ctx.Warnf(
+			"total reference files: %d tokens — agents may load multiple references "+
+				"in one session, consider whether all this content is essential",
+			refTotal,
+		))
 	}
 
 	// Count tokens in non-standard files
@@ -130,27 +115,19 @@ func CheckTokens(dir, body string) ([]validator.Result, []validator.TokenCount, 
 		otherTotal += c.Tokens
 	}
 	if otherTotal > otherTotalHardLimit {
-		results = append(results, validator.Result{
-			Level:    validator.Error,
-			Category: "Tokens",
-			Message: fmt.Sprintf(
-				"non-standard files total %d tokens — if an agent loads these, "+
-					"they will consume most of the context window and severely degrade performance; "+
-					"move essential content into references/ or remove unnecessary files",
-				otherTotal,
-			),
-		})
+		results = append(results, ctx.Errorf(
+			"non-standard files total %d tokens — if an agent loads these, "+
+				"they will consume most of the context window and severely degrade performance; "+
+				"move essential content into references/ or remove unnecessary files",
+			otherTotal,
+		))
 	} else if otherTotal > otherTotalSoftLimit {
-		results = append(results, validator.Result{
-			Level:    validator.Warning,
-			Category: "Tokens",
-			Message: fmt.Sprintf(
-				"non-standard files total %d tokens — if an agent loads these, "+
-					"they could consume a significant portion of the context window; "+
-					"consider moving essential content into references/ or removing unnecessary files",
-				otherTotal,
-			),
-		})
+		results = append(results, ctx.Warnf(
+			"non-standard files total %d tokens — if an agent loads these, "+
+				"they could consume a significant portion of the context window; "+
+				"consider moving essential content into references/ or removing unnecessary files",
+			otherTotal,
+		))
 	}
 
 	// Count tokens in text-based asset files

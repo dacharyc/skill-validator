@@ -48,7 +48,8 @@ func Validate(dir string, opts Options) *validator.Report {
 	// Parse skill
 	s, err := skill.Load(dir)
 	if err != nil {
-		report.Results = append(report.Results, validator.Result{Level: validator.Error, Category: "Frontmatter", Message: err.Error()})
+		report.Results = append(report.Results,
+			validator.ResultContext{Category: "Frontmatter", File: "SKILL.md"}.Error(err.Error()))
 		report.Tally()
 		return report
 	}
@@ -81,6 +82,7 @@ func Validate(dir string, opts Options) *validator.Report {
 }
 
 func checkSkillRatio(standard, other []validator.TokenCount) []validator.Result {
+	ctx := validator.ResultContext{Category: "Overall"}
 	standardTotal := 0
 	for _, tc := range standard {
 		standardTotal += tc.Tokens
@@ -91,19 +93,15 @@ func checkSkillRatio(standard, other []validator.TokenCount) []validator.Result 
 	}
 
 	if otherTotal > 25_000 && standardTotal > 0 && otherTotal > standardTotal*10 {
-		return []validator.Result{{
-			Level:    validator.Error,
-			Category: "Overall",
-			Message: fmt.Sprintf(
-				"this content doesn't appear to be structured as a skill — "+
-					"there are %s tokens of non-standard content but only %s tokens in the "+
-					"standard skill structure (SKILL.md + references). This ratio suggests a "+
-					"build pipeline issue or content that belongs in a different format, not a skill. "+
-					"Per the spec, a skill should contain a focused SKILL.md with optional references, "+
-					"scripts, and assets.",
-				formatTokenCount(otherTotal), formatTokenCount(standardTotal),
-			),
-		}}
+		return []validator.Result{ctx.Errorf(
+			"this content doesn't appear to be structured as a skill — "+
+				"there are %s tokens of non-standard content but only %s tokens in the "+
+				"standard skill structure (SKILL.md + references). This ratio suggests a "+
+				"build pipeline issue or content that belongs in a different format, not a skill. "+
+				"Per the spec, a skill should contain a focused SKILL.md with optional references, "+
+				"scripts, and assets.",
+			formatTokenCount(otherTotal), formatTokenCount(standardTotal),
+		)}
 	}
 
 	return nil

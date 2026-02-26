@@ -1,7 +1,6 @@
 package structure
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -11,15 +10,13 @@ import (
 
 // CheckMarkdown validates markdown structure in the skill.
 func CheckMarkdown(dir, body string) []validator.Result {
+	ctx := validator.ResultContext{Category: "Markdown"}
 	var results []validator.Result
 
 	// Check SKILL.md body
 	if line, ok := FindUnclosedFence(body); ok {
-		results = append(results, validator.Result{
-			Level:    validator.Error,
-			Category: "Markdown",
-			Message:  fmt.Sprintf("SKILL.md has an unclosed code fence starting at line %d — this may cause agents to misinterpret everything after it as code", line),
-		})
+		results = append(results, ctx.ErrorAtLinef("SKILL.md", line,
+			"SKILL.md has an unclosed code fence starting at line %d — this may cause agents to misinterpret everything after it as code", line))
 	}
 
 	// Check .md files in references/
@@ -27,11 +24,7 @@ func CheckMarkdown(dir, body string) []validator.Result {
 	entries, err := os.ReadDir(refsDir)
 	if err != nil {
 		if len(results) == 0 {
-			results = append(results, validator.Result{
-				Level:    validator.Pass,
-				Category: "Markdown",
-				Message:  "no unclosed code fences found",
-			})
+			results = append(results, ctx.Pass("no unclosed code fences found"))
 		}
 		return results
 	}
@@ -48,20 +41,13 @@ func CheckMarkdown(dir, body string) []validator.Result {
 		}
 		relPath := filepath.Join("references", entry.Name())
 		if line, ok := FindUnclosedFence(string(data)); ok {
-			results = append(results, validator.Result{
-				Level:    validator.Error,
-				Category: "Markdown",
-				Message:  fmt.Sprintf("%s has an unclosed code fence starting at line %d — this may cause agents to misinterpret everything after it as code", relPath, line),
-			})
+			results = append(results, ctx.ErrorAtLinef(relPath, line,
+				"%s has an unclosed code fence starting at line %d — this may cause agents to misinterpret everything after it as code", relPath, line))
 		}
 	}
 
 	if len(results) == 0 {
-		results = append(results, validator.Result{
-			Level:    validator.Pass,
-			Category: "Markdown",
-			Message:  "no unclosed code fences found",
-		})
+		results = append(results, ctx.Pass("no unclosed code fences found"))
 	}
 
 	return results

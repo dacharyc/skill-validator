@@ -23,6 +23,8 @@ type queueItem struct {
 // CheckOrphanFiles walks scripts/, references/, and assets/ to find files
 // that are never referenced (directly or transitively) from SKILL.md.
 func CheckOrphanFiles(dir, body string) []validator.Result {
+	ctx := validator.ResultContext{Category: "Structure"}
+
 	// Inventory: collect all files in recognized directories.
 	inventory := inventoryFiles(dir)
 	if len(inventory) == 0 {
@@ -125,28 +127,18 @@ func CheckOrphanFiles(dir, body string) []validator.Result {
 		for _, relPath := range dirFiles {
 			if !reached[relPath] {
 				hasOrphans = true
-				results = append(results, validator.Result{
-					Level:    validator.Warning,
-					Category: "Structure",
-					Message:  fmt.Sprintf("potentially unreferenced file: %s — agents may not discover this file without an explicit reference in SKILL.md or a referenced file", relPath),
-				})
+				results = append(results, ctx.WarnFile(relPath,
+					fmt.Sprintf("potentially unreferenced file: %s — agents may not discover this file without an explicit reference in SKILL.md or a referenced file", relPath)))
 			} else if missingExtension[relPath] {
 				ext := filepath.Ext(relPath)
 				noExt := strings.TrimSuffix(relPath, ext)
-				results = append(results, validator.Result{
-					Level:    validator.Warning,
-					Category: "Structure",
-					Message:  fmt.Sprintf("file %s is referenced without its extension (as %s in %s) — include the %s extension so agents can reliably locate the file", relPath, noExt, reachedFrom[relPath], ext),
-				})
+				results = append(results, ctx.WarnFile(relPath,
+					fmt.Sprintf("file %s is referenced without its extension (as %s in %s) — include the %s extension so agents can reliably locate the file", relPath, noExt, reachedFrom[relPath], ext)))
 			}
 		}
 
 		if !hasOrphans {
-			results = append(results, validator.Result{
-				Level:    validator.Pass,
-				Category: "Structure",
-				Message:  fmt.Sprintf("all files in %s/ are referenced", d),
-			})
+			results = append(results, ctx.Passf("all files in %s/ are referenced", d))
 		}
 	}
 

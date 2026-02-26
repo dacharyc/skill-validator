@@ -12,7 +12,10 @@ import (
 
 const version = "v0.7.0"
 
-var outputFormat string
+var (
+	outputFormat    string
+	emitAnnotations bool
+)
 
 var rootCmd = &cobra.Command{
 	Use:   "skill-validator",
@@ -23,6 +26,7 @@ var rootCmd = &cobra.Command{
 func init() {
 	rootCmd.Version = version
 	rootCmd.PersistentFlags().StringVarP(&outputFormat, "output", "o", "text", "output format: text, json, or markdown")
+	rootCmd.PersistentFlags().BoolVar(&emitAnnotations, "emit-annotations", false, "emit GitHub Actions workflow command annotations (::error/::warning) alongside normal output")
 }
 
 // Execute runs the root command.

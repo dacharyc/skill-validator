@@ -1,7 +1,6 @@
 package structure
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -14,6 +13,7 @@ import (
 // Broken internal links indicate a structural problem: the skill references
 // files that don't exist in the package.
 func CheckInternalLinks(dir, body string) []validator.Result {
+	ctx := validator.ResultContext{Category: "Structure", File: "SKILL.md"}
 	allLinks := links.ExtractLinks(body)
 	if len(allLinks) == 0 {
 		return nil
@@ -42,9 +42,9 @@ func CheckInternalLinks(dir, body string) []validator.Result {
 		// Relative link — check file existence
 		resolved := filepath.Join(dir, link)
 		if _, err := os.Stat(resolved); os.IsNotExist(err) {
-			results = append(results, validator.Result{Level: validator.Error, Category: "Structure", Message: fmt.Sprintf("broken internal link: %s (file not found)", link)})
+			results = append(results, ctx.Errorf("broken internal link: %s (file not found)", link))
 		} else {
-			results = append(results, validator.Result{Level: validator.Pass, Category: "Structure", Message: fmt.Sprintf("internal link: %s (exists)", link)})
+			results = append(results, ctx.Passf("internal link: %s (exists)", link))
 		}
 	}
 

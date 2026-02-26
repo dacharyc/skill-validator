@@ -42,6 +42,8 @@ type Result struct {
 	Level    Level
 	Category string
 	Message  string
+	File     string // path relative to skill dir, e.g. "SKILL.md", "references/guide.md"
+	Line     int    // 0 = no line info
 }
 
 // TokenCount holds the token count for a single file.

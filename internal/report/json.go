@@ -34,6 +34,8 @@ type jsonResult struct {
 	Level    string `json:"level"`
 	Category string `json:"category"`
 	Message  string `json:"message"`
+	File     string `json:"file,omitempty"`
+	Line     int    `json:"line,omitempty"`
 }
 
 type jsonTokenCounts struct {
@@ -67,6 +69,8 @@ func buildJSONReport(r *validator.Report, perFile bool) jsonReport {
 			Level:    res.Level.String(),
 			Category: res.Category,
 			Message:  res.Message,
+			File:     res.File,
+			Line:     res.Line,
 		}
 	}
 

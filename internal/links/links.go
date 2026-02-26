@@ -25,6 +25,7 @@ type linkResult struct {
 
 // CheckLinks validates external (HTTP/HTTPS) links in the skill body.
 func CheckLinks(dir, body string) []validator.Result {
+	ctx := validator.ResultContext{Category: "Links", File: "SKILL.md"}
 	allLinks := ExtractLinks(body)
 	if len(allLinks) == 0 {
 		return nil
@@ -58,7 +59,7 @@ func CheckLinks(dir, body string) []validator.Result {
 		wg.Add(1)
 		go func(idx int, url string) {
 			defer wg.Done()
-			r := checkHTTPLink(url)
+			r := checkHTTPLink(ctx, url)
 			mu.Lock()
 			httpResults[idx] = linkResult{url: url, result: r}
 			mu.Unlock()
@@ -99,7 +100,7 @@ func ExtractLinks(body string) []string {
 	return links
 }
 
-func checkHTTPLink(url string) validator.Result {
+func checkHTTPLink(ctx validator.ResultContext, url string) validator.Result {
 	client := &http.Client{
 		Timeout: 10 * time.Second,
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
@@ -112,24 +113,24 @@ func checkHTTPLink(url string) validator.Result {
 
 	req, err := http.NewRequest("HEAD", url, nil)
 	if err != nil {
-		return validator.Result{Level: validator.Error, Category: "Links", Message: fmt.Sprintf("%s (invalid URL: %v)", url, err)}
+		return ctx.Errorf("%s (invalid URL: %v)", url, err)
 	}
 	req.Header.Set("User-Agent", "skill-validator/1.0")
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return validator.Result{Level: validator.Error, Category: "Links", Message: fmt.Sprintf("%s (request failed: %v)", url, err)}
+		return ctx.Errorf("%s (request failed: %v)", url, err)
 	}
 	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
-		return validator.Result{Level: validator.Pass, Category: "Links", Message: fmt.Sprintf("%s (HTTP %d)", url, resp.StatusCode)}
+		return ctx.Passf("%s (HTTP %d)", url, resp.StatusCode)
 	}
 	if resp.StatusCode >= 300 && resp.StatusCode < 400 {
-		return validator.Result{Level: validator.Pass, Category: "Links", Message: fmt.Sprintf("%s (HTTP %d redirect)", url, resp.StatusCode)}
+		return ctx.Passf("%s (HTTP %d redirect)", url, resp.StatusCode)
 	}
 	if resp.StatusCode == http.StatusForbidden {
-		return validator.Result{Level: validator.Info, Category: "Links", Message: fmt.Sprintf("%s (HTTP 403 — may block automated requests)", url)}
+		return ctx.Infof("%s (HTTP 403 — may block automated requests)", url)
 	}
-	return validator.Result{Level: validator.Error, Category: "Links", Message: fmt.Sprintf("%s (HTTP %d)", url, resp.StatusCode)}
+	return ctx.Errorf("%s (HTTP %d)", url, resp.StatusCode)
 }

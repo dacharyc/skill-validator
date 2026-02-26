@@ -41,6 +41,10 @@ func outputReportWithExitOpts(r *validator.Report, perFile bool, opts exitOpts) 
 	default:
 		report.Print(os.Stdout, r, perFile)
 	}
+	if emitAnnotations {
+		wd, _ := os.Getwd()
+		report.PrintAnnotations(os.Stdout, r, wd)
+	}
 	if code := opts.resolve(r.Errors, r.Warnings); code != 0 {
 		os.Exit(code)
 	}
@@ -67,6 +71,10 @@ func outputMultiReportWithExitOpts(mr *validator.MultiReport, perFile bool, opts
 		}
 	default:
 		report.PrintMulti(os.Stdout, mr, perFile)
+	}
+	if emitAnnotations {
+		wd, _ := os.Getwd()
+		report.PrintMultiAnnotations(os.Stdout, mr, wd)
 	}
 	if code := opts.resolve(mr.Errors, mr.Warnings); code != 0 {
 		os.Exit(code)

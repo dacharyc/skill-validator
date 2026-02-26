@@ -137,9 +137,8 @@ func runAllChecks(dir string, enabled map[string]bool, structOpts structure.Opti
 		if err != nil {
 			if !enabled["structure"] {
 				// Only add the error if structure didn't already catch it
-				rpt.Results = append(rpt.Results, validator.Result{
-					Level: validator.Error, Category: "Skill", Message: err.Error(),
-				})
+				rpt.Results = append(rpt.Results,
+					validator.ResultContext{Category: "Skill"}.Error(err.Error()))
 			}
 			// Fall back to reading raw SKILL.md for content/contamination analysis
 			rawContent = validator.ReadSkillRaw(dir)

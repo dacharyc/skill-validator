@@ -23,6 +23,7 @@ Spec compliance is table stakes. `skill-validator` goes further: it checks that 
   - [score report](#score-report)
   - [JSON output](#json-output)
   - [Markdown output](#markdown-output)
+  - [GitHub Actions annotations](#github-actions-annotations)
   - [Multi-skill directories](#multi-skill-directories)
 - [What it checks & why](#what-it-checks)
   - [Structure validation](#structure-validation-validate-structure)
@@ -347,7 +348,7 @@ skill-validator check -o json my-skill/
   "errors": 0,
   "warnings": 0,
   "results": [
-    { "level": "pass", "category": "Structure", "message": "SKILL.md found" }
+    { "level": "pass", "category": "Structure", "message": "SKILL.md found", "file": "SKILL.md" }
   ],
   "token_counts": {
     "files": [
@@ -386,7 +387,7 @@ skill-validator check -o json my-skill/
 }
 ```
 
-The `passed` field is `true` when `errors` is `0`. Token count, content analysis, and contamination analysis sections are omitted when not computed. The `reference_reports` array is only included with `--per-file`. Pipe to `jq` for post-processing:
+The `passed` field is `true` when `errors` is `0`. Each result includes a `file` field (relative to the skill directory) and an optional `line` field when line-level context is available; both are omitted from JSON when empty. Token count, content analysis, and contamination analysis sections are omitted when not computed. The `reference_reports` array is only included with `--per-file`. Pipe to `jq` for post-processing:
 
 ```
 skill-validator check -o json my-skill/ | jq '.content_analysis'
@@ -442,6 +443,32 @@ The markdown format renders results as headings, lists, and tables:
 ```
 
 All three command groups support markdown output: `check`, `score evaluate`, and `score report`.
+
+### GitHub Actions annotations
+
+Use `--emit-annotations` to emit [GitHub Actions workflow commands](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-commands) alongside normal output. Errors and warnings appear as inline annotations in the PR diff view, pinned to the relevant file:
+
+```yaml
+- name: Validate skills
+  run: |
+    skill-validator check --emit-annotations my-skill/
+```
+
+The flag works with any output format (`text`, `json`, `markdown`) and with both single-skill and multi-skill directories. Annotations are appended after the normal output:
+
+```
+Result: 3 errors, 1 warning
+
+::warning title=Structure::unknown directory: extras/
+::error file=my-skill/SKILL.md,title=Frontmatter::name is required
+::error file=my-skill/SKILL.md,line=5,title=Markdown::unclosed code fence starting at line 5
+```
+
+File paths are relative to the working directory (the repository root in CI). Results at the pass and info levels are skipped. You can combine this with other flags:
+
+```
+skill-validator check --emit-annotations --strict -o markdown my-skill/ >> $GITHUB_STEP_SUMMARY
+```
 
 ### Multi-skill directories
 

@@ -50,17 +50,15 @@ func runContentAnalysis(dir string) *validator.Report {
 
 	s, err := validator.LoadSkill(dir)
 	if err != nil {
-		rpt.Results = append(rpt.Results, validator.Result{
-			Level: validator.Error, Category: "Content", Message: err.Error(),
-		})
+		rpt.Results = append(rpt.Results,
+			validator.ResultContext{Category: "Content"}.Error(err.Error()))
 		rpt.Errors = 1
 		return rpt
 	}
 
 	rpt.ContentReport = content.Analyze(s.RawContent)
-	rpt.Results = append(rpt.Results, validator.Result{
-		Level: validator.Pass, Category: "Content", Message: "content analysis complete",
-	})
+	rpt.Results = append(rpt.Results,
+		validator.ResultContext{Category: "Content"}.Pass("content analysis complete"))
 
 	validator.AnalyzeReferences(dir, rpt)
 

@@ -36,20 +36,21 @@ var knownExtraneousFiles = map[string]string{
 }
 
 func CheckStructure(dir string) []validator.Result {
+	ctx := validator.ResultContext{Category: "Structure"}
 	var results []validator.Result
 
 	// Check SKILL.md exists
 	skillPath := filepath.Join(dir, "SKILL.md")
 	if _, err := os.Stat(skillPath); os.IsNotExist(err) {
-		results = append(results, validator.Result{Level: validator.Error, Category: "Structure", Message: "SKILL.md not found"})
+		results = append(results, ctx.ErrorFile("SKILL.md", "SKILL.md not found"))
 		return results
 	}
-	results = append(results, validator.Result{Level: validator.Pass, Category: "Structure", Message: "SKILL.md found"})
+	results = append(results, ctx.PassFile("SKILL.md", "SKILL.md found"))
 
 	// Check directories
 	entries, err := os.ReadDir(dir)
 	if err != nil {
-		results = append(results, validator.Result{Level: validator.Error, Category: "Structure", Message: fmt.Sprintf("reading directory: %v", err)})
+		results = append(results, ctx.Errorf("reading directory: %v", err))
 		return results
 	}
 
@@ -60,7 +61,7 @@ func CheckStructure(dir string) []validator.Result {
 		}
 		if !entry.IsDir() {
 			if name != "SKILL.md" {
-				results = append(results, extraneousFileResult(name))
+				results = append(results, extraneousFileResult(ctx, name))
 			}
 			continue
 		}
@@ -81,7 +82,7 @@ func CheckStructure(dir string) []validator.Result {
 					)
 				}
 			}
-			results = append(results, validator.Result{Level: validator.Warning, Category: "Structure", Message: msg})
+			results = append(results, ctx.Warn(msg))
 		}
 	}
 
@@ -91,7 +92,7 @@ func CheckStructure(dir string) []validator.Result {
 		if _, err := os.Stat(subdir); os.IsNotExist(err) {
 			continue
 		}
-		err := checkNesting(subdir, dirName)
+		err := checkNesting(ctx, subdir, dirName)
 		if err != nil {
 			results = append(results, err...)
 		}
@@ -100,42 +101,30 @@ func CheckStructure(dir string) []validator.Result {
 	return results
 }
 
-func extraneousFileResult(name string) validator.Result {
+func extraneousFileResult(ctx validator.ResultContext, name string) validator.Result {
 	lower := strings.ToLower(name)
 	if lower == "agents.md" {
-		return validator.Result{
-			Level:    validator.Warning,
-			Category: "Structure",
-			Message: fmt.Sprintf(
-				"%s is for repo-level agent configuration, not skill content — "+
-					"move it outside the skill directory (e.g. to the repository root) "+
-					"where agents discover it automatically",
-				name,
-			),
-		}
+		return ctx.WarnFile(name, fmt.Sprintf(
+			"%s is for repo-level agent configuration, not skill content — "+
+				"move it outside the skill directory (e.g. to the repository root) "+
+				"where agents discover it automatically",
+			name,
+		))
 	}
 	if _, known := knownExtraneousFiles[lower]; known {
-		return validator.Result{
-			Level:    validator.Warning,
-			Category: "Structure",
-			Message: fmt.Sprintf(
-				"%s is not needed in a skill — agents may load it into their context window, "+
-					"taking space from your actual task (Anthropic best practices: skills should only "+
-					"contain files that directly support agent functionality)",
-				name,
-			),
-		}
-	}
-	return validator.Result{
-		Level:    validator.Warning,
-		Category: "Structure",
-		Message: fmt.Sprintf(
-			"unexpected file at root: %s — if agents need this file, move it into "+
-				"references/ or assets/ as appropriate; otherwise remove it to avoid "+
-				"unnecessary context window usage",
+		return ctx.WarnFile(name, fmt.Sprintf(
+			"%s is not needed in a skill — agents may load it into their context window, "+
+				"taking space from your actual task (Anthropic best practices: skills should only "+
+				"contain files that directly support agent functionality)",
 			name,
-		),
+		))
 	}
+	return ctx.WarnFile(name, fmt.Sprintf(
+		"unexpected file at root: %s — if agents need this file, move it into "+
+			"references/ or assets/ as appropriate; otherwise remove it to avoid "+
+			"unnecessary context window usage",
+		name,
+	))
 }
 
 func unknownDirHint(dir string) string {
@@ -159,7 +148,7 @@ func pluralS(n int) string {
 	return "s"
 }
 
-func checkNesting(dir, prefix string) []validator.Result {
+func checkNesting(ctx validator.ResultContext, dir, prefix string) []validator.Result {
 	var results []validator.Result
 	entries, err := os.ReadDir(dir)
 	if err != nil {
@@ -170,11 +159,7 @@ func checkNesting(dir, prefix string) []validator.Result {
 			continue
 		}
 		if entry.IsDir() {
-			results = append(results, validator.Result{
-				Level:    validator.Warning,
-				Category: "Structure",
-				Message:  fmt.Sprintf("deep nesting detected: %s/%s/", prefix, entry.Name()),
-			})
+			results = append(results, ctx.Warnf("deep nesting detected: %s/%s/", prefix, entry.Name()))
 		}
 	}
 	return results
