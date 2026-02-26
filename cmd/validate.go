@@ -34,6 +34,10 @@ func outputReportWithExitOpts(r *validator.Report, perFile bool, opts exitOpts) 
 		if err := report.PrintJSON(os.Stdout, r, perFile); err != nil {
 			return fmt.Errorf("writing JSON: %w", err)
 		}
+	case "markdown":
+		if err := report.PrintMarkdown(os.Stdout, r, perFile); err != nil {
+			return fmt.Errorf("writing markdown: %w", err)
+		}
 	default:
 		report.Print(os.Stdout, r, perFile)
 	}
@@ -56,6 +60,10 @@ func outputMultiReportWithExitOpts(mr *validator.MultiReport, perFile bool, opts
 	case "json":
 		if err := report.PrintMultiJSON(os.Stdout, mr, perFile); err != nil {
 			return fmt.Errorf("writing JSON: %w", err)
+		}
+	case "markdown":
+		if err := report.PrintMultiMarkdown(os.Stdout, mr, perFile); err != nil {
+			return fmt.Errorf("writing markdown: %w", err)
 		}
 	default:
 		report.PrintMulti(os.Stdout, mr, perFile)

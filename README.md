@@ -22,6 +22,7 @@ Spec compliance is table stakes. `skill-validator` goes further: it checks that 
   - [score evaluate](#score-evaluate)
   - [score report](#score-report)
   - [JSON output](#json-output)
+  - [Markdown output](#markdown-output)
   - [Multi-skill directories](#multi-skill-directories)
 - [What it checks & why](#what-it-checks)
   - [Structure validation](#structure-validation-validate-structure)
@@ -96,7 +97,7 @@ Commands map to skill development lifecycle stages:
 | Comparing models | [`score report`](#score-report) | How do scores compare across different LLM providers/models? |
 | Pre-publish | [`check`](#check) | Run everything (except LLM scoring) |
 
-All commands accept `-o text` (default) or `-o json` for output format. Use `--version` to print the installed version.
+All commands accept `-o text` (default), `-o json`, or `-o markdown` for output format. Use `--version` to print the installed version.
 
 **Exit codes:**
 
@@ -391,6 +392,56 @@ The `passed` field is `true` when `errors` is `0`. Token count, content analysis
 skill-validator check -o json my-skill/ | jq '.content_analysis'
 skill-validator check -o json my-skill/ | jq '.results[] | select(.level == "error")'
 ```
+
+### Markdown output
+
+Use `-o markdown` for GitHub-flavored markdown output. This is useful in CI pipelines where you want to write results directly to the GitHub Actions step summary:
+
+```yaml
+- name: Validate skills
+  run: |
+    skill-validator check -o markdown my-skill/ >> $GITHUB_STEP_SUMMARY
+```
+
+The markdown format renders results as headings, lists, and tables:
+
+```markdown
+## Validating skill: my-skill/
+
+### Structure
+
+- **Pass:** SKILL.md found
+
+### Frontmatter
+
+- **Pass:** name: "my-skill" (valid)
+- **Pass:** description: (54 chars)
+
+### Tokens
+
+| File | Tokens |
+| --- | ---: |
+| SKILL.md body | 1,250 |
+| references/guide.md | 820 |
+| **Total** | **2,070** |
+
+### Content Analysis
+
+| Metric | Value |
+| --- | ---: |
+| Word count | 1,250 |
+| Code block ratio | 0.32 |
+| Imperative ratio | 0.45 |
+| Information density | 0.39 |
+| Instruction specificity | 0.78 |
+| Sections | 6 |
+| List items | 23 |
+| Code blocks | 8 |
+
+**Result: passed**
+```
+
+All three command groups support markdown output: `check`, `score evaluate`, and `score report`.
 
 ### Multi-skill directories
 

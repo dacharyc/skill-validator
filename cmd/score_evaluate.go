@@ -395,6 +395,9 @@ func outputEvalResult(result *skillEvalResult) error {
 	switch outputFormat {
 	case "json":
 		return outputEvalJSON([]*skillEvalResult{result})
+	case "markdown":
+		printEvalResultMarkdown(os.Stdout, result)
+		return nil
 	default:
 		printEvalResult(result)
 		return nil
@@ -409,6 +412,9 @@ func outputMultiEvalResults(results []skillEvalResult) error {
 			ptrs[i] = &results[i]
 		}
 		return outputEvalJSON(ptrs)
+	case "markdown":
+		printMultiEvalResultsMarkdown(os.Stdout, results)
+		return nil
 	default:
 		for i, r := range results {
 			if i > 0 {

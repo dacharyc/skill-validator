@@ -77,6 +77,10 @@ func outputReportList(results []*judge.CachedResult, skillDir string) error {
 	if outputFormat == "json" {
 		return outputReportListJSON(results)
 	}
+	if outputFormat == "markdown" {
+		outputReportListMarkdown(os.Stdout, results, skillDir)
+		return nil
+	}
 
 	fmt.Printf("\n%sCached scores for: %s%s\n\n", evalColorBold, skillDir, evalColorReset)
 	fmt.Printf("  %-28s %-30s %-20s %s\n", "File", "Model", "Scored At", "Provider")
@@ -102,6 +106,10 @@ func outputReportListJSON(results []*judge.CachedResult) error {
 func outputReportCompare(results []*judge.CachedResult, skillDir string) error {
 	if outputFormat == "json" {
 		return outputReportCompareJSON(results)
+	}
+	if outputFormat == "markdown" {
+		outputReportCompareMarkdown(os.Stdout, results, skillDir)
+		return nil
 	}
 
 	byFile := make(map[string][]*judge.CachedResult)
@@ -230,6 +238,11 @@ func outputReportDefault(results []*judge.CachedResult, skillDir string) error {
 		enc := json.NewEncoder(os.Stdout)
 		enc.SetIndent("", "  ")
 		return enc.Encode(vals)
+	}
+
+	if outputFormat == "markdown" {
+		outputReportDefaultMarkdown(os.Stdout, results, skillDir)
+		return nil
 	}
 
 	fmt.Printf("\n%sCached scores for: %s%s\n", evalColorBold, skillDir, evalColorReset)

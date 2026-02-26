@@ -22,7 +22,7 @@ var rootCmd = &cobra.Command{
 
 func init() {
 	rootCmd.Version = version
-	rootCmd.PersistentFlags().StringVarP(&outputFormat, "output", "o", "text", "output format: text or json")
+	rootCmd.PersistentFlags().StringVarP(&outputFormat, "output", "o", "text", "output format: text, json, or markdown")
 }
 
 // Execute runs the root command.
