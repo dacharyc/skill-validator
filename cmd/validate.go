@@ -21,10 +21,14 @@ func init() {
 }
 
 func outputReport(r *validator.Report) error {
-	return outputReportWithPerFile(r, false)
+	return outputReportWithExitOpts(r, false, exitOpts{})
 }
 
 func outputReportWithPerFile(r *validator.Report, perFile bool) error {
+	return outputReportWithExitOpts(r, perFile, exitOpts{})
+}
+
+func outputReportWithExitOpts(r *validator.Report, perFile bool, opts exitOpts) error {
 	switch outputFormat {
 	case "json":
 		if err := report.PrintJSON(os.Stdout, r, perFile); err != nil {
@@ -33,17 +37,21 @@ func outputReportWithPerFile(r *validator.Report, perFile bool) error {
 	default:
 		report.Print(os.Stdout, r, perFile)
 	}
-	if r.Errors > 0 {
-		os.Exit(1)
+	if code := opts.resolve(r.Errors, r.Warnings); code != 0 {
+		os.Exit(code)
 	}
 	return nil
 }
 
 func outputMultiReport(mr *validator.MultiReport) error {
-	return outputMultiReportWithPerFile(mr, false)
+	return outputMultiReportWithExitOpts(mr, false, exitOpts{})
 }
 
 func outputMultiReportWithPerFile(mr *validator.MultiReport, perFile bool) error {
+	return outputMultiReportWithExitOpts(mr, perFile, exitOpts{})
+}
+
+func outputMultiReportWithExitOpts(mr *validator.MultiReport, perFile bool, opts exitOpts) error {
 	switch outputFormat {
 	case "json":
 		if err := report.PrintMultiJSON(os.Stdout, mr, perFile); err != nil {
@@ -52,8 +60,8 @@ func outputMultiReportWithPerFile(mr *validator.MultiReport, perFile bool) error
 	default:
 		report.PrintMulti(os.Stdout, mr, perFile)
 	}
-	if mr.Errors > 0 {
-		os.Exit(1)
+	if code := opts.resolve(mr.Errors, mr.Warnings); code != 0 {
+		os.Exit(code)
 	}
 	return nil
 }

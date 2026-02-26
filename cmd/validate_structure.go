@@ -7,7 +7,10 @@ import (
 	"github.com/dacharyc/skill-validator/internal/validator"
 )
 
-var skipOrphans bool
+var (
+	skipOrphans     bool
+	strictStructure bool
+)
 
 var validateStructureCmd = &cobra.Command{
 	Use:   "structure <path>",
@@ -20,6 +23,7 @@ var validateStructureCmd = &cobra.Command{
 func init() {
 	validateStructureCmd.Flags().BoolVar(&skipOrphans, "skip-orphans", false,
 		"skip orphan file detection (unreferenced files in scripts/, references/, assets/)")
+	validateStructureCmd.Flags().BoolVar(&strictStructure, "strict", false, "treat warnings as errors (exit 1 instead of 2)")
 	validateCmd.AddCommand(validateStructureCmd)
 }
 
@@ -30,14 +34,15 @@ func runValidateStructure(cmd *cobra.Command, args []string) error {
 	}
 
 	opts := structure.Options{SkipOrphans: skipOrphans}
+	eopts := exitOpts{strict: strictStructure}
 
 	switch mode {
 	case validator.SingleSkill:
 		r := structure.Validate(dirs[0], opts)
-		return outputReport(r)
+		return outputReportWithExitOpts(r, false, eopts)
 	case validator.MultiSkill:
 		mr := structure.ValidateMulti(dirs, opts)
-		return outputMultiReport(mr)
+		return outputMultiReportWithExitOpts(mr, false, eopts)
 	}
 	return nil
 }

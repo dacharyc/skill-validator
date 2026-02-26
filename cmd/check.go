@@ -19,6 +19,7 @@ var (
 	checkSkip        string
 	perFileCheck     bool
 	checkSkipOrphans bool
+	strictCheck      bool
 )
 
 var checkCmd = &cobra.Command{
@@ -35,6 +36,7 @@ func init() {
 	checkCmd.Flags().BoolVar(&perFileCheck, "per-file", false, "show per-file reference analysis")
 	checkCmd.Flags().BoolVar(&checkSkipOrphans, "skip-orphans", false,
 		"skip orphan file detection (unreferenced files in scripts/, references/, assets/)")
+	checkCmd.Flags().BoolVar(&strictCheck, "strict", false, "treat warnings as errors (exit 1 instead of 2)")
 	rootCmd.AddCommand(checkCmd)
 }
 
@@ -61,11 +63,12 @@ func runCheck(cmd *cobra.Command, args []string) error {
 	}
 
 	structOpts := structure.Options{SkipOrphans: checkSkipOrphans}
+	eopts := exitOpts{strict: strictCheck}
 
 	switch mode {
 	case validator.SingleSkill:
 		r := runAllChecks(dirs[0], enabled, structOpts)
-		return outputReportWithPerFile(r, perFileCheck)
+		return outputReportWithExitOpts(r, perFileCheck, eopts)
 	case validator.MultiSkill:
 		mr := &validator.MultiReport{}
 		for _, dir := range dirs {
@@ -74,7 +77,7 @@ func runCheck(cmd *cobra.Command, args []string) error {
 			mr.Errors += r.Errors
 			mr.Warnings += r.Warnings
 		}
-		return outputMultiReportWithPerFile(mr, perFileCheck)
+		return outputMultiReportWithExitOpts(mr, perFileCheck, eopts)
 	}
 	return nil
 }

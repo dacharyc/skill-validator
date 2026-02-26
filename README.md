@@ -98,7 +98,21 @@ Commands map to skill development lifecycle stages:
 
 All commands accept `-o text` (default) or `-o json` for output format. Use `--version` to print the installed version.
 
-Exit codes: `0` = passed, `1` = validation errors, `2` = usage/tool error.
+**Exit codes:**
+
+| Code | Meaning |
+|------|---------|
+| `0` | Clean pass (no errors, no warnings) |
+| `1` | Validation errors present |
+| `2` | Warnings present, no errors |
+| `3` | CLI/usage error (bad flags, missing args) |
+
+Use `--strict` on `check` or `validate structure` to treat warnings as errors (exit 1 instead of 2). This is useful in CI pipelines where you want a binary pass/fail:
+
+```
+skill-validator check --strict <path>
+skill-validator validate structure --strict <path>
+```
 
 For more details about how the commands are implemented and what they provide, refer to [What it Checks](#what-it-checks).
 
@@ -107,9 +121,10 @@ For more details about how the commands are implemented and what they provide, r
 ```
 skill-validator validate structure <path>
 skill-validator validate structure --skip-orphans <path>
+skill-validator validate structure --strict <path>
 ```
 
-Checks spec compliance: directory structure, frontmatter fields, token limits, skill ratio, code fence integrity, internal link validity, and orphan file detection. Use `--skip-orphans` to suppress warnings about unreferenced files in `scripts/`, `references/`, and `assets/`.
+Checks spec compliance: directory structure, frontmatter fields, token limits, skill ratio, code fence integrity, internal link validity, and orphan file detection. Use `--skip-orphans` to suppress warnings about unreferenced files in `scripts/`, `references/`, and `assets/`. Use `--strict` to treat warnings as errors (exit 1 instead of 2).
 
 ```
 Validating skill: my-skill/
@@ -203,9 +218,10 @@ skill-validator check --only structure,links <path>
 skill-validator check --skip contamination <path>
 skill-validator check --per-file <path>
 skill-validator check --skip-orphans <path>
+skill-validator check --strict <path>
 ```
 
-Runs all checks (structure + links + content + contamination). Use `--only` or `--skip` to select specific check groups. The flags are mutually exclusive. Use `--per-file` to see per-file reference analysis alongside the aggregate. Use `--skip-orphans` to suppress orphan file warnings in the structure check.
+Runs all checks (structure + links + content + contamination). Use `--only` or `--skip` to select specific check groups. The flags are mutually exclusive. Use `--per-file` to see per-file reference analysis alongside the aggregate. Use `--skip-orphans` to suppress orphan file warnings in the structure check. Use `--strict` to treat warnings as errors (exit 1 instead of 2).
 
 Valid check groups: `structure`, `links`, `content`, `contamination`.
 
@@ -398,7 +414,7 @@ Each skill is validated independently. The text output separates skills with a l
 }
 ```
 
-If no `SKILL.md` is found at the root or in any immediate subdirectory, the validator exits with code 2.
+If no `SKILL.md` is found at the root or in any immediate subdirectory, the validator exits with code 3 (CLI error).
 
 ## What it checks
 

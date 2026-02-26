@@ -28,7 +28,7 @@ func init() {
 // Execute runs the root command.
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
-		os.Exit(2)
+		os.Exit(ExitCobra)
 	}
 }
 
