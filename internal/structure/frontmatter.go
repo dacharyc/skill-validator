@@ -113,7 +113,7 @@ func checkDescriptionKeywordStuffing(desc string) []validator.Result {
 		for w := range strings.FieldsSeq(prose) {
 			// Skip punctuation-only tokens (commas, periods, colons, etc.)
 			cleaned := strings.TrimFunc(w, func(r rune) bool {
-				return !((r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9'))
+				return (r < 'a' || r > 'z') && (r < 'A' || r > 'Z') && (r < '0' || r > '9')
 			})
 			if len(cleaned) > 0 {
 				proseWordCount++

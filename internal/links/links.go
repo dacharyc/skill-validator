@@ -120,7 +120,7 @@ func checkHTTPLink(url string) validator.Result {
 	if err != nil {
 		return validator.Result{Level: validator.Error, Category: "Links", Message: fmt.Sprintf("%s (request failed: %v)", url, err)}
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
 		return validator.Result{Level: validator.Pass, Category: "Links", Message: fmt.Sprintf("%s (HTTP %d)", url, resp.StatusCode)}

@@ -463,7 +463,7 @@ func TestAnthropicClient_Complete(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprint(w, `{"content": [{"text": "hello from anthropic"}]}`)
+		_, _ = fmt.Fprint(w, `{"content": [{"text": "hello from anthropic"}]}`)
 	}))
 	defer server.Close()
 
@@ -484,7 +484,7 @@ func TestAnthropicClient_Complete(t *testing.T) {
 func TestAnthropicClient_APIError(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprint(w, `{"error": {"message": "invalid request"}}`)
+		_, _ = fmt.Fprint(w, `{"error": {"message": "invalid request"}}`)
 	}))
 	defer server.Close()
 
@@ -498,7 +498,7 @@ func TestAnthropicClient_APIError(t *testing.T) {
 func TestAnthropicClient_EmptyContent(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprint(w, `{"content": []}`)
+		_, _ = fmt.Fprint(w, `{"content": []}`)
 	}))
 	defer server.Close()
 
@@ -512,7 +512,7 @@ func TestAnthropicClient_EmptyContent(t *testing.T) {
 func TestAnthropicClient_ErrorField(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprint(w, `{"error": {"message": "overloaded"}, "content": []}`)
+		_, _ = fmt.Fprint(w, `{"error": {"message": "overloaded"}, "content": []}`)
 	}))
 	defer server.Close()
 
@@ -539,7 +539,7 @@ func TestOpenAIClient_Complete(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprint(w, `{"choices": [{"message": {"content": "hello from openai"}}]}`)
+		_, _ = fmt.Fprint(w, `{"choices": [{"message": {"content": "hello from openai"}}]}`)
 	}))
 	defer server.Close()
 
@@ -560,7 +560,7 @@ func TestOpenAIClient_Complete(t *testing.T) {
 func TestOpenAIClient_APIError(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusUnauthorized)
-		fmt.Fprint(w, `{"error": {"message": "invalid api key"}}`)
+		_, _ = fmt.Fprint(w, `{"error": {"message": "invalid api key"}}`)
 	}))
 	defer server.Close()
 
@@ -577,7 +577,7 @@ func TestOpenAIClient_APIError(t *testing.T) {
 func TestOpenAIClient_EmptyChoices(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprint(w, `{"choices": []}`)
+		_, _ = fmt.Fprint(w, `{"choices": []}`)
 	}))
 	defer server.Close()
 
@@ -592,7 +592,7 @@ func TestOpenAIClient_ErrorField(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		// 200 status but with error in body
-		fmt.Fprint(w, `{"error": {"message": "rate limited"}, "choices": []}`)
+		_, _ = fmt.Fprint(w, `{"error": {"message": "rate limited"}, "choices": []}`)
 	}))
 	defer server.Close()
 
