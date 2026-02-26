@@ -524,7 +524,13 @@ Uses an LLM-as-judge approach ported from the [agent-skill-analysis](https://git
 
 ## Development
 
+Run lint and tests locally before pushing:
+
 ```
-go test ./...
-go vet ./...
+golangci-lint run ./...
+go test -race ./... -count=1
 ```
+
+CI runs both checks on every pull request. Install
+[golangci-lint](https://golangci-lint.run/welcome/install/) if you don't
+have it already.

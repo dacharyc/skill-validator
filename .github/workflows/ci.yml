@@ -7,6 +7,17 @@ on:
     branches: [main]
 
 jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+
+      - uses: golangci/golangci-lint-action@v7
+
   test:
     runs-on: ubuntu-latest
     steps:
@@ -16,11 +27,8 @@ jobs:
         with:
           go-version-file: go.mod
 
-      - name: Vet
-        run: go vet ./...
-
       - name: Test
-        run: go test ./... -count=1
+        run: go test -race ./... -count=1
 
       - name: Build
         run: go build -o skill-validator .
