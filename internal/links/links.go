@@ -15,7 +15,7 @@ var (
 	// Match [text](url) markdown links
 	mdLinkPattern = regexp.MustCompile(`\[([^\]]*)\]\(([^)]+)\)`)
 	// Match bare URLs
-	bareURLPattern = regexp.MustCompile(`(?:^|\s)(https?://[^\s<>\)]+)`)
+	bareURLPattern = regexp.MustCompile("(?:^|\\s)(https?://[^\\s<>\\)`]+)")
 )
 
 type linkResult struct {
@@ -90,7 +90,7 @@ func ExtractLinks(body string) []string {
 
 	// Bare URLs
 	for _, match := range bareURLPattern.FindAllStringSubmatch(body, -1) {
-		url := strings.TrimSpace(match[1])
+		url := trimTrailingDelimiters(strings.TrimSpace(match[1]))
 		if !seen[url] {
 			seen[url] = true
 			links = append(links, url)
@@ -98,6 +98,48 @@ func ExtractLinks(body string) []string {
 	}
 
 	return links
+}
+
+var entitySuffix = regexp.MustCompile(`&[a-zA-Z0-9]+;$`)
+
+// trimTrailingDelimiters strips trailing punctuation and entity references
+// from bare URLs, following cmark-gfm's autolink delimiter rules.
+func trimTrailingDelimiters(url string) string {
+	for {
+		changed := false
+
+		// Strip trailing HTML entity references (e.g. &amp;)
+		if strings.HasSuffix(url, ";") {
+			if loc := entitySuffix.FindStringIndex(url); loc != nil {
+				url = url[:loc[0]]
+				changed = true
+				continue
+			}
+		}
+
+		// Strip unbalanced trailing closing parenthesis
+		if strings.HasSuffix(url, ")") {
+			open := strings.Count(url, "(")
+			close := strings.Count(url, ")")
+			if close > open {
+				url = url[:len(url)-1]
+				changed = true
+				continue
+			}
+		}
+
+		// Strip trailing punctuation
+		if len(url) > 0 && strings.ContainsRune("?!.,:*_~'\";<", rune(url[len(url)-1])) {
+			url = url[:len(url)-1]
+			changed = true
+			continue
+		}
+
+		if !changed {
+			break
+		}
+	}
+	return url
 }
 
 func checkHTTPLink(ctx validator.ResultContext, url string) validator.Result {

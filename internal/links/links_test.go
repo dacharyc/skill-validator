@@ -97,6 +97,17 @@ func TestExtractLinks(t *testing.T) {
 		}
 	})
 
+	t.Run("bare URL in code span strips backtick", func(t *testing.T) {
+		body := "`curl https://example.com/docs`"
+		links := ExtractLinks(body)
+		if len(links) != 1 {
+			t.Fatalf("expected 1 link, got %d: %v", len(links), links)
+		}
+		if links[0] != "https://example.com/docs" {
+			t.Errorf("links[0] = %q, want %q", links[0], "https://example.com/docs")
+		}
+	})
+
 	t.Run("empty link text", func(t *testing.T) {
 		body := "[](references/empty.md)"
 		links := ExtractLinks(body)
@@ -107,6 +118,34 @@ func TestExtractLinks(t *testing.T) {
 			t.Errorf("links[0] = %q, want %q", links[0], "references/empty.md")
 		}
 	})
+}
+
+func TestTrimTrailingDelimiters(t *testing.T) {
+	tests := []struct {
+		name string
+		in   string
+		want string
+	}{
+		{"trailing period", "https://example.com.", "https://example.com"},
+		{"trailing comma", "https://example.com,", "https://example.com"},
+		{"trailing exclamation", "https://example.com!", "https://example.com"},
+		{"trailing question mark", "https://example.com?", "https://example.com"},
+		{"query string preserved", "https://example.com?q=test", "https://example.com?q=test"},
+		{"path with extension", "https://example.com/file.html", "https://example.com/file.html"},
+		{"balanced parens", "https://en.wikipedia.org/wiki/Foo_(bar)", "https://en.wikipedia.org/wiki/Foo_(bar)"},
+		{"unbalanced trailing paren", "https://example.com)", "https://example.com"},
+		{"entity reference", "https://example.com&amp;", "https://example.com"},
+		{"multiple trailing", "https://example.com.\"", "https://example.com"},
+		{"no trimming needed", "https://example.com/path", "https://example.com/path"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := trimTrailingDelimiters(tt.in)
+			if got != tt.want {
+				t.Errorf("trimTrailingDelimiters(%q) = %q, want %q", tt.in, got, tt.want)
+			}
+		})
+	}
 }
 
 func TestCheckLinks_SkipsRelative(t *testing.T) {
