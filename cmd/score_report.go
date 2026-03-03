@@ -18,6 +18,16 @@ var (
 	reportModel   string
 )
 
+// Color constants for terminal output (local to score_report).
+const (
+	reportColorReset  = "\033[0m"
+	reportColorBold   = "\033[1m"
+	reportColorGreen  = "\033[32m"
+	reportColorYellow = "\033[33m"
+	reportColorCyan   = "\033[36m"
+	reportColorRed    = "\033[31m"
+)
+
 var scoreReportCmd = &cobra.Command{
 	Use:   "report <path>",
 	Short: "View cached LLM scores",
@@ -82,7 +92,7 @@ func outputReportList(results []*judge.CachedResult, skillDir string) error {
 		return nil
 	}
 
-	fmt.Printf("\n%sCached scores for: %s%s\n\n", evalColorBold, skillDir, evalColorReset)
+	fmt.Printf("\n%sCached scores for: %s%s\n\n", reportColorBold, skillDir, reportColorReset)
 	fmt.Printf("  %-28s %-30s %-20s %s\n", "File", "Model", "Scored At", "Provider")
 	fmt.Printf("  %s\n", strings.Repeat("─", 90))
 
@@ -123,11 +133,11 @@ func outputReportCompare(results []*judge.CachedResult, skillDir string) error {
 	}
 	sort.Strings(files)
 
-	fmt.Printf("\n%sScore comparison for: %s%s\n", evalColorBold, skillDir, evalColorReset)
+	fmt.Printf("\n%sScore comparison for: %s%s\n", reportColorBold, skillDir, reportColorReset)
 
 	for _, file := range files {
 		entries := byFile[file]
-		fmt.Printf("\n%s%s%s\n", evalColorBold, file, evalColorReset)
+		fmt.Printf("\n%s%s%s\n", reportColorBold, file, reportColorReset)
 
 		// Get unique models
 		models := make([]string, 0)
@@ -245,7 +255,7 @@ func outputReportDefault(results []*judge.CachedResult, skillDir string) error {
 		return nil
 	}
 
-	fmt.Printf("\n%sCached scores for: %s%s\n", evalColorBold, skillDir, evalColorReset)
+	fmt.Printf("\n%sCached scores for: %s%s\n", reportColorBold, skillDir, reportColorReset)
 
 	// Show SKILL.md first, then references sorted alphabetically
 	if r, ok := latest["SKILL.md"]; ok {
@@ -275,25 +285,36 @@ func printCachedSkillScores(r *judge.CachedResult) {
 	}
 
 	fmt.Printf("\n%sSKILL.md Scores%s  %s(model: %s, scored: %s)%s\n",
-		evalColorBold, evalColorReset,
-		evalColorCyan, r.Model, r.ScoredAt.Local().Format("2006-01-02 15:04"), evalColorReset)
+		reportColorBold, reportColorReset,
+		reportColorCyan, r.Model, r.ScoredAt.Local().Format("2006-01-02 15:04"), reportColorReset)
 
-	printDimScore("Clarity", scores.Clarity)
-	printDimScore("Actionability", scores.Actionability)
-	printDimScore("Token Efficiency", scores.TokenEfficiency)
-	printDimScore("Scope Discipline", scores.ScopeDiscipline)
-	printDimScore("Directive Precision", scores.DirectivePrecision)
-	printDimScore("Novelty", scores.Novelty)
+	reportPrintDimScore("Clarity", scores.Clarity)
+	reportPrintDimScore("Actionability", scores.Actionability)
+	reportPrintDimScore("Token Efficiency", scores.TokenEfficiency)
+	reportPrintDimScore("Scope Discipline", scores.ScopeDiscipline)
+	reportPrintDimScore("Directive Precision", scores.DirectivePrecision)
+	reportPrintDimScore("Novelty", scores.Novelty)
 	fmt.Printf("  %s\n", strings.Repeat("─", 30))
-	fmt.Printf("  %sOverall:              %.2f/5%s\n", evalColorBold, scores.Overall, evalColorReset)
+	fmt.Printf("  %sOverall:              %.2f/5%s\n", reportColorBold, scores.Overall, reportColorReset)
 
 	if scores.BriefAssessment != "" {
-		fmt.Printf("\n  %s\"%s\"%s\n", evalColorCyan, scores.BriefAssessment, evalColorReset)
+		fmt.Printf("\n  %s\"%s\"%s\n", reportColorCyan, scores.BriefAssessment, reportColorReset)
 	}
 
 	if scores.NovelInfo != "" {
-		fmt.Printf("  %sNovel details: %s%s\n", evalColorCyan, scores.NovelInfo, evalColorReset)
+		fmt.Printf("  %sNovel details: %s%s\n", reportColorCyan, scores.NovelInfo, reportColorReset)
 	}
+}
+
+func reportPrintDimScore(name string, score int) {
+	color := reportColorGreen
+	if score <= 2 {
+		color = reportColorRed
+	} else if score <= 3 {
+		color = reportColorYellow
+	}
+	padding := max(22-len(name), 1)
+	fmt.Printf("  %s:%s%s%d/5%s\n", name, strings.Repeat(" ", padding), color, score, reportColorReset)
 }
 
 func printCachedRefScores(r *judge.CachedResult) {
@@ -304,22 +325,22 @@ func printCachedRefScores(r *judge.CachedResult) {
 	}
 
 	fmt.Printf("\n%sReference: %s%s  %s(model: %s, scored: %s)%s\n",
-		evalColorBold, r.File, evalColorReset,
-		evalColorCyan, r.Model, r.ScoredAt.Local().Format("2006-01-02 15:04"), evalColorReset)
+		reportColorBold, r.File, reportColorReset,
+		reportColorCyan, r.Model, r.ScoredAt.Local().Format("2006-01-02 15:04"), reportColorReset)
 
-	printDimScore("Clarity", scores.Clarity)
-	printDimScore("Instructional Value", scores.InstructionalValue)
-	printDimScore("Token Efficiency", scores.TokenEfficiency)
-	printDimScore("Novelty", scores.Novelty)
-	printDimScore("Skill Relevance", scores.SkillRelevance)
+	reportPrintDimScore("Clarity", scores.Clarity)
+	reportPrintDimScore("Instructional Value", scores.InstructionalValue)
+	reportPrintDimScore("Token Efficiency", scores.TokenEfficiency)
+	reportPrintDimScore("Novelty", scores.Novelty)
+	reportPrintDimScore("Skill Relevance", scores.SkillRelevance)
 	fmt.Printf("  %s\n", strings.Repeat("─", 30))
-	fmt.Printf("  %sOverall:              %.2f/5%s\n", evalColorBold, scores.Overall, evalColorReset)
+	fmt.Printf("  %sOverall:              %.2f/5%s\n", reportColorBold, scores.Overall, reportColorReset)
 
 	if scores.BriefAssessment != "" {
-		fmt.Printf("\n  %s\"%s\"%s\n", evalColorCyan, scores.BriefAssessment, evalColorReset)
+		fmt.Printf("\n  %s\"%s\"%s\n", reportColorCyan, scores.BriefAssessment, reportColorReset)
 	}
 
 	if scores.NovelInfo != "" {
-		fmt.Printf("  %sNovel details: %s%s\n", evalColorCyan, scores.NovelInfo, evalColorReset)
+		fmt.Printf("  %sNovel details: %s%s\n", reportColorCyan, scores.NovelInfo, reportColorReset)
 	}
 }
