@@ -6,7 +6,7 @@ import (
 	"io"
 	"sort"
 
-	"github.com/dacharyc/skill-validator/internal/judge"
+	"github.com/dacharyc/skill-validator/judge"
 )
 
 func outputReportListMarkdown(w io.Writer, results []*judge.CachedResult, skillDir string) {

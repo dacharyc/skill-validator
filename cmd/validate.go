@@ -6,8 +6,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/dacharyc/skill-validator/internal/report"
-	"github.com/dacharyc/skill-validator/internal/validator"
+	"github.com/dacharyc/skill-validator/report"
+	"github.com/dacharyc/skill-validator/skillcheck"
 )
 
 var validateCmd = &cobra.Command{
@@ -20,15 +20,15 @@ func init() {
 	rootCmd.AddCommand(validateCmd)
 }
 
-func outputReport(r *validator.Report) error {
+func outputReport(r *skillcheck.Report) error {
 	return outputReportWithExitOpts(r, false, exitOpts{})
 }
 
-func outputReportWithPerFile(r *validator.Report, perFile bool) error {
+func outputReportWithPerFile(r *skillcheck.Report, perFile bool) error {
 	return outputReportWithExitOpts(r, perFile, exitOpts{})
 }
 
-func outputReportWithExitOpts(r *validator.Report, perFile bool, opts exitOpts) error {
+func outputReportWithExitOpts(r *skillcheck.Report, perFile bool, opts exitOpts) error {
 	switch outputFormat {
 	case "json":
 		if err := report.PrintJSON(os.Stdout, r, perFile); err != nil {
@@ -51,15 +51,15 @@ func outputReportWithExitOpts(r *validator.Report, perFile bool, opts exitOpts) 
 	return nil
 }
 
-func outputMultiReport(mr *validator.MultiReport) error {
+func outputMultiReport(mr *skillcheck.MultiReport) error {
 	return outputMultiReportWithExitOpts(mr, false, exitOpts{})
 }
 
-func outputMultiReportWithPerFile(mr *validator.MultiReport, perFile bool) error {
+func outputMultiReportWithPerFile(mr *skillcheck.MultiReport, perFile bool) error {
 	return outputMultiReportWithExitOpts(mr, perFile, exitOpts{})
 }
 
-func outputMultiReportWithExitOpts(mr *validator.MultiReport, perFile bool, opts exitOpts) error {
+func outputMultiReportWithExitOpts(mr *skillcheck.MultiReport, perFile bool, opts exitOpts) error {
 	switch outputFormat {
 	case "json":
 		if err := report.PrintMultiJSON(os.Stdout, mr, perFile); err != nil {

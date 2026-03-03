@@ -7,11 +7,11 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/dacharyc/skill-validator/internal/contamination"
-	"github.com/dacharyc/skill-validator/internal/content"
-	"github.com/dacharyc/skill-validator/internal/links"
-	"github.com/dacharyc/skill-validator/internal/structure"
-	"github.com/dacharyc/skill-validator/internal/validator"
+	"github.com/dacharyc/skill-validator/contamination"
+	"github.com/dacharyc/skill-validator/content"
+	"github.com/dacharyc/skill-validator/links"
+	"github.com/dacharyc/skill-validator/skillcheck"
+	"github.com/dacharyc/skill-validator/structure"
 )
 
 var (
@@ -66,11 +66,11 @@ func runCheck(cmd *cobra.Command, args []string) error {
 	eopts := exitOpts{strict: strictCheck}
 
 	switch mode {
-	case validator.SingleSkill:
+	case skillcheck.SingleSkill:
 		r := runAllChecks(dirs[0], enabled, structOpts)
 		return outputReportWithExitOpts(r, perFileCheck, eopts)
-	case validator.MultiSkill:
-		mr := &validator.MultiReport{}
+	case skillcheck.MultiSkill:
+		mr := &skillcheck.MultiReport{}
 		for _, dir := range dirs {
 			r := runAllChecks(dir, enabled, structOpts)
 			mr.Skills = append(mr.Skills, r)
@@ -117,8 +117,8 @@ func resolveCheckGroups(only, skip string) (map[string]bool, error) {
 	return enabled, nil
 }
 
-func runAllChecks(dir string, enabled map[string]bool, structOpts structure.Options) *validator.Report {
-	rpt := &validator.Report{SkillDir: dir}
+func runAllChecks(dir string, enabled map[string]bool, structOpts structure.Options) *skillcheck.Report {
+	rpt := &skillcheck.Report{SkillDir: dir}
 
 	// Structure validation (spec compliance, tokens, code fences)
 	if enabled["structure"] {
@@ -133,15 +133,15 @@ func runAllChecks(dir string, enabled map[string]bool, structOpts structure.Opti
 	var rawContent, body string
 	var skillLoaded bool
 	if needsSkill {
-		s, err := validator.LoadSkill(dir)
+		s, err := skillcheck.LoadSkill(dir)
 		if err != nil {
 			if !enabled["structure"] {
 				// Only add the error if structure didn't already catch it
 				rpt.Results = append(rpt.Results,
-					validator.ResultContext{Category: "Skill"}.Error(err.Error()))
+					skillcheck.ResultContext{Category: "Skill"}.Error(err.Error()))
 			}
 			// Fall back to reading raw SKILL.md for content/contamination analysis
-			rawContent = validator.ReadSkillRaw(dir)
+			rawContent = skillcheck.ReadSkillRaw(dir)
 		} else {
 			rawContent = s.RawContent
 			body = s.Body
@@ -174,7 +174,7 @@ func runAllChecks(dir string, enabled map[string]bool, structOpts structure.Opti
 
 		// Reference file analysis (both content and contamination)
 		if enabled["content"] || enabled["contamination"] {
-			validator.AnalyzeReferences(dir, rpt)
+			skillcheck.AnalyzeReferences(dir, rpt)
 			// If content is disabled, clear the content-specific reference fields
 			if !enabled["content"] {
 				rpt.ReferencesContentReport = nil
@@ -197,9 +197,9 @@ func runAllChecks(dir string, enabled map[string]bool, structOpts structure.Opti
 	rpt.Warnings = 0
 	for _, r := range rpt.Results {
 		switch r.Level {
-		case validator.Error:
+		case skillcheck.Error:
 			rpt.Errors++
-		case validator.Warning:
+		case skillcheck.Warning:
 			rpt.Warnings++
 		}
 	}

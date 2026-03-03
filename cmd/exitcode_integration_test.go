@@ -16,8 +16,8 @@ func buildBinary(t *testing.T) string {
 		ext = ".exe"
 	}
 	bin := filepath.Join(t.TempDir(), "skill-validator"+ext)
-	cmd := exec.Command("go", "build", "-o", bin, "..")
-	cmd.Dir = filepath.Join(moduleRoot(t), "cmd")
+	cmd := exec.Command("go", "build", "-o", bin, "./cmd/skill-validator")
+	cmd.Dir = moduleRoot(t)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		t.Fatalf("build failed: %v\n%s", err, out)

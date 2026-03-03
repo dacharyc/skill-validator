@@ -9,7 +9,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/dacharyc/skill-validator/internal/judge"
+	"github.com/dacharyc/skill-validator/judge"
 )
 
 var (

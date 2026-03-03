@@ -10,9 +10,11 @@ Spec compliance is table stakes. `skill-validator` goes further: it checks that 
 ## Table of Contents
 
 - [Install](#install)
-  - [Homebrew](#homebrew)
-  - [Using Go](#using-go)
-  - [Pre-commit hook](#pre-commit-hook)
+  - [CLI](#install-cli)
+    - [Homebrew](#homebrew)
+    - [Using Go](#using-go)
+    - [Pre-commit hook](#pre-commit-hook)
+  - [As a library](#as-a-library)
 - [Command Usage](#command-usage)
   - [validate structure](#validate-structure)
   - [validate links](#validate-links)
@@ -36,23 +38,25 @@ Spec compliance is table stakes. `skill-validator` goes further: it checks that 
 
 ## Install
 
-You can install in three ways:
+### Install CLI
+
+You can install the CLI in three ways:
 
 - [Homebrew](#homebrew)
 - [Using Go](#using-go)
 - [Pre-commit hook](#pre-commit-hook)
 
-### Homebrew
+#### Homebrew
 
 ```
 brew tap dacharyc/tap
 brew install skill-validator
 ```
 
-### Using Go
+#### Using Go
 
 ```
-go install github.com/dacharyc/skill-validator@latest
+go install github.com/dacharyc/skill-validator/cmd/skill-validator@latest
 ```
 
 Or build from source:
@@ -60,10 +64,10 @@ Or build from source:
 ```
 git clone https://github.com/dacharyc/skill-validator.git
 cd skill-validator
-go build -o skill-validator .
+go build -o skill-validator ./cmd/skill-validator
 ```
 
-### Pre-commit hook
+#### Pre-commit hook
 
 `skill-validator` supports [pre-commit](https://pre-commit.com). Platform-specific hooks are provided for all major agent platforms, so the correct skills directory is used automatically. For example, the following configuration runs the skill-validator [`check`](#check) command on the `".claude/skills/"` path:
 
@@ -84,6 +88,20 @@ hooks:
   - id: skill-validator
     args: ["check", "path/to/skills/"]
 ```
+
+### As a library
+
+The validation and scoring packages are importable for use in custom tooling, CI pipelines, and enterprise integrations:
+
+```go
+import (
+    "github.com/dacharyc/skill-validator/skillcheck"
+    "github.com/dacharyc/skill-validator/structure"
+    "github.com/dacharyc/skill-validator/judge"
+)
+```
+
+See the [package documentation](https://pkg.go.dev/github.com/dacharyc/skill-validator) for available APIs.
 
 ## Command Usage
 

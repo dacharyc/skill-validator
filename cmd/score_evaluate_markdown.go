@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/dacharyc/skill-validator/internal/judge"
+	"github.com/dacharyc/skill-validator/judge"
 )
 
 func printEvalResultMarkdown(w io.Writer, result *skillEvalResult) {

@@ -12,8 +12,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/dacharyc/skill-validator/internal/judge"
-	"github.com/dacharyc/skill-validator/internal/validator"
+	"github.com/dacharyc/skill-validator/judge"
+	"github.com/dacharyc/skill-validator/skillcheck"
 )
 
 var (
@@ -124,14 +124,14 @@ func runScoreEvaluate(cmd *cobra.Command, args []string) error {
 	}
 
 	switch mode {
-	case validator.SingleSkill:
+	case skillcheck.SingleSkill:
 		result, err := evaluateSkill(ctx, dirs[0], client, evalMaxLen())
 		if err != nil {
 			return err
 		}
 		return outputEvalResult(result)
 
-	case validator.MultiSkill:
+	case skillcheck.MultiSkill:
 		var results []skillEvalResult
 		for _, dir := range dirs {
 			result, err := evaluateSkill(ctx, dir, client, evalMaxLen())
@@ -160,7 +160,7 @@ func evaluateSkill(ctx context.Context, dir string, client judge.LLMClient, maxL
 	skillName := filepath.Base(dir)
 
 	// Load skill
-	s, err := validator.LoadSkill(dir)
+	s, err := skillcheck.LoadSkill(dir)
 	if err != nil {
 		return nil, fmt.Errorf("loading skill: %w", err)
 	}
@@ -207,7 +207,7 @@ func evaluateSkill(ctx context.Context, dir string, client judge.LLMClient, maxL
 
 	// Score reference files
 	if !evalSkillOnly {
-		refFiles := validator.ReadReferencesMarkdownFiles(dir)
+		refFiles := skillcheck.ReadReferencesMarkdownFiles(dir)
 		if refFiles != nil {
 			skillDesc := s.Frontmatter.Description
 
@@ -292,7 +292,7 @@ func runScoreSingleFile(ctx context.Context, absPath string, client judge.LLMCli
 	}
 
 	// Load parent skill for context
-	s, err := validator.LoadSkill(skillDir)
+	s, err := skillcheck.LoadSkill(skillDir)
 	if err != nil {
 		return fmt.Errorf("loading parent skill: %w", err)
 	}

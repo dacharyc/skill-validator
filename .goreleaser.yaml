@@ -2,6 +2,7 @@ version: 2
 
 builds:
   - binary: skill-validator
+    main: ./cmd/skill-validator
     env:
       - CGO_ENABLED=0
     goos:
