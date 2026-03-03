@@ -6,8 +6,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/dacharyc/skill-validator/evaluate"
 	"github.com/dacharyc/skill-validator/judge"
+	"github.com/dacharyc/skill-validator/report"
 )
 
 var (
@@ -61,10 +61,10 @@ func runScoreReport(cmd *cobra.Command, args []string) error {
 
 	switch {
 	case reportList:
-		return evaluate.ReportList(os.Stdout, results, absDir, outputFormat)
+		return report.List(os.Stdout, results, absDir, outputFormat)
 	case reportCompare:
-		return evaluate.ReportCompare(os.Stdout, results, absDir, outputFormat)
+		return report.Compare(os.Stdout, results, absDir, outputFormat)
 	default:
-		return evaluate.ReportDefault(os.Stdout, results, absDir, outputFormat)
+		return report.Default(os.Stdout, results, absDir, outputFormat)
 	}
 }

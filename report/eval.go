@@ -1,4 +1,4 @@
-package evaluate
+package report
 
 import (
 	"encoding/json"
@@ -6,77 +6,68 @@ import (
 	"io"
 	"strings"
 
-	"github.com/dacharyc/skill-validator/judge"
+	"github.com/dacharyc/skill-validator/evaluate"
+	"github.com/dacharyc/skill-validator/types"
 	"github.com/dacharyc/skill-validator/util"
 )
 
-// Shorthand aliases for color constants to keep format strings compact.
-const (
-	ColorReset  = util.ColorReset
-	ColorBold   = util.ColorBold
-	ColorGreen  = util.ColorGreen
-	ColorYellow = util.ColorYellow
-	ColorCyan   = util.ColorCyan
-	ColorRed    = util.ColorRed
-)
-
-// FormatResults formats a single EvalResult in the given format.
-func FormatResults(w io.Writer, results []*EvalResult, format, display string) error {
+// FormatEvalResults formats a single EvalResult in the given format.
+func FormatEvalResults(w io.Writer, results []*evaluate.EvalResult, format, display string) error {
 	if len(results) == 0 {
 		return nil
 	}
 	if len(results) == 1 {
 		switch format {
 		case "json":
-			return PrintJSON(w, results)
+			return PrintEvalJSON(w, results)
 		case "markdown":
-			PrintMarkdown(w, results[0], display)
+			PrintEvalMarkdown(w, results[0], display)
 			return nil
 		default:
-			PrintText(w, results[0], display)
+			PrintEvalText(w, results[0], display)
 			return nil
 		}
 	}
-	return FormatMultiResults(w, results, format, display)
+	return FormatMultiEvalResults(w, results, format, display)
 }
 
-// FormatMultiResults formats multiple EvalResults in the given format.
-func FormatMultiResults(w io.Writer, results []*EvalResult, format, display string) error {
+// FormatMultiEvalResults formats multiple EvalResults in the given format.
+func FormatMultiEvalResults(w io.Writer, results []*evaluate.EvalResult, format, display string) error {
 	switch format {
 	case "json":
-		return PrintJSON(w, results)
+		return PrintEvalJSON(w, results)
 	case "markdown":
-		PrintMultiMarkdown(w, results, display)
+		PrintMultiEvalMarkdown(w, results, display)
 		return nil
 	default:
 		for i, r := range results {
 			if i > 0 {
 				_, _ = fmt.Fprintf(w, "\n%s\n", strings.Repeat("━", 60))
 			}
-			PrintText(w, r, display)
+			PrintEvalText(w, r, display)
 		}
 		return nil
 	}
 }
 
-// PrintText writes a human-readable text representation of an EvalResult.
-func PrintText(w io.Writer, result *EvalResult, display string) {
-	_, _ = fmt.Fprintf(w, "\n%sScoring skill: %s%s\n", ColorBold, result.SkillDir, ColorReset)
+// PrintEvalText writes a human-readable text representation of an EvalResult.
+func PrintEvalText(w io.Writer, result *evaluate.EvalResult, display string) {
+	_, _ = fmt.Fprintf(w, "\n%sScoring skill: %s%s\n", colorBold, result.SkillDir, colorReset)
 
 	if result.SkillScores != nil {
-		_, _ = fmt.Fprintf(w, "\n%sSKILL.md Scores%s\n", ColorBold, ColorReset)
+		_, _ = fmt.Fprintf(w, "\n%sSKILL.md Scores%s\n", colorBold, colorReset)
 		printScoredText(w, result.SkillScores)
 	}
 
 	if display == "files" && len(result.RefResults) > 0 {
 		for _, ref := range result.RefResults {
-			_, _ = fmt.Fprintf(w, "\n%sReference: %s%s\n", ColorBold, ref.File, ColorReset)
+			_, _ = fmt.Fprintf(w, "\n%sReference: %s%s\n", colorBold, ref.File, colorReset)
 			printScoredText(w, ref.Scores)
 		}
 	}
 
 	if result.RefAggregate != nil {
-		_, _ = fmt.Fprintf(w, "\n%sReference Scores (%d file%s)%s\n", ColorBold, len(result.RefResults), util.PluralS(len(result.RefResults)), ColorReset)
+		_, _ = fmt.Fprintf(w, "\n%sReference Scores (%d file%s)%s\n", colorBold, len(result.RefResults), util.PluralS(len(result.RefResults)), colorReset)
 		printScoredText(w, result.RefAggregate)
 	}
 
@@ -84,30 +75,30 @@ func PrintText(w io.Writer, result *EvalResult, display string) {
 }
 
 // printScoredText writes all dimensions, overall, assessment, and novel details for a Scored value.
-func printScoredText(w io.Writer, s judge.Scored) {
+func printScoredText(w io.Writer, s types.Scored) {
 	for _, d := range s.DimensionScores() {
 		printDimScore(w, d.Label, d.Value)
 	}
 	_, _ = fmt.Fprintf(w, "  %s\n", strings.Repeat("─", 30))
-	_, _ = fmt.Fprintf(w, "  %sOverall:              %.2f/5%s\n", ColorBold, s.OverallScore(), ColorReset)
+	_, _ = fmt.Fprintf(w, "  %sOverall:              %.2f/5%s\n", colorBold, s.OverallScore(), colorReset)
 
 	if s.Assessment() != "" {
-		_, _ = fmt.Fprintf(w, "\n  %s\"%s\"%s\n", ColorCyan, s.Assessment(), ColorReset)
+		_, _ = fmt.Fprintf(w, "\n  %s\"%s\"%s\n", colorCyan, s.Assessment(), colorReset)
 	}
 	if s.NovelDetails() != "" {
-		_, _ = fmt.Fprintf(w, "  %sNovel details: %s%s\n", ColorCyan, s.NovelDetails(), ColorReset)
+		_, _ = fmt.Fprintf(w, "  %sNovel details: %s%s\n", colorCyan, s.NovelDetails(), colorReset)
 	}
 }
 
 func printDimScore(w io.Writer, name string, score int) {
-	color := ColorGreen
+	color := colorGreen
 	if score <= 2 {
-		color = ColorRed
+		color = colorRed
 	} else if score <= 3 {
-		color = ColorYellow
+		color = colorYellow
 	}
 	padding := max(22-len(name), 1)
-	_, _ = fmt.Fprintf(w, "  %s:%s%s%d/5%s\n", name, strings.Repeat(" ", padding), color, score, ColorReset)
+	_, _ = fmt.Fprintf(w, "  %s:%s%s%d/5%s\n", name, strings.Repeat(" ", padding), color, score, colorReset)
 }
 
 // --- JSON output ---
@@ -119,20 +110,20 @@ type EvalJSONOutput struct {
 
 // EvalJSONSkill is one skill entry in JSON output.
 type EvalJSONSkill struct {
-	SkillDir     string             `json:"skill_dir"`
-	SkillScores  *judge.SkillScores `json:"skill_scores,omitempty"`
-	RefScores    []EvalJSONRef      `json:"reference_scores,omitempty"`
-	RefAggregate *judge.RefScores   `json:"reference_aggregate,omitempty"`
+	SkillDir     string        `json:"skill_dir"`
+	SkillScores  any           `json:"skill_scores,omitempty"`
+	RefScores    []EvalJSONRef `json:"reference_scores,omitempty"`
+	RefAggregate any           `json:"reference_aggregate,omitempty"`
 }
 
 // EvalJSONRef is one reference file entry in JSON output.
 type EvalJSONRef struct {
-	File   string           `json:"file"`
-	Scores *judge.RefScores `json:"scores"`
+	File   string `json:"file"`
+	Scores any    `json:"scores"`
 }
 
-// PrintJSON writes results as indented JSON.
-func PrintJSON(w io.Writer, results []*EvalResult) error {
+// PrintEvalJSON writes results as indented JSON.
+func PrintEvalJSON(w io.Writer, results []*evaluate.EvalResult) error {
 	out := EvalJSONOutput{
 		Skills: make([]EvalJSONSkill, len(results)),
 	}
@@ -143,7 +134,7 @@ func PrintJSON(w io.Writer, results []*EvalResult) error {
 			RefAggregate: r.RefAggregate,
 		}
 		for _, ref := range r.RefResults {
-			skill.RefScores = append(skill.RefScores, EvalJSONRef(ref))
+			skill.RefScores = append(skill.RefScores, EvalJSONRef{File: ref.File, Scores: ref.Scores})
 		}
 		out.Skills[i] = skill
 	}
@@ -155,8 +146,8 @@ func PrintJSON(w io.Writer, results []*EvalResult) error {
 
 // --- Markdown output ---
 
-// PrintMarkdown writes a single EvalResult as Markdown.
-func PrintMarkdown(w io.Writer, result *EvalResult, display string) {
+// PrintEvalMarkdown writes a single EvalResult as Markdown.
+func PrintEvalMarkdown(w io.Writer, result *evaluate.EvalResult, display string) {
 	_, _ = fmt.Fprintf(w, "## Scoring skill: %s\n", result.SkillDir)
 
 	if result.SkillScores != nil {
@@ -177,18 +168,18 @@ func PrintMarkdown(w io.Writer, result *EvalResult, display string) {
 	}
 }
 
-// PrintMultiMarkdown writes multiple EvalResults as Markdown, separated by rules.
-func PrintMultiMarkdown(w io.Writer, results []*EvalResult, display string) {
+// PrintMultiEvalMarkdown writes multiple EvalResults as Markdown, separated by rules.
+func PrintMultiEvalMarkdown(w io.Writer, results []*evaluate.EvalResult, display string) {
 	for i, r := range results {
 		if i > 0 {
 			_, _ = fmt.Fprintf(w, "\n---\n\n")
 		}
-		PrintMarkdown(w, r, display)
+		PrintEvalMarkdown(w, r, display)
 	}
 }
 
 // printScoredMarkdown writes a markdown table for all dimensions plus overall, assessment, and novel details.
-func printScoredMarkdown(w io.Writer, s judge.Scored) {
+func printScoredMarkdown(w io.Writer, s types.Scored) {
 	_, _ = fmt.Fprintf(w, "| Dimension | Score |\n")
 	_, _ = fmt.Fprintf(w, "| --- | ---: |\n")
 	for _, d := range s.DimensionScores() {

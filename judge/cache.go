@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"sort"
 	"time"
+
+	"github.com/dacharyc/skill-validator/types"
 )
 
 // CachedResult holds a scoring result with metadata for cache storage.
@@ -125,7 +127,7 @@ func FilterByModel(results []*CachedResult, model string) []*CachedResult {
 // concrete type and returns it as a Scored interface. It uses the Type field
 // to determine whether the result is a skill or reference score, falling back
 // to checking File == "SKILL.md" for compatibility with older cache entries.
-func DeserializeScored(r *CachedResult) (Scored, error) {
+func DeserializeScored(r *CachedResult) (types.Scored, error) {
 	if r.Type == "skill" || r.File == "SKILL.md" {
 		var s SkillScores
 		if err := json.Unmarshal(r.Scores, &s); err != nil {

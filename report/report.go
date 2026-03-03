@@ -24,15 +24,7 @@ const (
 func Print(w io.Writer, r *types.Report, perFile bool) {
 	_, _ = fmt.Fprintf(w, "\n%sValidating skill: %s%s\n", colorBold, r.SkillDir, colorReset)
 
-	// Group results by category, preserving order of first appearance
-	var categories []string
-	grouped := make(map[string][]types.Result)
-	for _, res := range r.Results {
-		if _, exists := grouped[res.Category]; !exists {
-			categories = append(categories, res.Category)
-		}
-		grouped[res.Category] = append(grouped[res.Category], res)
-	}
+	categories, grouped := groupByCategory(r.Results)
 
 	for _, cat := range categories {
 		_, _ = fmt.Fprintf(w, "\n%s%s%s\n", colorBold, cat, colorReset)
@@ -243,6 +235,19 @@ func printContaminationReport(w io.Writer, title string, rr *contamination.Repor
 			colorCyan, strings.Join(rr.MultiInterfaceTools, ", "), colorReset)
 	}
 	_, _ = fmt.Fprintf(w, "  Scope breadth: %d\n", rr.ScopeBreadth)
+}
+
+// groupByCategory groups results by category, preserving first-appearance order.
+func groupByCategory(results []types.Result) ([]string, map[string][]types.Result) {
+	var categories []string
+	grouped := make(map[string][]types.Result)
+	for _, res := range results {
+		if _, exists := grouped[res.Category]; !exists {
+			categories = append(categories, res.Category)
+		}
+		grouped[res.Category] = append(grouped[res.Category], res)
+	}
+	return categories, grouped
 }
 
 func formatLevel(level types.Level) (string, string) {

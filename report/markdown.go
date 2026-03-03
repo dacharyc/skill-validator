@@ -15,15 +15,7 @@ import (
 func PrintMarkdown(w io.Writer, r *types.Report, perFile bool) error {
 	_, _ = fmt.Fprintf(w, "## Validating skill: %s\n", r.SkillDir)
 
-	// Group results by category, preserving order of first appearance
-	var categories []string
-	grouped := make(map[string][]types.Result)
-	for _, res := range r.Results {
-		if _, exists := grouped[res.Category]; !exists {
-			categories = append(categories, res.Category)
-		}
-		grouped[res.Category] = append(grouped[res.Category], res)
-	}
+	categories, grouped := groupByCategory(r.Results)
 
 	for _, cat := range categories {
 		_, _ = fmt.Fprintf(w, "\n### %s\n\n", cat)

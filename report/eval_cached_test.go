@@ -1,4 +1,4 @@
-package evaluate
+package report
 
 import (
 	"bytes"
@@ -38,7 +38,7 @@ func makeRefScoresJSON(t *testing.T) json.RawMessage {
 	return data
 }
 
-func makeTestResults(t *testing.T) []*judge.CachedResult {
+func makeCachedTestResults(t *testing.T) []*judge.CachedResult {
 	t.Helper()
 	now := time.Date(2025, 6, 15, 10, 30, 0, 0, time.UTC)
 	return []*judge.CachedResult{
@@ -50,9 +50,9 @@ func makeTestResults(t *testing.T) []*judge.CachedResult {
 // --- ReportList tests ---
 
 func TestReportList_Text(t *testing.T) {
-	results := makeTestResults(t)
+	results := makeCachedTestResults(t)
 	var buf bytes.Buffer
-	err := ReportList(&buf, results, "/tmp/skill", "text")
+	err := List(&buf, results, "/tmp/skill", "text")
 	if err != nil {
 		t.Fatalf("ReportList text error = %v", err)
 	}
@@ -72,9 +72,9 @@ func TestReportList_Text(t *testing.T) {
 }
 
 func TestReportList_JSON(t *testing.T) {
-	results := makeTestResults(t)
+	results := makeCachedTestResults(t)
 	var buf bytes.Buffer
-	err := ReportList(&buf, results, "/tmp/skill", "json")
+	err := List(&buf, results, "/tmp/skill", "json")
 	if err != nil {
 		t.Fatalf("ReportList json error = %v", err)
 	}
@@ -88,9 +88,9 @@ func TestReportList_JSON(t *testing.T) {
 }
 
 func TestReportList_Markdown(t *testing.T) {
-	results := makeTestResults(t)
+	results := makeCachedTestResults(t)
 	var buf bytes.Buffer
-	err := ReportList(&buf, results, "/tmp/skill", "markdown")
+	err := List(&buf, results, "/tmp/skill", "markdown")
 	if err != nil {
 		t.Fatalf("ReportList markdown error = %v", err)
 	}
@@ -106,9 +106,9 @@ func TestReportList_Markdown(t *testing.T) {
 // --- ReportCompare tests ---
 
 func TestReportCompare_Text(t *testing.T) {
-	results := makeTestResults(t)
+	results := makeCachedTestResults(t)
 	var buf bytes.Buffer
-	err := ReportCompare(&buf, results, "/tmp/skill", "text")
+	err := Compare(&buf, results, "/tmp/skill", "text")
 	if err != nil {
 		t.Fatalf("ReportCompare text error = %v", err)
 	}
@@ -122,9 +122,9 @@ func TestReportCompare_Text(t *testing.T) {
 }
 
 func TestReportCompare_JSON(t *testing.T) {
-	results := makeTestResults(t)
+	results := makeCachedTestResults(t)
 	var buf bytes.Buffer
-	err := ReportCompare(&buf, results, "/tmp/skill", "json")
+	err := Compare(&buf, results, "/tmp/skill", "json")
 	if err != nil {
 		t.Fatalf("ReportCompare json error = %v", err)
 	}
@@ -135,9 +135,9 @@ func TestReportCompare_JSON(t *testing.T) {
 }
 
 func TestReportCompare_Markdown(t *testing.T) {
-	results := makeTestResults(t)
+	results := makeCachedTestResults(t)
 	var buf bytes.Buffer
-	err := ReportCompare(&buf, results, "/tmp/skill", "markdown")
+	err := Compare(&buf, results, "/tmp/skill", "markdown")
 	if err != nil {
 		t.Fatalf("ReportCompare markdown error = %v", err)
 	}
@@ -157,7 +157,7 @@ func TestReportCompare_MultiModel(t *testing.T) {
 		{Provider: "anthropic", Model: "gpt-4o", File: "SKILL.md", ScoredAt: now, Scores: makeSkillScoresJSON(t)},
 	}
 	var buf bytes.Buffer
-	err := ReportCompare(&buf, results, "/tmp/skill", "text")
+	err := Compare(&buf, results, "/tmp/skill", "text")
 	if err != nil {
 		t.Fatalf("ReportCompare multi-model error = %v", err)
 	}
@@ -173,9 +173,9 @@ func TestReportCompare_MultiModel(t *testing.T) {
 // --- ReportDefault tests ---
 
 func TestReportDefault_Text(t *testing.T) {
-	results := makeTestResults(t)
+	results := makeCachedTestResults(t)
 	var buf bytes.Buffer
-	err := ReportDefault(&buf, results, "/tmp/skill", "text")
+	err := Default(&buf, results, "/tmp/skill", "text")
 	if err != nil {
 		t.Fatalf("ReportDefault text error = %v", err)
 	}
@@ -192,9 +192,9 @@ func TestReportDefault_Text(t *testing.T) {
 }
 
 func TestReportDefault_JSON(t *testing.T) {
-	results := makeTestResults(t)
+	results := makeCachedTestResults(t)
 	var buf bytes.Buffer
-	err := ReportDefault(&buf, results, "/tmp/skill", "json")
+	err := Default(&buf, results, "/tmp/skill", "json")
 	if err != nil {
 		t.Fatalf("ReportDefault json error = %v", err)
 	}
@@ -205,9 +205,9 @@ func TestReportDefault_JSON(t *testing.T) {
 }
 
 func TestReportDefault_Markdown(t *testing.T) {
-	results := makeTestResults(t)
+	results := makeCachedTestResults(t)
 	var buf bytes.Buffer
-	err := ReportDefault(&buf, results, "/tmp/skill", "markdown")
+	err := Default(&buf, results, "/tmp/skill", "markdown")
 	if err != nil {
 		t.Fatalf("ReportDefault markdown error = %v", err)
 	}
@@ -221,9 +221,9 @@ func TestReportDefault_Markdown(t *testing.T) {
 }
 
 func TestReportDefault_Text_NovelInfo(t *testing.T) {
-	results := makeTestResults(t)
+	results := makeCachedTestResults(t)
 	var buf bytes.Buffer
-	err := ReportDefault(&buf, results, "/tmp/skill", "text")
+	err := Default(&buf, results, "/tmp/skill", "text")
 	if err != nil {
 		t.Fatalf("error = %v", err)
 	}

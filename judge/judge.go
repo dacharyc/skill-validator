@@ -6,22 +6,9 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+
+	"github.com/dacharyc/skill-validator/types"
 )
-
-// DimensionScore holds a single scoring dimension's display name and value.
-type DimensionScore struct {
-	Label string // Display name, e.g., "Token Efficiency"
-	Value int    // Score value, typically 1-5
-}
-
-// Scored is the interface implemented by both SkillScores and RefScores.
-// It allows formatting code to iterate dimensions generically.
-type Scored interface {
-	DimensionScores() []DimensionScore
-	OverallScore() float64
-	Assessment() string
-	NovelDetails() string
-}
 
 // SkillScores holds the LLM judge scores for a SKILL.md file.
 type SkillScores struct {
@@ -49,14 +36,14 @@ type RefScores struct {
 }
 
 // DimensionScores returns the ordered dimension scores for SKILL.md scoring.
-func (s *SkillScores) DimensionScores() []DimensionScore {
-	return []DimensionScore{
-		{"Clarity", s.Clarity},
-		{"Actionability", s.Actionability},
-		{"Token Efficiency", s.TokenEfficiency},
-		{"Scope Discipline", s.ScopeDiscipline},
-		{"Directive Precision", s.DirectivePrecision},
-		{"Novelty", s.Novelty},
+func (s *SkillScores) DimensionScores() []types.DimensionScore {
+	return []types.DimensionScore{
+		{Label: "Clarity", Value: s.Clarity},
+		{Label: "Actionability", Value: s.Actionability},
+		{Label: "Token Efficiency", Value: s.TokenEfficiency},
+		{Label: "Scope Discipline", Value: s.ScopeDiscipline},
+		{Label: "Directive Precision", Value: s.DirectivePrecision},
+		{Label: "Novelty", Value: s.Novelty},
 	}
 }
 
@@ -70,13 +57,13 @@ func (s *SkillScores) Assessment() string { return s.BriefAssessment }
 func (s *SkillScores) NovelDetails() string { return s.NovelInfo }
 
 // DimensionScores returns the ordered dimension scores for reference file scoring.
-func (s *RefScores) DimensionScores() []DimensionScore {
-	return []DimensionScore{
-		{"Clarity", s.Clarity},
-		{"Instructional Value", s.InstructionalValue},
-		{"Token Efficiency", s.TokenEfficiency},
-		{"Novelty", s.Novelty},
-		{"Skill Relevance", s.SkillRelevance},
+func (s *RefScores) DimensionScores() []types.DimensionScore {
+	return []types.DimensionScore{
+		{Label: "Clarity", Value: s.Clarity},
+		{Label: "Instructional Value", Value: s.InstructionalValue},
+		{Label: "Token Efficiency", Value: s.TokenEfficiency},
+		{Label: "Novelty", Value: s.Novelty},
+		{Label: "Skill Relevance", Value: s.SkillRelevance},
 	}
 }
 

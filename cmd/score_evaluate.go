@@ -11,6 +11,7 @@ import (
 
 	"github.com/dacharyc/skill-validator/evaluate"
 	"github.com/dacharyc/skill-validator/judge"
+	"github.com/dacharyc/skill-validator/report"
 	"github.com/dacharyc/skill-validator/types"
 )
 
@@ -95,6 +96,9 @@ func runScoreEvaluate(cmd *cobra.Command, args []string) error {
 		SkillOnly: evalSkillOnly,
 		RefsOnly:  evalRefsOnly,
 		MaxLen:    evalMaxLen(),
+		Progress: func(event, detail string) {
+			fmt.Fprintf(os.Stderr, "  %s: %s\n", event, detail)
+		},
 	}
 
 	ctx := context.Background()
@@ -112,11 +116,11 @@ func runScoreEvaluate(cmd *cobra.Command, args []string) error {
 	}
 
 	if !info.IsDir() {
-		result, err := evaluate.EvaluateSingleFile(ctx, absPath, client, opts, os.Stderr)
+		result, err := evaluate.EvaluateSingleFile(ctx, absPath, client, opts)
 		if err != nil {
 			return err
 		}
-		return evaluate.FormatResults(os.Stdout, []*evaluate.EvalResult{result}, outputFormat, evalDisplay)
+		return report.FormatEvalResults(os.Stdout, []*evaluate.EvalResult{result}, outputFormat, evalDisplay)
 	}
 
 	// Directory mode — detect skills
@@ -127,23 +131,23 @@ func runScoreEvaluate(cmd *cobra.Command, args []string) error {
 
 	switch mode {
 	case types.SingleSkill:
-		result, err := evaluate.EvaluateSkill(ctx, dirs[0], client, opts, os.Stderr)
+		result, err := evaluate.EvaluateSkill(ctx, dirs[0], client, opts)
 		if err != nil {
 			return err
 		}
-		return evaluate.FormatResults(os.Stdout, []*evaluate.EvalResult{result}, outputFormat, evalDisplay)
+		return report.FormatEvalResults(os.Stdout, []*evaluate.EvalResult{result}, outputFormat, evalDisplay)
 
 	case types.MultiSkill:
 		var results []*evaluate.EvalResult
 		for _, dir := range dirs {
-			result, err := evaluate.EvaluateSkill(ctx, dir, client, opts, os.Stderr)
+			result, err := evaluate.EvaluateSkill(ctx, dir, client, opts)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Error scoring %s: %v\n", filepath.Base(dir), err)
 				continue
 			}
 			results = append(results, result)
 		}
-		return evaluate.FormatMultiResults(os.Stdout, results, outputFormat, evalDisplay)
+		return report.FormatMultiEvalResults(os.Stdout, results, outputFormat, evalDisplay)
 	}
 
 	return nil

@@ -100,3 +100,18 @@ type MultiReport struct {
 	Errors   int
 	Warnings int
 }
+
+// DimensionScore holds a single scoring dimension's display name and value.
+type DimensionScore struct {
+	Label string // Display name, e.g., "Token Efficiency"
+	Value int    // Score value, typically 1-5
+}
+
+// Scored is the interface implemented by both SkillScores and RefScores.
+// It allows formatting code to iterate dimensions generically.
+type Scored interface {
+	DimensionScores() []DimensionScore
+	OverallScore() float64
+	Assessment() string
+	NovelDetails() string
+}

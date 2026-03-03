@@ -11,6 +11,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/dacharyc/skill-validator/types"
 )
 
 // --- extractJSON tests ---
@@ -955,7 +957,7 @@ func TestSkillScores_Scored(t *testing.T) {
 		Overall: 3.67, BriefAssessment: "Solid.", NovelInfo: "Internal API.",
 	}
 
-	var scored Scored = s // verify interface satisfaction
+	var scored types.Scored = s // verify interface satisfaction
 	dims := scored.DimensionScores()
 	if len(dims) != 6 {
 		t.Fatalf("expected 6 dimensions, got %d", len(dims))
@@ -981,7 +983,7 @@ func TestRefScores_Scored(t *testing.T) {
 		Overall: 3.80, BriefAssessment: "Good.", NovelInfo: "Proprietary.",
 	}
 
-	var scored Scored = s
+	var scored types.Scored = s
 	dims := scored.DimensionScores()
 	if len(dims) != 5 {
 		t.Fatalf("expected 5 dimensions, got %d", len(dims))

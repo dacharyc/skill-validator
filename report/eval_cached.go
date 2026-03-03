@@ -1,4 +1,4 @@
-package evaluate
+package report
 
 import (
 	"encoding/json"
@@ -8,11 +8,12 @@ import (
 	"strings"
 
 	"github.com/dacharyc/skill-validator/judge"
+	"github.com/dacharyc/skill-validator/types"
 	"github.com/dacharyc/skill-validator/util"
 )
 
 // ReportList formats cached results in list mode.
-func ReportList(w io.Writer, results []*judge.CachedResult, skillDir, format string) error {
+func List(w io.Writer, results []*judge.CachedResult, skillDir, format string) error {
 	switch format {
 	case "json":
 		enc := json.NewEncoder(w)
@@ -28,7 +29,7 @@ func ReportList(w io.Writer, results []*judge.CachedResult, skillDir, format str
 		}
 		return nil
 	default:
-		_, _ = fmt.Fprintf(w, "\n%sCached scores for: %s%s\n\n", ColorBold, skillDir, ColorReset)
+		_, _ = fmt.Fprintf(w, "\n%sCached scores for: %s%s\n\n", colorBold, skillDir, colorReset)
 		_, _ = fmt.Fprintf(w, "  %-28s %-30s %-20s %s\n", "File", "Model", "Scored At", "Provider")
 		_, _ = fmt.Fprintf(w, "  %s\n", strings.Repeat("─", 90))
 		for _, r := range results {
@@ -41,7 +42,7 @@ func ReportList(w io.Writer, results []*judge.CachedResult, skillDir, format str
 }
 
 // ReportCompare formats cached results in comparison mode.
-func ReportCompare(w io.Writer, results []*judge.CachedResult, skillDir, format string) error {
+func Compare(w io.Writer, results []*judge.CachedResult, skillDir, format string) error {
 	switch format {
 	case "json":
 		enc := json.NewEncoder(w)
@@ -57,14 +58,14 @@ func ReportCompare(w io.Writer, results []*judge.CachedResult, skillDir, format 
 }
 
 func reportCompareText(w io.Writer, results []*judge.CachedResult, skillDir string) {
-	byFile := groupByFile(results)
+	byFile := groupCachedByFile(results)
 	files := util.SortedKeys(byFile)
 
-	_, _ = fmt.Fprintf(w, "\n%sScore comparison for: %s%s\n", ColorBold, skillDir, ColorReset)
+	_, _ = fmt.Fprintf(w, "\n%sScore comparison for: %s%s\n", colorBold, skillDir, colorReset)
 
 	for _, file := range files {
 		entries := byFile[file]
-		_, _ = fmt.Fprintf(w, "\n%s%s%s\n", ColorBold, file, ColorReset)
+		_, _ = fmt.Fprintf(w, "\n%s%s%s\n", colorBold, file, colorReset)
 
 		models := uniqueModels(entries)
 		modelScored := buildModelScored(entries)
@@ -85,7 +86,7 @@ func reportCompareText(w io.Writer, results []*judge.CachedResult, skillDir stri
 	_, _ = fmt.Fprintln(w)
 }
 
-func printCompareRowScored(w io.Writer, label string, models []string, modelScored map[string]judge.Scored, isOverall bool) {
+func printCompareRowScored(w io.Writer, label string, models []string, modelScored map[string]types.Scored, isOverall bool) {
 	_, _ = fmt.Fprintf(w, "  %-22s", label)
 	for _, m := range models {
 		s := modelScored[m]
@@ -104,7 +105,7 @@ func printCompareRowScored(w io.Writer, label string, models []string, modelScor
 }
 
 func reportCompareMarkdown(w io.Writer, results []*judge.CachedResult, skillDir string) {
-	byFile := groupByFile(results)
+	byFile := groupCachedByFile(results)
 	files := util.SortedKeys(byFile)
 
 	_, _ = fmt.Fprintf(w, "## Score comparison for: %s\n", skillDir)
@@ -134,7 +135,7 @@ func reportCompareMarkdown(w io.Writer, results []*judge.CachedResult, skillDir 
 	}
 }
 
-func printCompareRowScoredMD(w io.Writer, label string, models []string, modelScored map[string]judge.Scored, isOverall bool) {
+func printCompareRowScoredMD(w io.Writer, label string, models []string, modelScored map[string]types.Scored, isOverall bool) {
 	_, _ = fmt.Fprintf(w, "| %s |", label)
 	for _, m := range models {
 		s := modelScored[m]
@@ -145,7 +146,6 @@ func printCompareRowScoredMD(w io.Writer, label string, models []string, modelSc
 		if isOverall {
 			_, _ = fmt.Fprintf(w, " **%.2f/5** |", s.OverallScore())
 		} else {
-			// Strip markdown bold markers for label lookup
 			lookupLabel := strings.TrimPrefix(strings.TrimSuffix(label, "**"), "**")
 			val := dimValueByLabel(s, lookupLabel)
 			_, _ = fmt.Fprintf(w, " %d/5 |", val)
@@ -156,7 +156,7 @@ func printCompareRowScoredMD(w io.Writer, label string, models []string, modelSc
 
 // --- Helpers ---
 
-func groupByFile(results []*judge.CachedResult) map[string][]*judge.CachedResult {
+func groupCachedByFile(results []*judge.CachedResult) map[string][]*judge.CachedResult {
 	byFile := make(map[string][]*judge.CachedResult)
 	for _, r := range results {
 		byFile[r.File] = append(byFile[r.File], r)
@@ -176,9 +176,8 @@ func uniqueModels(entries []*judge.CachedResult) []string {
 	return models
 }
 
-// buildModelScored deserializes each model's cached result into a Scored value.
-func buildModelScored(entries []*judge.CachedResult) map[string]judge.Scored {
-	m := make(map[string]judge.Scored)
+func buildModelScored(entries []*judge.CachedResult) map[string]types.Scored {
+	m := make(map[string]types.Scored)
 	for _, e := range entries {
 		if _, ok := m[e.Model]; ok {
 			continue
@@ -190,8 +189,6 @@ func buildModelScored(entries []*judge.CachedResult) map[string]judge.Scored {
 	return m
 }
 
-// dimensionLabels returns the dimension display labels for a set of cached results.
-// Uses the first successfully deserialized entry.
 func dimensionLabels(entries []*judge.CachedResult) []string {
 	for _, e := range entries {
 		if s, err := judge.DeserializeScored(e); err == nil {
@@ -206,8 +203,7 @@ func dimensionLabels(entries []*judge.CachedResult) []string {
 	return nil
 }
 
-// dimValueByLabel finds a dimension value by its display label.
-func dimValueByLabel(s judge.Scored, label string) int {
+func dimValueByLabel(s types.Scored, label string) int {
 	for _, d := range s.DimensionScores() {
 		if d.Label == label {
 			return d.Value
@@ -217,7 +213,7 @@ func dimValueByLabel(s judge.Scored, label string) int {
 }
 
 // ReportDefault formats the most recent cached results per file.
-func ReportDefault(w io.Writer, results []*judge.CachedResult, skillDir, format string) error {
+func Default(w io.Writer, results []*judge.CachedResult, skillDir, format string) error {
 	latest := judge.LatestByFile(results)
 
 	if format == "json" {
@@ -240,7 +236,7 @@ func ReportDefault(w io.Writer, results []*judge.CachedResult, skillDir, format 
 }
 
 func reportDefaultText(w io.Writer, latest map[string]*judge.CachedResult, skillDir string) {
-	_, _ = fmt.Fprintf(w, "\n%sCached scores for: %s%s\n", ColorBold, skillDir, ColorReset)
+	_, _ = fmt.Fprintf(w, "\n%sCached scores for: %s%s\n", colorBold, skillDir, colorReset)
 
 	if r, ok := latest["SKILL.md"]; ok {
 		printCachedScoresText(w, r)
@@ -269,12 +265,12 @@ func printCachedScoresText(w io.Writer, r *judge.CachedResult) {
 
 	if r.Type == "skill" || r.File == "SKILL.md" {
 		_, _ = fmt.Fprintf(w, "\n%sSKILL.md Scores%s  %s(model: %s, scored: %s)%s\n",
-			ColorBold, ColorReset,
-			ColorCyan, r.Model, r.ScoredAt.Local().Format("2006-01-02 15:04"), ColorReset)
+			colorBold, colorReset,
+			colorCyan, r.Model, r.ScoredAt.Local().Format("2006-01-02 15:04"), colorReset)
 	} else {
 		_, _ = fmt.Fprintf(w, "\n%sReference: %s%s  %s(model: %s, scored: %s)%s\n",
-			ColorBold, r.File, ColorReset,
-			ColorCyan, r.Model, r.ScoredAt.Local().Format("2006-01-02 15:04"), ColorReset)
+			colorBold, r.File, colorReset,
+			colorCyan, r.Model, r.ScoredAt.Local().Format("2006-01-02 15:04"), colorReset)
 	}
 
 	printScoredText(w, scored)

@@ -8,7 +8,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"sort"
@@ -19,6 +18,11 @@ import (
 	"github.com/dacharyc/skill-validator/skill"
 	"github.com/dacharyc/skill-validator/skillcheck"
 )
+
+// ProgressFunc receives progress events during evaluation.
+// event identifies the kind of event (e.g. "scoring", "cached", "warning", "error").
+// detail provides human-readable context.
+type ProgressFunc func(event string, detail string)
 
 // EvalResult holds the complete scoring output for one skill.
 type EvalResult struct {
@@ -40,7 +44,15 @@ type EvalOptions struct {
 	SkillOnly bool
 	RefsOnly  bool
 	MaxLen    int
-	CacheDir  string // Override cache directory; defaults to judge.CacheDir(skillDir) when empty
+	CacheDir  string       // Override cache directory; defaults to judge.CacheDir(skillDir) when empty
+	Progress  ProgressFunc // Optional progress callback; nil means no output
+}
+
+// progress calls the progress callback if set.
+func progress(opts EvalOptions, event, detail string) {
+	if opts.Progress != nil {
+		opts.Progress(event, detail)
+	}
 }
 
 // resolveCacheDir returns the configured cache directory, falling back to the
@@ -53,7 +65,7 @@ func resolveCacheDir(opts EvalOptions, skillDir string) string {
 }
 
 // EvaluateSkill scores a skill directory (SKILL.md and/or reference files).
-func EvaluateSkill(ctx context.Context, dir string, client judge.LLMClient, opts EvalOptions, w io.Writer) (*EvalResult, error) {
+func EvaluateSkill(ctx context.Context, dir string, client judge.LLMClient, opts EvalOptions) (*EvalResult, error) {
 	result := &EvalResult{SkillDir: dir}
 	cacheDir := resolveCacheDir(opts, dir)
 	skillName := filepath.Base(dir)
@@ -66,7 +78,7 @@ func EvaluateSkill(ctx context.Context, dir string, client judge.LLMClient, opts
 
 	// Score SKILL.md
 	if !opts.RefsOnly {
-		_, _ = fmt.Fprintf(w, "  Scoring %s/SKILL.md...\n", skillName)
+		progress(opts, "scoring", fmt.Sprintf("%s/SKILL.md", skillName))
 
 		cacheKey := judge.CacheKey(client.Provider(), client.ModelName(), "skill", skillName, "SKILL.md")
 
@@ -75,7 +87,7 @@ func EvaluateSkill(ctx context.Context, dir string, client judge.LLMClient, opts
 				var scores judge.SkillScores
 				if err := json.Unmarshal(cached.Scores, &scores); err == nil {
 					result.SkillScores = &scores
-					_, _ = fmt.Fprintf(w, "  Scoring %s/SKILL.md... (cached)\n", skillName)
+					progress(opts, "cached", fmt.Sprintf("%s/SKILL.md", skillName))
 				}
 			}
 		}
@@ -99,7 +111,7 @@ func EvaluateSkill(ctx context.Context, dir string, client judge.LLMClient, opts
 				Scores:      scoresJSON,
 			}
 			if err := judge.SaveCache(cacheDir, cacheKey, cacheResult); err != nil {
-				_, _ = fmt.Fprintf(w, "  Warning: could not save cache: %v\n", err)
+				progress(opts, "warning", fmt.Sprintf("could not save cache: %v", err))
 			}
 		}
 	}
@@ -119,7 +131,7 @@ func EvaluateSkill(ctx context.Context, dir string, client judge.LLMClient, opts
 
 			for _, name := range names {
 				content := refFiles[name]
-				_, _ = fmt.Fprintf(w, "  Scoring %s/references/%s...\n", skillName, name)
+				progress(opts, "scoring", fmt.Sprintf("%s/references/%s", skillName, name))
 
 				cacheKey := judge.CacheKey(client.Provider(), client.ModelName(), "ref:"+name, skillName, name)
 				var refScores *judge.RefScores
@@ -129,7 +141,7 @@ func EvaluateSkill(ctx context.Context, dir string, client judge.LLMClient, opts
 						var scores judge.RefScores
 						if err := json.Unmarshal(cached.Scores, &scores); err == nil {
 							refScores = &scores
-							_, _ = fmt.Fprintf(w, "  Scoring %s/references/%s... (cached)\n", skillName, name)
+							progress(opts, "cached", fmt.Sprintf("%s/references/%s", skillName, name))
 						}
 					}
 				}
@@ -137,7 +149,7 @@ func EvaluateSkill(ctx context.Context, dir string, client judge.LLMClient, opts
 				if refScores == nil {
 					scores, err := judge.ScoreReference(ctx, content, s.Frontmatter.Name, skillDesc, client, opts.MaxLen)
 					if err != nil {
-						_, _ = fmt.Fprintf(w, "  Error scoring %s: %v\n", name, err)
+						progress(opts, "error", fmt.Sprintf("scoring %s: %v", name, err))
 						continue
 					}
 					refScores = scores
@@ -153,7 +165,7 @@ func EvaluateSkill(ctx context.Context, dir string, client judge.LLMClient, opts
 						Scores:      scoresJSON,
 					}
 					if err := judge.SaveCache(cacheDir, cacheKey, cacheResult); err != nil {
-						_, _ = fmt.Fprintf(w, "  Warning: could not save cache: %v\n", err)
+						progress(opts, "warning", fmt.Sprintf("could not save cache: %v", err))
 					}
 				}
 
@@ -175,7 +187,7 @@ func EvaluateSkill(ctx context.Context, dir string, client judge.LLMClient, opts
 }
 
 // EvaluateSingleFile scores a single reference .md file.
-func EvaluateSingleFile(ctx context.Context, absPath string, client judge.LLMClient, opts EvalOptions, w io.Writer) (*EvalResult, error) {
+func EvaluateSingleFile(ctx context.Context, absPath string, client judge.LLMClient, opts EvalOptions) (*EvalResult, error) {
 	if !strings.HasSuffix(strings.ToLower(absPath), ".md") {
 		return nil, fmt.Errorf("single-file scoring only supports .md files: %s", absPath)
 	}
@@ -203,7 +215,7 @@ func EvaluateSingleFile(ctx context.Context, absPath string, client judge.LLMCli
 		skillName = filepath.Base(skillDir)
 	}
 
-	_, _ = fmt.Fprintf(w, "  Scoring %s (parent: %s)...\n", fileName, skillName)
+	progress(opts, "scoring", fmt.Sprintf("%s (parent: %s)", fileName, skillName))
 
 	cacheDir := resolveCacheDir(opts, skillDir)
 	cacheKey := judge.CacheKey(client.Provider(), client.ModelName(), "ref:"+fileName, skillName, fileName)
@@ -212,7 +224,7 @@ func EvaluateSingleFile(ctx context.Context, absPath string, client judge.LLMCli
 		if cached, ok := judge.GetCached(cacheDir, cacheKey); ok {
 			var scores judge.RefScores
 			if err := json.Unmarshal(cached.Scores, &scores); err == nil {
-				_, _ = fmt.Fprintf(w, "  Scoring %s... (cached)\n", fileName)
+				progress(opts, "cached", fileName)
 				result := &EvalResult{
 					SkillDir:   skillDir,
 					RefResults: []RefEvalResult{{File: fileName, Scores: &scores}},
@@ -239,7 +251,7 @@ func EvaluateSingleFile(ctx context.Context, absPath string, client judge.LLMCli
 		Scores:      scoresJSON,
 	}
 	if err := judge.SaveCache(cacheDir, cacheKey, cacheResult); err != nil {
-		_, _ = fmt.Fprintf(w, "  Warning: could not save cache: %v\n", err)
+		progress(opts, "warning", fmt.Sprintf("could not save cache: %v", err))
 	}
 
 	result := &EvalResult{
