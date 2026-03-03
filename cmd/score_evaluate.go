@@ -91,7 +91,7 @@ func runScoreEvaluate(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	opts := evaluate.EvalOptions{
+	opts := evaluate.Options{
 		Rescore:   evalRescore,
 		SkillOnly: evalSkillOnly,
 		RefsOnly:  evalRefsOnly,
@@ -120,7 +120,7 @@ func runScoreEvaluate(cmd *cobra.Command, args []string) error {
 		if err != nil {
 			return err
 		}
-		return report.FormatEvalResults(os.Stdout, []*evaluate.EvalResult{result}, outputFormat, evalDisplay)
+		return report.FormatEvalResults(os.Stdout, []*evaluate.Result{result}, outputFormat, evalDisplay)
 	}
 
 	// Directory mode — detect skills
@@ -135,10 +135,10 @@ func runScoreEvaluate(cmd *cobra.Command, args []string) error {
 		if err != nil {
 			return err
 		}
-		return report.FormatEvalResults(os.Stdout, []*evaluate.EvalResult{result}, outputFormat, evalDisplay)
+		return report.FormatEvalResults(os.Stdout, []*evaluate.Result{result}, outputFormat, evalDisplay)
 
 	case types.MultiSkill:
-		var results []*evaluate.EvalResult
+		var results []*evaluate.Result
 		for _, dir := range dirs {
 			result, err := evaluate.EvaluateSkill(ctx, dir, client, opts)
 			if err != nil {

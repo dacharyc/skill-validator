@@ -12,7 +12,7 @@ import (
 )
 
 // FormatEvalResults formats a single EvalResult in the given format.
-func FormatEvalResults(w io.Writer, results []*evaluate.EvalResult, format, display string) error {
+func FormatEvalResults(w io.Writer, results []*evaluate.Result, format, display string) error {
 	if len(results) == 0 {
 		return nil
 	}
@@ -32,7 +32,7 @@ func FormatEvalResults(w io.Writer, results []*evaluate.EvalResult, format, disp
 }
 
 // FormatMultiEvalResults formats multiple EvalResults in the given format.
-func FormatMultiEvalResults(w io.Writer, results []*evaluate.EvalResult, format, display string) error {
+func FormatMultiEvalResults(w io.Writer, results []*evaluate.Result, format, display string) error {
 	switch format {
 	case "json":
 		return PrintEvalJSON(w, results)
@@ -51,7 +51,7 @@ func FormatMultiEvalResults(w io.Writer, results []*evaluate.EvalResult, format,
 }
 
 // PrintEvalText writes a human-readable text representation of an EvalResult.
-func PrintEvalText(w io.Writer, result *evaluate.EvalResult, display string) {
+func PrintEvalText(w io.Writer, result *evaluate.Result, display string) {
 	_, _ = fmt.Fprintf(w, "\n%sScoring skill: %s%s\n", colorBold, result.SkillDir, colorReset)
 
 	if result.SkillScores != nil {
@@ -123,7 +123,7 @@ type EvalJSONRef struct {
 }
 
 // PrintEvalJSON writes results as indented JSON.
-func PrintEvalJSON(w io.Writer, results []*evaluate.EvalResult) error {
+func PrintEvalJSON(w io.Writer, results []*evaluate.Result) error {
 	out := EvalJSONOutput{
 		Skills: make([]EvalJSONSkill, len(results)),
 	}
@@ -147,7 +147,7 @@ func PrintEvalJSON(w io.Writer, results []*evaluate.EvalResult) error {
 // --- Markdown output ---
 
 // PrintEvalMarkdown writes a single EvalResult as Markdown.
-func PrintEvalMarkdown(w io.Writer, result *evaluate.EvalResult, display string) {
+func PrintEvalMarkdown(w io.Writer, result *evaluate.Result, display string) {
 	_, _ = fmt.Fprintf(w, "## Scoring skill: %s\n", result.SkillDir)
 
 	if result.SkillScores != nil {
@@ -169,7 +169,7 @@ func PrintEvalMarkdown(w io.Writer, result *evaluate.EvalResult, display string)
 }
 
 // PrintMultiEvalMarkdown writes multiple EvalResults as Markdown, separated by rules.
-func PrintMultiEvalMarkdown(w io.Writer, results []*evaluate.EvalResult, display string) {
+func PrintMultiEvalMarkdown(w io.Writer, results []*evaluate.Result, display string) {
 	for i, r := range results {
 		if i > 0 {
 			_, _ = fmt.Fprintf(w, "\n---\n\n")

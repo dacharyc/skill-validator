@@ -58,7 +58,7 @@ func TestFindParentSkillDir_NotFound(t *testing.T) {
 }
 
 func TestResolveCacheDir_Default(t *testing.T) {
-	opts := EvalOptions{}
+	opts := Options{}
 	got := resolveCacheDir(opts, "/tmp/skill")
 	want := judge.CacheDir("/tmp/skill")
 	if got != want {
@@ -67,7 +67,7 @@ func TestResolveCacheDir_Default(t *testing.T) {
 }
 
 func TestResolveCacheDir_Override(t *testing.T) {
-	opts := EvalOptions{CacheDir: "/custom/cache"}
+	opts := Options{CacheDir: "/custom/cache"}
 	got := resolveCacheDir(opts, "/tmp/skill")
 	if got != "/custom/cache" {
 		t.Errorf("resolveCacheDir override = %q, want /custom/cache", got)
@@ -134,7 +134,7 @@ func TestEvaluateSkill_SkillOnly(t *testing.T) {
 	dir := makeSkillDir(t, map[string]string{"ref.md": "# Ref"})
 	client := &mockLLMClient{responses: []string{skillJSON}}
 
-	result, err := EvaluateSkill(context.Background(), dir, client, EvalOptions{SkillOnly: true, MaxLen: 8000})
+	result, err := EvaluateSkill(context.Background(), dir, client, Options{SkillOnly: true, MaxLen: 8000})
 	if err != nil {
 		t.Fatalf("EvaluateSkill error = %v", err)
 	}
@@ -150,7 +150,7 @@ func TestEvaluateSkill_RefsOnly(t *testing.T) {
 	dir := makeSkillDir(t, map[string]string{"ref.md": "# Ref"})
 	client := &mockLLMClient{responses: []string{refJSON}}
 
-	result, err := EvaluateSkill(context.Background(), dir, client, EvalOptions{RefsOnly: true, MaxLen: 8000})
+	result, err := EvaluateSkill(context.Background(), dir, client, Options{RefsOnly: true, MaxLen: 8000})
 	if err != nil {
 		t.Fatalf("EvaluateSkill error = %v", err)
 	}
@@ -169,7 +169,7 @@ func TestEvaluateSkill_Both(t *testing.T) {
 	dir := makeSkillDir(t, map[string]string{"a.md": "# A", "b.md": "# B"})
 	client := &mockLLMClient{responses: []string{skillJSON, refJSON, refJSON}}
 
-	result, err := EvaluateSkill(context.Background(), dir, client, EvalOptions{MaxLen: 8000})
+	result, err := EvaluateSkill(context.Background(), dir, client, Options{MaxLen: 8000})
 	if err != nil {
 		t.Fatalf("EvaluateSkill error = %v", err)
 	}
@@ -192,7 +192,7 @@ func TestEvaluateSkill_NoRefs(t *testing.T) {
 	dir := makeSkillDir(t, nil)
 	client := &mockLLMClient{responses: []string{skillJSON}}
 
-	result, err := EvaluateSkill(context.Background(), dir, client, EvalOptions{MaxLen: 8000})
+	result, err := EvaluateSkill(context.Background(), dir, client, Options{MaxLen: 8000})
 	if err != nil {
 		t.Fatalf("EvaluateSkill error = %v", err)
 	}
@@ -209,7 +209,7 @@ func TestEvaluateSkill_NoRefs(t *testing.T) {
 
 func TestEvaluateSkill_BadDir(t *testing.T) {
 	client := &mockLLMClient{}
-	_, err := EvaluateSkill(context.Background(), "/nonexistent", client, EvalOptions{})
+	_, err := EvaluateSkill(context.Background(), "/nonexistent", client, Options{})
 	if err == nil {
 		t.Fatal("expected error for nonexistent dir")
 	}
@@ -219,7 +219,7 @@ func TestEvaluateSkill_LLMError(t *testing.T) {
 	dir := makeSkillDir(t, nil)
 	client := &mockLLMClient{errors: []error{fmt.Errorf("API down")}}
 
-	_, err := EvaluateSkill(context.Background(), dir, client, EvalOptions{MaxLen: 8000})
+	_, err := EvaluateSkill(context.Background(), dir, client, Options{MaxLen: 8000})
 	if err == nil {
 		t.Fatal("expected error when LLM fails")
 	}
@@ -230,14 +230,14 @@ func TestEvaluateSkill_CacheRoundTrip(t *testing.T) {
 	client := &mockLLMClient{responses: []string{skillJSON}}
 
 	// First call — scores and caches
-	result1, err := EvaluateSkill(context.Background(), dir, client, EvalOptions{MaxLen: 8000})
+	result1, err := EvaluateSkill(context.Background(), dir, client, Options{MaxLen: 8000})
 	if err != nil {
 		t.Fatalf("first call error = %v", err)
 	}
 
 	// Second call — should use cache (no more mock responses needed)
 	client2 := &mockLLMClient{} // empty: would fail if called
-	result2, err := EvaluateSkill(context.Background(), dir, client2, EvalOptions{MaxLen: 8000})
+	result2, err := EvaluateSkill(context.Background(), dir, client2, Options{MaxLen: 8000})
 	if err != nil {
 		t.Fatalf("cached call error = %v", err)
 	}
@@ -251,14 +251,14 @@ func TestEvaluateSkill_Rescore(t *testing.T) {
 	client := &mockLLMClient{responses: []string{skillJSON}}
 
 	// First call populates cache
-	_, err := EvaluateSkill(context.Background(), dir, client, EvalOptions{MaxLen: 8000})
+	_, err := EvaluateSkill(context.Background(), dir, client, Options{MaxLen: 8000})
 	if err != nil {
 		t.Fatalf("first call error = %v", err)
 	}
 
 	// Rescore should call LLM again
 	client2 := &mockLLMClient{responses: []string{skillJSON}}
-	_, err = EvaluateSkill(context.Background(), dir, client2, EvalOptions{Rescore: true, MaxLen: 8000})
+	_, err = EvaluateSkill(context.Background(), dir, client2, Options{Rescore: true, MaxLen: 8000})
 	if err != nil {
 		t.Fatalf("rescore call error = %v", err)
 	}
@@ -274,7 +274,7 @@ func TestEvaluateSingleFile_Success(t *testing.T) {
 	refPath := filepath.Join(dir, "references", "example.md")
 	client := &mockLLMClient{responses: []string{refJSON}}
 
-	result, err := EvaluateSingleFile(context.Background(), refPath, client, EvalOptions{MaxLen: 8000})
+	result, err := EvaluateSingleFile(context.Background(), refPath, client, Options{MaxLen: 8000})
 	if err != nil {
 		t.Fatalf("EvaluateSingleFile error = %v", err)
 	}
@@ -290,7 +290,7 @@ func TestEvaluateSingleFile_Success(t *testing.T) {
 }
 
 func TestEvaluateSingleFile_NonMD(t *testing.T) {
-	_, err := EvaluateSingleFile(context.Background(), "/tmp/foo.txt", &mockLLMClient{}, EvalOptions{})
+	_, err := EvaluateSingleFile(context.Background(), "/tmp/foo.txt", &mockLLMClient{}, Options{})
 	if err == nil {
 		t.Fatal("expected error for non-.md file")
 	}
@@ -306,7 +306,7 @@ func TestEvaluateSingleFile_NoParentSkill(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err := EvaluateSingleFile(context.Background(), mdPath, &mockLLMClient{}, EvalOptions{})
+	_, err := EvaluateSingleFile(context.Background(), mdPath, &mockLLMClient{}, Options{})
 	if err == nil {
 		t.Fatal("expected error for missing parent skill")
 	}
@@ -318,14 +318,14 @@ func TestEvaluateSingleFile_CacheRoundTrip(t *testing.T) {
 	client := &mockLLMClient{responses: []string{refJSON}}
 
 	// First call — caches
-	_, err := EvaluateSingleFile(context.Background(), refPath, client, EvalOptions{MaxLen: 8000})
+	_, err := EvaluateSingleFile(context.Background(), refPath, client, Options{MaxLen: 8000})
 	if err != nil {
 		t.Fatalf("first call error = %v", err)
 	}
 
 	// Second call — from cache
 	client2 := &mockLLMClient{}
-	result, err := EvaluateSingleFile(context.Background(), refPath, client2, EvalOptions{MaxLen: 8000})
+	result, err := EvaluateSingleFile(context.Background(), refPath, client2, Options{MaxLen: 8000})
 	if err != nil {
 		t.Fatalf("cached call error = %v", err)
 	}
@@ -342,7 +342,7 @@ func TestEvaluateSkill_RefScoringError(t *testing.T) {
 	}
 
 	var progressEvents []string
-	opts := EvalOptions{
+	opts := Options{
 		MaxLen: 8000,
 		Progress: func(event, detail string) {
 			progressEvents = append(progressEvents, event+": "+detail)

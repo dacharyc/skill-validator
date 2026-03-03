@@ -11,7 +11,7 @@ import (
 )
 
 func TestPrintEvalText(t *testing.T) {
-	result := &evaluate.EvalResult{
+	result := &evaluate.Result{
 		SkillDir: "/tmp/my-skill",
 		SkillScores: &judge.SkillScores{
 			Clarity: 4, Actionability: 3, TokenEfficiency: 5,
@@ -39,13 +39,13 @@ func TestPrintEvalText(t *testing.T) {
 }
 
 func TestPrintEvalJSON(t *testing.T) {
-	result := &evaluate.EvalResult{
+	result := &evaluate.Result{
 		SkillDir:    "/tmp/my-skill",
 		SkillScores: &judge.SkillScores{Clarity: 4, Overall: 4.0},
 	}
 
 	var buf bytes.Buffer
-	err := PrintEvalJSON(&buf, []*evaluate.EvalResult{result})
+	err := PrintEvalJSON(&buf, []*evaluate.Result{result})
 	if err != nil {
 		t.Fatalf("PrintEvalJSON() error = %v", err)
 	}
@@ -59,7 +59,7 @@ func TestPrintEvalJSON(t *testing.T) {
 }
 
 func TestPrintEvalMarkdown(t *testing.T) {
-	result := &evaluate.EvalResult{
+	result := &evaluate.Result{
 		SkillDir: "/tmp/my-skill",
 		SkillScores: &judge.SkillScores{
 			Clarity: 4, Actionability: 3, TokenEfficiency: 5,
@@ -84,13 +84,13 @@ func TestPrintEvalMarkdown(t *testing.T) {
 }
 
 func TestFormatEvalResults_SingleText(t *testing.T) {
-	result := &evaluate.EvalResult{
+	result := &evaluate.Result{
 		SkillDir:    "/tmp/test",
 		SkillScores: &judge.SkillScores{Overall: 4.0},
 	}
 
 	var buf bytes.Buffer
-	err := FormatEvalResults(&buf, []*evaluate.EvalResult{result}, "text", "aggregate")
+	err := FormatEvalResults(&buf, []*evaluate.Result{result}, "text", "aggregate")
 	if err != nil {
 		t.Fatalf("FormatEvalResults() error = %v", err)
 	}
@@ -111,7 +111,7 @@ func TestFormatEvalResults_Empty(t *testing.T) {
 }
 
 func TestPrintMultiEvalMarkdown(t *testing.T) {
-	results := []*evaluate.EvalResult{
+	results := []*evaluate.Result{
 		{SkillDir: "/tmp/skill-a", SkillScores: &judge.SkillScores{Overall: 4.0}},
 		{SkillDir: "/tmp/skill-b", SkillScores: &judge.SkillScores{Overall: 3.0}},
 	}
@@ -132,9 +132,9 @@ func TestPrintMultiEvalMarkdown(t *testing.T) {
 }
 
 func TestPrintEvalText_WithRefs(t *testing.T) {
-	result := &evaluate.EvalResult{
+	result := &evaluate.Result{
 		SkillDir: "/tmp/my-skill",
-		RefResults: []evaluate.RefEvalResult{
+		RefResults: []evaluate.RefResult{
 			{
 				File: "example.md",
 				Scores: &judge.RefScores{
@@ -169,13 +169,13 @@ func TestPrintEvalText_WithRefs(t *testing.T) {
 }
 
 func TestFormatEvalResults_SingleJSON(t *testing.T) {
-	result := &evaluate.EvalResult{
+	result := &evaluate.Result{
 		SkillDir:    "/tmp/test",
 		SkillScores: &judge.SkillScores{Clarity: 4, Overall: 4.0},
 	}
 
 	var buf bytes.Buffer
-	err := FormatEvalResults(&buf, []*evaluate.EvalResult{result}, "json", "aggregate")
+	err := FormatEvalResults(&buf, []*evaluate.Result{result}, "json", "aggregate")
 	if err != nil {
 		t.Fatalf("FormatEvalResults(json) error = %v", err)
 	}
@@ -185,13 +185,13 @@ func TestFormatEvalResults_SingleJSON(t *testing.T) {
 }
 
 func TestFormatEvalResults_SingleMarkdown(t *testing.T) {
-	result := &evaluate.EvalResult{
+	result := &evaluate.Result{
 		SkillDir:    "/tmp/test",
 		SkillScores: &judge.SkillScores{Clarity: 4, Overall: 4.0},
 	}
 
 	var buf bytes.Buffer
-	err := FormatEvalResults(&buf, []*evaluate.EvalResult{result}, "markdown", "aggregate")
+	err := FormatEvalResults(&buf, []*evaluate.Result{result}, "markdown", "aggregate")
 	if err != nil {
 		t.Fatalf("FormatEvalResults(markdown) error = %v", err)
 	}
@@ -201,7 +201,7 @@ func TestFormatEvalResults_SingleMarkdown(t *testing.T) {
 }
 
 func TestFormatMultiEvalResults_Text(t *testing.T) {
-	results := []*evaluate.EvalResult{
+	results := []*evaluate.Result{
 		{SkillDir: "/tmp/a", SkillScores: &judge.SkillScores{Overall: 4.0}},
 		{SkillDir: "/tmp/b", SkillScores: &judge.SkillScores{Overall: 3.0}},
 	}
@@ -221,7 +221,7 @@ func TestFormatMultiEvalResults_Text(t *testing.T) {
 }
 
 func TestFormatMultiEvalResults_JSON(t *testing.T) {
-	results := []*evaluate.EvalResult{
+	results := []*evaluate.Result{
 		{SkillDir: "/tmp/a", SkillScores: &judge.SkillScores{Overall: 4.0}},
 		{SkillDir: "/tmp/b", SkillScores: &judge.SkillScores{Overall: 3.0}},
 	}
@@ -237,7 +237,7 @@ func TestFormatMultiEvalResults_JSON(t *testing.T) {
 }
 
 func TestFormatMultiEvalResults_Markdown(t *testing.T) {
-	results := []*evaluate.EvalResult{
+	results := []*evaluate.Result{
 		{SkillDir: "/tmp/a", SkillScores: &judge.SkillScores{Overall: 4.0}},
 		{SkillDir: "/tmp/b", SkillScores: &judge.SkillScores{Overall: 3.0}},
 	}
@@ -253,7 +253,7 @@ func TestFormatMultiEvalResults_Markdown(t *testing.T) {
 }
 
 func TestFormatEvalResults_MultiDelegates(t *testing.T) {
-	results := []*evaluate.EvalResult{
+	results := []*evaluate.Result{
 		{SkillDir: "/tmp/a"},
 		{SkillDir: "/tmp/b"},
 	}
@@ -270,10 +270,10 @@ func TestFormatEvalResults_MultiDelegates(t *testing.T) {
 }
 
 func TestPrintEvalMarkdown_WithRefsFiles(t *testing.T) {
-	result := &evaluate.EvalResult{
+	result := &evaluate.Result{
 		SkillDir:    "/tmp/my-skill",
 		SkillScores: &judge.SkillScores{Clarity: 4, Overall: 4.0},
-		RefResults: []evaluate.RefEvalResult{
+		RefResults: []evaluate.RefResult{
 			{
 				File: "ref.md",
 				Scores: &judge.RefScores{
@@ -305,7 +305,7 @@ func TestPrintEvalMarkdown_WithRefsFiles(t *testing.T) {
 }
 
 func TestPrintEvalMarkdown_WithNovelInfo(t *testing.T) {
-	result := &evaluate.EvalResult{
+	result := &evaluate.Result{
 		SkillDir: "/tmp/test",
 		SkillScores: &judge.SkillScores{
 			Clarity: 4, Overall: 4.0,
@@ -326,7 +326,7 @@ func TestPrintEvalMarkdown_WithNovelInfo(t *testing.T) {
 }
 
 func TestPrintEvalText_NovelInfo(t *testing.T) {
-	result := &evaluate.EvalResult{
+	result := &evaluate.Result{
 		SkillDir: "/tmp/test",
 		SkillScores: &judge.SkillScores{
 			Clarity: 4, Overall: 4.0,
@@ -343,9 +343,9 @@ func TestPrintEvalText_NovelInfo(t *testing.T) {
 }
 
 func TestPrintEvalText_RefFilesWithNovelInfo(t *testing.T) {
-	result := &evaluate.EvalResult{
+	result := &evaluate.Result{
 		SkillDir: "/tmp/test",
-		RefResults: []evaluate.RefEvalResult{
+		RefResults: []evaluate.RefResult{
 			{
 				File: "ref.md",
 				Scores: &judge.RefScores{
@@ -366,16 +366,16 @@ func TestPrintEvalText_RefFilesWithNovelInfo(t *testing.T) {
 }
 
 func TestPrintEvalJSON_WithRefs(t *testing.T) {
-	result := &evaluate.EvalResult{
+	result := &evaluate.Result{
 		SkillDir: "/tmp/test",
-		RefResults: []evaluate.RefEvalResult{
+		RefResults: []evaluate.RefResult{
 			{File: "ref.md", Scores: &judge.RefScores{Clarity: 4, Overall: 4.0}},
 		},
 		RefAggregate: &judge.RefScores{Clarity: 4, Overall: 4.0},
 	}
 
 	var buf bytes.Buffer
-	err := PrintEvalJSON(&buf, []*evaluate.EvalResult{result})
+	err := PrintEvalJSON(&buf, []*evaluate.Result{result})
 	if err != nil {
 		t.Fatalf("PrintEvalJSON error = %v", err)
 	}
@@ -390,7 +390,7 @@ func TestPrintEvalJSON_WithRefs(t *testing.T) {
 
 func TestPrintDimScore_Colors(t *testing.T) {
 	// Test via PrintEvalText with scores that trigger different color thresholds
-	highResult := &evaluate.EvalResult{
+	highResult := &evaluate.Result{
 		SkillDir:    "/tmp/test",
 		SkillScores: &judge.SkillScores{Clarity: 5, Overall: 5.0},
 	}
@@ -400,7 +400,7 @@ func TestPrintDimScore_Colors(t *testing.T) {
 		t.Errorf("score 5 should use green, got: %s", buf.String())
 	}
 
-	medResult := &evaluate.EvalResult{
+	medResult := &evaluate.Result{
 		SkillDir:    "/tmp/test",
 		SkillScores: &judge.SkillScores{Clarity: 3, Overall: 3.0},
 	}
@@ -410,7 +410,7 @@ func TestPrintDimScore_Colors(t *testing.T) {
 		t.Errorf("score 3 should use yellow, got: %s", buf.String())
 	}
 
-	lowResult := &evaluate.EvalResult{
+	lowResult := &evaluate.Result{
 		SkillDir:    "/tmp/test",
 		SkillScores: &judge.SkillScores{Clarity: 2, Overall: 2.0},
 	}

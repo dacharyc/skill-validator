@@ -24,22 +24,22 @@ import (
 // detail provides human-readable context.
 type ProgressFunc func(event string, detail string)
 
-// EvalResult holds the complete scoring output for one skill.
-type EvalResult struct {
+// Result holds the complete scoring output for one skill.
+type Result struct {
 	SkillDir     string
 	SkillScores  *judge.SkillScores
-	RefResults   []RefEvalResult
+	RefResults   []RefResult
 	RefAggregate *judge.RefScores
 }
 
-// RefEvalResult holds scoring output for a single reference file.
-type RefEvalResult struct {
+// RefResult holds scoring output for a single reference file.
+type RefResult struct {
 	File   string
 	Scores *judge.RefScores
 }
 
-// EvalOptions controls what gets scored.
-type EvalOptions struct {
+// Options controls what gets scored.
+type Options struct {
 	Rescore   bool
 	SkillOnly bool
 	RefsOnly  bool
@@ -49,7 +49,7 @@ type EvalOptions struct {
 }
 
 // progress calls the progress callback if set.
-func progress(opts EvalOptions, event, detail string) {
+func progress(opts Options, event, detail string) {
 	if opts.Progress != nil {
 		opts.Progress(event, detail)
 	}
@@ -57,7 +57,7 @@ func progress(opts EvalOptions, event, detail string) {
 
 // resolveCacheDir returns the configured cache directory, falling back to the
 // default .score_cache location inside skillDir.
-func resolveCacheDir(opts EvalOptions, skillDir string) string {
+func resolveCacheDir(opts Options, skillDir string) string {
 	if opts.CacheDir != "" {
 		return opts.CacheDir
 	}
@@ -65,8 +65,8 @@ func resolveCacheDir(opts EvalOptions, skillDir string) string {
 }
 
 // EvaluateSkill scores a skill directory (SKILL.md and/or reference files).
-func EvaluateSkill(ctx context.Context, dir string, client judge.LLMClient, opts EvalOptions) (*EvalResult, error) {
-	result := &EvalResult{SkillDir: dir}
+func EvaluateSkill(ctx context.Context, dir string, client judge.LLMClient, opts Options) (*Result, error) {
+	result := &Result{SkillDir: dir}
 	cacheDir := resolveCacheDir(opts, dir)
 	skillName := filepath.Base(dir)
 
@@ -169,7 +169,7 @@ func EvaluateSkill(ctx context.Context, dir string, client judge.LLMClient, opts
 					}
 				}
 
-				result.RefResults = append(result.RefResults, RefEvalResult{File: name, Scores: refScores})
+				result.RefResults = append(result.RefResults, RefResult{File: name, Scores: refScores})
 			}
 
 			// Aggregate
@@ -187,7 +187,7 @@ func EvaluateSkill(ctx context.Context, dir string, client judge.LLMClient, opts
 }
 
 // EvaluateSingleFile scores a single reference .md file.
-func EvaluateSingleFile(ctx context.Context, absPath string, client judge.LLMClient, opts EvalOptions) (*EvalResult, error) {
+func EvaluateSingleFile(ctx context.Context, absPath string, client judge.LLMClient, opts Options) (*Result, error) {
 	if !strings.HasSuffix(strings.ToLower(absPath), ".md") {
 		return nil, fmt.Errorf("single-file scoring only supports .md files: %s", absPath)
 	}
@@ -225,9 +225,9 @@ func EvaluateSingleFile(ctx context.Context, absPath string, client judge.LLMCli
 			var scores judge.RefScores
 			if err := json.Unmarshal(cached.Scores, &scores); err == nil {
 				progress(opts, "cached", fileName)
-				result := &EvalResult{
+				result := &Result{
 					SkillDir:   skillDir,
-					RefResults: []RefEvalResult{{File: fileName, Scores: &scores}},
+					RefResults: []RefResult{{File: fileName, Scores: &scores}},
 				}
 				return result, nil
 			}
@@ -254,9 +254,9 @@ func EvaluateSingleFile(ctx context.Context, absPath string, client judge.LLMCli
 		progress(opts, "warning", fmt.Sprintf("could not save cache: %v", err))
 	}
 
-	result := &EvalResult{
+	result := &Result{
 		SkillDir:   skillDir,
-		RefResults: []RefEvalResult{{File: fileName, Scores: scores}},
+		RefResults: []RefResult{{File: fileName, Scores: scores}},
 	}
 	return result, nil
 }
