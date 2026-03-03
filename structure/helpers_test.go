@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/dacharyc/skill-validator/skillcheck"
+	"github.com/dacharyc/skill-validator/types"
 )
 
 // writeFile creates a file at dir/relPath with the given content, creating directories as needed.
@@ -33,7 +33,7 @@ func dirName(dir string) string {
 }
 
 // requireResult asserts that at least one result has the exact level and message.
-func requireResult(t *testing.T, results []skillcheck.Result, level skillcheck.Level, message string) {
+func requireResult(t *testing.T, results []types.Result, level types.Level, message string) {
 	t.Helper()
 	for _, r := range results {
 		if r.Level == level && r.Message == message {
@@ -47,7 +47,7 @@ func requireResult(t *testing.T, results []skillcheck.Result, level skillcheck.L
 }
 
 // requireResultContaining asserts that at least one result has the given level and message containing substr.
-func requireResultContaining(t *testing.T, results []skillcheck.Result, level skillcheck.Level, substr string) {
+func requireResultContaining(t *testing.T, results []types.Result, level types.Level, substr string) {
 	t.Helper()
 	for _, r := range results {
 		if r.Level == level && strings.Contains(r.Message, substr) {
@@ -61,7 +61,7 @@ func requireResultContaining(t *testing.T, results []skillcheck.Result, level sk
 }
 
 // requireNoLevel asserts that no result has the given level.
-func requireNoLevel(t *testing.T, results []skillcheck.Result, level skillcheck.Level) {
+func requireNoLevel(t *testing.T, results []types.Result, level types.Level) {
 	t.Helper()
 	for _, r := range results {
 		if r.Level == level {
@@ -71,7 +71,7 @@ func requireNoLevel(t *testing.T, results []skillcheck.Result, level skillcheck.
 }
 
 // requireNoResultContaining asserts no result has the given level with message containing substr.
-func requireNoResultContaining(t *testing.T, results []skillcheck.Result, level skillcheck.Level, substr string) {
+func requireNoResultContaining(t *testing.T, results []types.Result, level types.Level, substr string) {
 	t.Helper()
 	for _, r := range results {
 		if r.Level == level && strings.Contains(r.Message, substr) {

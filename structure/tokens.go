@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/dacharyc/skill-validator/skillcheck"
+	"github.com/dacharyc/skill-validator/types"
 	"github.com/tiktoken-go/tokenizer"
 )
 
@@ -23,10 +23,10 @@ const (
 	otherTotalHardLimit = 100_000
 )
 
-func CheckTokens(dir, body string) ([]skillcheck.Result, []skillcheck.TokenCount, []skillcheck.TokenCount) {
-	ctx := skillcheck.ResultContext{Category: "Tokens"}
-	var results []skillcheck.Result
-	var counts []skillcheck.TokenCount
+func CheckTokens(dir, body string) ([]types.Result, []types.TokenCount, []types.TokenCount) {
+	ctx := types.ResultContext{Category: "Tokens"}
+	var results []types.Result
+	var counts []types.TokenCount
 
 	enc, err := tokenizer.Get(tokenizer.O200kBase)
 	if err != nil {
@@ -37,7 +37,7 @@ func CheckTokens(dir, body string) ([]skillcheck.Result, []skillcheck.TokenCount
 	// Count SKILL.md body tokens
 	bodyTokens, _, _ := enc.Encode(body)
 	bodyCount := len(bodyTokens)
-	counts = append(counts, skillcheck.TokenCount{File: "SKILL.md body", Tokens: bodyCount})
+	counts = append(counts, types.TokenCount{File: "SKILL.md body", Tokens: bodyCount})
 
 	// Warn if body exceeds 5000 tokens
 	if bodyCount > 5000 {
@@ -68,7 +68,7 @@ func CheckTokens(dir, body string) ([]skillcheck.Result, []skillcheck.TokenCount
 			tokens, _, _ := enc.Encode(string(data))
 			fileTokens := len(tokens)
 			relPath := filepath.Join("references", entry.Name())
-			counts = append(counts, skillcheck.TokenCount{
+			counts = append(counts, types.TokenCount{
 				File:   relPath,
 				Tokens: fileTokens,
 			})
@@ -176,8 +176,8 @@ var textAssetExtensions = map[string]bool{
 	".ipynb":    true,
 }
 
-func countAssetFiles(dir string, enc tokenizer.Codec) []skillcheck.TokenCount {
-	var counts []skillcheck.TokenCount
+func countAssetFiles(dir string, enc tokenizer.Codec) []types.TokenCount {
+	var counts []types.TokenCount
 	assetsDir := filepath.Join(dir, "assets")
 
 	_ = filepath.Walk(assetsDir, func(path string, info os.FileInfo, err error) error {
@@ -203,15 +203,15 @@ func countAssetFiles(dir string, enc tokenizer.Codec) []skillcheck.TokenCount {
 		}
 		rel, _ := filepath.Rel(dir, path)
 		tokens, _, _ := enc.Encode(string(data))
-		counts = append(counts, skillcheck.TokenCount{File: rel, Tokens: len(tokens)})
+		counts = append(counts, types.TokenCount{File: rel, Tokens: len(tokens)})
 		return nil
 	})
 
 	return counts
 }
 
-func countOtherFiles(dir string, enc tokenizer.Codec) []skillcheck.TokenCount {
-	var counts []skillcheck.TokenCount
+func countOtherFiles(dir string, enc tokenizer.Codec) []types.TokenCount {
+	var counts []types.TokenCount
 
 	entries, err := os.ReadDir(dir)
 	if err != nil {
@@ -242,15 +242,15 @@ func countOtherFiles(dir string, enc tokenizer.Codec) []skillcheck.TokenCount {
 				continue
 			}
 			tokens, _, _ := enc.Encode(string(data))
-			counts = append(counts, skillcheck.TokenCount{File: name, Tokens: len(tokens)})
+			counts = append(counts, types.TokenCount{File: name, Tokens: len(tokens)})
 		}
 	}
 
 	return counts
 }
 
-func countFilesInDir(rootDir, dirName string, enc tokenizer.Codec) []skillcheck.TokenCount {
-	var counts []skillcheck.TokenCount
+func countFilesInDir(rootDir, dirName string, enc tokenizer.Codec) []types.TokenCount {
+	var counts []types.TokenCount
 	fullDir := filepath.Join(rootDir, dirName)
 
 	_ = filepath.Walk(fullDir, func(path string, info os.FileInfo, err error) error {
@@ -275,7 +275,7 @@ func countFilesInDir(rootDir, dirName string, enc tokenizer.Codec) []skillcheck.
 		}
 		rel, _ := filepath.Rel(rootDir, path)
 		tokens, _, _ := enc.Encode(string(data))
-		counts = append(counts, skillcheck.TokenCount{File: rel, Tokens: len(tokens)})
+		counts = append(counts, types.TokenCount{File: rel, Tokens: len(tokens)})
 		return nil
 	})
 

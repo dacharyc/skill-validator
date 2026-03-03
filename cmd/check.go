@@ -10,8 +10,10 @@ import (
 	"github.com/dacharyc/skill-validator/contamination"
 	"github.com/dacharyc/skill-validator/content"
 	"github.com/dacharyc/skill-validator/links"
+	"github.com/dacharyc/skill-validator/skill"
 	"github.com/dacharyc/skill-validator/skillcheck"
 	"github.com/dacharyc/skill-validator/structure"
+	"github.com/dacharyc/skill-validator/types"
 )
 
 var (
@@ -66,11 +68,11 @@ func runCheck(cmd *cobra.Command, args []string) error {
 	eopts := exitOpts{strict: strictCheck}
 
 	switch mode {
-	case skillcheck.SingleSkill:
+	case types.SingleSkill:
 		r := runAllChecks(dirs[0], enabled, structOpts)
 		return outputReportWithExitOpts(r, perFileCheck, eopts)
-	case skillcheck.MultiSkill:
-		mr := &skillcheck.MultiReport{}
+	case types.MultiSkill:
+		mr := &types.MultiReport{}
 		for _, dir := range dirs {
 			r := runAllChecks(dir, enabled, structOpts)
 			mr.Skills = append(mr.Skills, r)
@@ -117,8 +119,8 @@ func resolveCheckGroups(only, skip string) (map[string]bool, error) {
 	return enabled, nil
 }
 
-func runAllChecks(dir string, enabled map[string]bool, structOpts structure.Options) *skillcheck.Report {
-	rpt := &skillcheck.Report{SkillDir: dir}
+func runAllChecks(dir string, enabled map[string]bool, structOpts structure.Options) *types.Report {
+	rpt := &types.Report{SkillDir: dir}
 
 	// Structure validation (spec compliance, tokens, code fences)
 	if enabled["structure"] {
@@ -133,12 +135,12 @@ func runAllChecks(dir string, enabled map[string]bool, structOpts structure.Opti
 	var rawContent, body string
 	var skillLoaded bool
 	if needsSkill {
-		s, err := skillcheck.LoadSkill(dir)
+		s, err := skill.Load(dir)
 		if err != nil {
 			if !enabled["structure"] {
 				// Only add the error if structure didn't already catch it
 				rpt.Results = append(rpt.Results,
-					skillcheck.ResultContext{Category: "Skill"}.Error(err.Error()))
+					types.ResultContext{Category: "Skill"}.Error(err.Error()))
 			}
 			// Fall back to reading raw SKILL.md for content/contamination analysis
 			rawContent = skillcheck.ReadSkillRaw(dir)
@@ -197,9 +199,9 @@ func runAllChecks(dir string, enabled map[string]bool, structOpts structure.Opti
 	rpt.Warnings = 0
 	for _, r := range rpt.Results {
 		switch r.Level {
-		case skillcheck.Error:
+		case types.Error:
 			rpt.Errors++
-		case skillcheck.Warning:
+		case types.Warning:
 			rpt.Warnings++
 		}
 	}

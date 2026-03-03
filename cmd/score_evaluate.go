@@ -11,7 +11,7 @@ import (
 
 	"github.com/dacharyc/skill-validator/evaluate"
 	"github.com/dacharyc/skill-validator/judge"
-	"github.com/dacharyc/skill-validator/skillcheck"
+	"github.com/dacharyc/skill-validator/types"
 )
 
 var (
@@ -120,14 +120,14 @@ func runScoreEvaluate(cmd *cobra.Command, args []string) error {
 	}
 
 	switch mode {
-	case skillcheck.SingleSkill:
+	case types.SingleSkill:
 		result, err := evaluate.EvaluateSkill(ctx, dirs[0], client, opts, os.Stderr)
 		if err != nil {
 			return err
 		}
 		return evaluate.FormatResults(os.Stdout, []*evaluate.EvalResult{result}, outputFormat, evalDisplay)
 
-	case skillcheck.MultiSkill:
+	case types.MultiSkill:
 		var results []*evaluate.EvalResult
 		for _, dir := range dirs {
 			result, err := evaluate.EvaluateSkill(ctx, dir, client, opts, os.Stderr)

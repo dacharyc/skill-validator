@@ -7,7 +7,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/dacharyc/skill-validator/skillcheck"
+	"github.com/dacharyc/skill-validator/types"
 )
 
 // orderedRecognizedDirs lists the recognized subdirectories in a stable order
@@ -22,8 +22,8 @@ type queueItem struct {
 
 // CheckOrphanFiles walks scripts/, references/, and assets/ to find files
 // that are never referenced (directly or transitively) from SKILL.md.
-func CheckOrphanFiles(dir, body string) []skillcheck.Result {
-	ctx := skillcheck.ResultContext{Category: "Structure"}
+func CheckOrphanFiles(dir, body string) []types.Result {
+	ctx := types.ResultContext{Category: "Structure"}
 
 	// Inventory: collect all files in recognized directories.
 	inventory := inventoryFiles(dir)
@@ -115,7 +115,7 @@ func CheckOrphanFiles(dir, body string) []skillcheck.Result {
 	}
 
 	// Build results per directory.
-	var results []skillcheck.Result
+	var results []types.Result
 
 	for _, d := range orderedRecognizedDirs {
 		dirFiles := filesInDir(inventory, d)

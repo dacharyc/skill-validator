@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/dacharyc/skill-validator/skillcheck"
+	"github.com/dacharyc/skill-validator/types"
 )
 
 func TestValidate(t *testing.T) {
@@ -15,7 +16,7 @@ func TestValidate(t *testing.T) {
 		if report.Errors != 0 {
 			t.Errorf("expected 0 errors, got %d", report.Errors)
 			for _, r := range report.Results {
-				if r.Level == skillcheck.Error {
+				if r.Level == types.Error {
 					t.Logf("  error: %s: %s", r.Category, r.Message)
 				}
 			}
@@ -28,7 +29,7 @@ func TestValidate(t *testing.T) {
 		if report.Errors != 1 {
 			t.Errorf("expected 1 error, got %d", report.Errors)
 		}
-		requireResult(t, report.Results, skillcheck.Error, "SKILL.md not found")
+		requireResult(t, report.Results, types.Error, "SKILL.md not found")
 		// Should not have any frontmatter/link/token results
 		for _, r := range report.Results {
 			if r.Category != "Structure" {
@@ -45,7 +46,7 @@ func TestValidate(t *testing.T) {
 		if report.Errors < 3 {
 			t.Errorf("expected at least 3 errors, got %d", report.Errors)
 			for _, r := range report.Results {
-				if r.Level == skillcheck.Error {
+				if r.Level == types.Error {
 					t.Logf("  error: %s: %s", r.Category, r.Message)
 				}
 			}
@@ -102,8 +103,8 @@ func TestValidate(t *testing.T) {
 		// Add a massive amount of non-standard content
 		writeFile(t, dir, "AGENTS.md", generateContent(30_000))
 		report := Validate(dir, Options{})
-		requireResultContaining(t, report.Results, skillcheck.Error, "doesn't appear to be structured as a skill")
-		requireResultContaining(t, report.Results, skillcheck.Error, "build pipeline issue")
+		requireResultContaining(t, report.Results, types.Error, "doesn't appear to be structured as a skill")
+		requireResultContaining(t, report.Results, types.Error, "build pipeline issue")
 	})
 
 	t.Run("no skill ratio error when other content is small", func(t *testing.T) {
@@ -111,7 +112,7 @@ func TestValidate(t *testing.T) {
 		writeSkill(t, dir, "---\nname: "+dirName(dir)+"\ndescription: desc\n---\n# Body\n")
 		writeFile(t, dir, "extra.md", "A small extra file.")
 		report := Validate(dir, Options{})
-		requireNoResultContaining(t, report.Results, skillcheck.Error, "doesn't appear to be structured as a skill")
+		requireNoResultContaining(t, report.Results, types.Error, "doesn't appear to be structured as a skill")
 	})
 
 	t.Run("unparseable frontmatter", func(t *testing.T) {
@@ -121,7 +122,7 @@ func TestValidate(t *testing.T) {
 		if report.Errors != 1 {
 			t.Errorf("expected 1 error, got %d", report.Errors)
 		}
-		requireResultContaining(t, report.Results, skillcheck.Error, "parsing frontmatter YAML")
+		requireResultContaining(t, report.Results, types.Error, "parsing frontmatter YAML")
 	})
 }
 
@@ -156,7 +157,7 @@ func TestValidate_MultiSkillFixture(t *testing.T) {
 	// Integration test using testdata/multi-skill
 	fixtureDir := "../testdata/multi-skill"
 	mode, dirs := skillcheck.DetectSkills(fixtureDir)
-	if mode != skillcheck.MultiSkill {
+	if mode != types.MultiSkill {
 		t.Fatalf("expected MultiSkill, got %d", mode)
 	}
 	if len(dirs) != 3 {
@@ -175,7 +176,7 @@ func TestValidate_MultiSkillFixture(t *testing.T) {
 			if r.Errors != 0 {
 				t.Errorf("%s: expected 0 errors, got %d", base, r.Errors)
 				for _, res := range r.Results {
-					if res.Level == skillcheck.Error {
+					if res.Level == types.Error {
 						t.Logf("  %s: %s", res.Category, res.Message)
 					}
 				}

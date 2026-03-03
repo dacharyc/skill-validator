@@ -7,16 +7,17 @@ import (
 	"strings"
 
 	"github.com/dacharyc/skill-validator/judge"
+	"github.com/dacharyc/skill-validator/util"
 )
 
-// ANSI color constants for terminal output.
+// Shorthand aliases for color constants to keep format strings compact.
 const (
-	ColorReset  = "\033[0m"
-	ColorBold   = "\033[1m"
-	ColorGreen  = "\033[32m"
-	ColorYellow = "\033[33m"
-	ColorCyan   = "\033[36m"
-	ColorRed    = "\033[31m"
+	ColorReset  = util.ColorReset
+	ColorBold   = util.ColorBold
+	ColorGreen  = util.ColorGreen
+	ColorYellow = util.ColorYellow
+	ColorCyan   = util.ColorCyan
+	ColorRed    = util.ColorRed
 )
 
 // FormatResults formats a single EvalResult in the given format.
@@ -104,7 +105,7 @@ func PrintText(w io.Writer, result *EvalResult, display string) {
 	}
 
 	if result.RefAggregate != nil {
-		_, _ = fmt.Fprintf(w, "\n%sReference Scores (%d file%s)%s\n", ColorBold, len(result.RefResults), pluralS(len(result.RefResults)), ColorReset)
+		_, _ = fmt.Fprintf(w, "\n%sReference Scores (%d file%s)%s\n", ColorBold, len(result.RefResults), util.PluralS(len(result.RefResults)), ColorReset)
 		printDimScore(w, "Clarity", result.RefAggregate.Clarity)
 		printDimScore(w, "Instructional Value", result.RefAggregate.InstructionalValue)
 		printDimScore(w, "Token Efficiency", result.RefAggregate.TokenEfficiency)
@@ -126,13 +127,6 @@ func printDimScore(w io.Writer, name string, score int) {
 	}
 	padding := max(22-len(name), 1)
 	_, _ = fmt.Fprintf(w, "  %s:%s%s%d/5%s\n", name, strings.Repeat(" ", padding), color, score, ColorReset)
-}
-
-func pluralS(n int) string {
-	if n == 1 {
-		return ""
-	}
-	return "s"
 }
 
 // --- JSON output ---
@@ -212,7 +206,7 @@ func PrintMarkdown(w io.Writer, result *EvalResult, display string) {
 	}
 
 	if result.RefAggregate != nil {
-		_, _ = fmt.Fprintf(w, "\n### Reference Scores (%d file%s)\n\n", len(result.RefResults), pluralS(len(result.RefResults)))
+		_, _ = fmt.Fprintf(w, "\n### Reference Scores (%d file%s)\n\n", len(result.RefResults), util.PluralS(len(result.RefResults)))
 		_, _ = fmt.Fprintf(w, "| Dimension | Score |\n")
 		_, _ = fmt.Fprintf(w, "| --- | ---: |\n")
 		_, _ = fmt.Fprintf(w, "| Clarity | %d/5 |\n", result.RefAggregate.Clarity)

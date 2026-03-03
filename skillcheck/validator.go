@@ -1,3 +1,6 @@
+// Package skillcheck provides skill detection and reference analysis
+// operations. Type definitions (Level, Result, Report, etc.) live in
+// the types package.
 package skillcheck
 
 import (
@@ -8,94 +11,22 @@ import (
 
 	"github.com/dacharyc/skill-validator/contamination"
 	"github.com/dacharyc/skill-validator/content"
-	"github.com/dacharyc/skill-validator/skill"
-)
-
-// Level represents the severity of a validation result.
-type Level int
-
-const (
-	Pass Level = iota
-	Info
-	Warning
-	Error
-)
-
-// String returns the lowercase name of the level.
-func (l Level) String() string {
-	switch l {
-	case Pass:
-		return "pass"
-	case Info:
-		return "info"
-	case Warning:
-		return "warning"
-	case Error:
-		return "error"
-	default:
-		return "unknown"
-	}
-}
-
-// Result represents a single validation finding.
-type Result struct {
-	Level    Level
-	Category string
-	Message  string
-	File     string // path relative to skill dir, e.g. "SKILL.md", "references/guide.md"
-	Line     int    // 0 = no line info
-}
-
-// TokenCount holds the token count for a single file.
-type TokenCount struct {
-	File   string
-	Tokens int
-}
-
-// ReferenceFileReport holds per-file content and contamination analysis for a single reference file.
-type ReferenceFileReport struct {
-	File                string
-	ContentReport       *content.Report
-	ContaminationReport *contamination.Report
-}
-
-// Report holds all validation results and token counts.
-type Report struct {
-	SkillDir                      string
-	Results                       []Result
-	TokenCounts                   []TokenCount
-	OtherTokenCounts              []TokenCount
-	ContentReport                 *content.Report
-	ReferencesContentReport       *content.Report
-	ContaminationReport           *contamination.Report
-	ReferencesContaminationReport *contamination.Report
-	ReferenceReports              []ReferenceFileReport
-	Errors                        int
-	Warnings                      int
-}
-
-// SkillMode indicates what kind of skill directory was detected.
-type SkillMode int
-
-const (
-	NoSkill SkillMode = iota
-	SingleSkill
-	MultiSkill
+	"github.com/dacharyc/skill-validator/types"
 )
 
 // DetectSkills determines whether dir is a single skill, a multi-skill
 // parent, or contains no skills. It follows symlinks when checking
 // subdirectories.
-func DetectSkills(dir string) (SkillMode, []string) {
+func DetectSkills(dir string) (types.SkillMode, []string) {
 	// If the directory itself contains SKILL.md, it's a single skill.
 	if _, err := os.Stat(filepath.Join(dir, "SKILL.md")); err == nil {
-		return SingleSkill, []string{dir}
+		return types.SingleSkill, []string{dir}
 	}
 
 	// Scan immediate subdirectories for SKILL.md.
 	entries, err := os.ReadDir(dir)
 	if err != nil {
-		return NoSkill, nil
+		return types.NoSkill, nil
 	}
 
 	var skillDirs []string
@@ -116,22 +47,9 @@ func DetectSkills(dir string) (SkillMode, []string) {
 	}
 
 	if len(skillDirs) > 0 {
-		return MultiSkill, skillDirs
+		return types.MultiSkill, skillDirs
 	}
-	return NoSkill, nil
-}
-
-// MultiReport holds aggregated results from validating multiple skills.
-type MultiReport struct {
-	Skills   []*Report
-	Errors   int
-	Warnings int
-}
-
-// LoadSkill loads and returns the skill from the given directory.
-// This is used by commands that need the parsed skill (e.g., links, content, contamination).
-func LoadSkill(dir string) (*skill.Skill, error) {
-	return skill.Load(dir)
+	return types.NoSkill, nil
 }
 
 // ReadSkillRaw reads the raw SKILL.md content from a directory without parsing
@@ -179,7 +97,7 @@ func ReadReferencesMarkdownFiles(dir string) map[string]string {
 // AnalyzeReferences runs content and contamination analysis on reference markdown
 // files. It populates the aggregate ReferencesContentReport, ReferencesContaminationReport,
 // and per-file ReferenceReports on the given report.
-func AnalyzeReferences(dir string, rpt *Report) {
+func AnalyzeReferences(dir string, rpt *types.Report) {
 	files := ReadReferencesMarkdownFiles(dir)
 	if files == nil {
 		return
@@ -198,7 +116,7 @@ func AnalyzeReferences(dir string, rpt *Report) {
 		fileContent := files[name]
 		parts = append(parts, fileContent)
 
-		fr := ReferenceFileReport{File: name}
+		fr := types.ReferenceFileReport{File: name}
 		fr.ContentReport = content.Analyze(fileContent)
 		skillName := filepath.Base(dir)
 		fr.ContaminationReport = contamination.Analyze(skillName, fileContent, fr.ContentReport.CodeLanguages)
@@ -210,18 +128,4 @@ func AnalyzeReferences(dir string, rpt *Report) {
 	rpt.ReferencesContentReport = content.Analyze(concatenated)
 	skillName := filepath.Base(dir)
 	rpt.ReferencesContaminationReport = contamination.Analyze(skillName, concatenated, rpt.ReferencesContentReport.CodeLanguages)
-}
-
-// Tally counts errors and warnings in the report.
-func (r *Report) Tally() {
-	r.Errors = 0
-	r.Warnings = 0
-	for _, result := range r.Results {
-		switch result.Level {
-		case Error:
-			r.Errors++
-		case Warning:
-			r.Warnings++
-		}
-	}
 }

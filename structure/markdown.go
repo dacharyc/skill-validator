@@ -5,13 +5,13 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/dacharyc/skill-validator/skillcheck"
+	"github.com/dacharyc/skill-validator/types"
 )
 
 // CheckMarkdown validates markdown structure in the skill.
-func CheckMarkdown(dir, body string) []skillcheck.Result {
-	ctx := skillcheck.ResultContext{Category: "Markdown"}
-	var results []skillcheck.Result
+func CheckMarkdown(dir, body string) []types.Result {
+	ctx := types.ResultContext{Category: "Markdown"}
+	var results []types.Result
 
 	// Check SKILL.md body
 	if line, ok := FindUnclosedFence(body); ok {

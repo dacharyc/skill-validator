@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/dacharyc/skill-validator/skillcheck"
+	"github.com/dacharyc/skill-validator/types"
 )
 
 // writeFile creates a file at dir/relPath with the given content, creating directories as needed.
@@ -24,7 +24,7 @@ func writeFile(t *testing.T, dir, relPath, content string) {
 }
 
 // requireResultContaining asserts that at least one result has the given level and message containing substr.
-func requireResultContaining(t *testing.T, results []skillcheck.Result, level skillcheck.Level, substr string) {
+func requireResultContaining(t *testing.T, results []types.Result, level types.Level, substr string) {
 	t.Helper()
 	for _, r := range results {
 		if r.Level == level && strings.Contains(r.Message, substr) {
@@ -234,28 +234,28 @@ func TestCheckLinks_HTTP(t *testing.T) {
 		dir := t.TempDir()
 		body := "[ok](" + server.URL + "/ok)"
 		results := CheckLinks(dir, body)
-		requireResultContaining(t, results, skillcheck.Pass, "HTTP 200")
+		requireResultContaining(t, results, types.Pass, "HTTP 200")
 	})
 
 	t.Run("404 HTTP link", func(t *testing.T) {
 		dir := t.TempDir()
 		body := "[missing](" + server.URL + "/not-found)"
 		results := CheckLinks(dir, body)
-		requireResultContaining(t, results, skillcheck.Error, "HTTP 404")
+		requireResultContaining(t, results, types.Error, "HTTP 404")
 	})
 
 	t.Run("403 HTTP link", func(t *testing.T) {
 		dir := t.TempDir()
 		body := "[blocked](" + server.URL + "/forbidden)"
 		results := CheckLinks(dir, body)
-		requireResultContaining(t, results, skillcheck.Info, "HTTP 403")
+		requireResultContaining(t, results, types.Info, "HTTP 403")
 	})
 
 	t.Run("500 HTTP link", func(t *testing.T) {
 		dir := t.TempDir()
 		body := "[error](" + server.URL + "/server-error)"
 		results := CheckLinks(dir, body)
-		requireResultContaining(t, results, skillcheck.Error, "HTTP 500")
+		requireResultContaining(t, results, types.Error, "HTTP 500")
 	})
 
 	t.Run("mixed relative and HTTP only checks HTTP", func(t *testing.T) {
@@ -266,14 +266,14 @@ func TestCheckLinks_HTTP(t *testing.T) {
 		if len(results) != 1 {
 			t.Fatalf("expected 1 result (HTTP only), got %d", len(results))
 		}
-		requireResultContaining(t, results, skillcheck.Pass, "HTTP 200")
+		requireResultContaining(t, results, types.Pass, "HTTP 200")
 	})
 }
 
 func TestCheckHTTPLink(t *testing.T) {
 	t.Run("connection refused", func(t *testing.T) {
-		result := checkHTTPLink(skillcheck.ResultContext{Category: "Links", File: "SKILL.md"}, "http://127.0.0.1:1")
-		if result.Level != skillcheck.Error {
+		result := checkHTTPLink(types.ResultContext{Category: "Links", File: "SKILL.md"}, "http://127.0.0.1:1")
+		if result.Level != types.Error {
 			t.Errorf("expected Error level, got %d", result.Level)
 		}
 		requireContains(t, result.Message, "request failed")
@@ -291,8 +291,8 @@ func TestCheckHTTPLink(t *testing.T) {
 		server := httptest.NewServer(mux)
 		defer server.Close()
 
-		result := checkHTTPLink(skillcheck.ResultContext{Category: "Links", File: "SKILL.md"}, server.URL+"/redirect")
-		if result.Level != skillcheck.Pass {
+		result := checkHTTPLink(types.ResultContext{Category: "Links", File: "SKILL.md"}, server.URL+"/redirect")
+		if result.Level != types.Pass {
 			t.Errorf("expected Pass for followed redirect, got level=%d message=%q", result.Level, result.Message)
 		}
 	})
@@ -304,8 +304,8 @@ func TestCheckHTTPLink(t *testing.T) {
 		}))
 		defer server.Close()
 
-		result := checkHTTPLink(skillcheck.ResultContext{Category: "Links", File: "SKILL.md"}, server.URL)
-		if result.Level != skillcheck.Error {
+		result := checkHTTPLink(types.ResultContext{Category: "Links", File: "SKILL.md"}, server.URL)
+		if result.Level != types.Error {
 			t.Errorf("expected Error for broken redirect target, got level=%d message=%q", result.Level, result.Message)
 		}
 	})
@@ -317,8 +317,8 @@ func TestCheckHTTPLink(t *testing.T) {
 		}))
 		defer server.Close()
 
-		result := checkHTTPLink(skillcheck.ResultContext{Category: "Links", File: "SKILL.md"}, server.URL+"/loop")
-		if result.Level != skillcheck.Error {
+		result := checkHTTPLink(types.ResultContext{Category: "Links", File: "SKILL.md"}, server.URL+"/loop")
+		if result.Level != types.Error {
 			t.Errorf("expected Error for redirect loop, got level=%d message=%q", result.Level, result.Message)
 		}
 		requireContains(t, result.Message, "request failed")
@@ -330,16 +330,16 @@ func TestCheckHTTPLink(t *testing.T) {
 		}))
 		defer server.Close()
 
-		result := checkHTTPLink(skillcheck.ResultContext{Category: "Links", File: "SKILL.md"}, server.URL)
-		if result.Level != skillcheck.Info {
+		result := checkHTTPLink(types.ResultContext{Category: "Links", File: "SKILL.md"}, server.URL)
+		if result.Level != types.Info {
 			t.Errorf("expected Info level for 403, got %d", result.Level)
 		}
 		requireContains(t, result.Message, "HTTP 403")
 	})
 
 	t.Run("invalid URL", func(t *testing.T) {
-		result := checkHTTPLink(skillcheck.ResultContext{Category: "Links", File: "SKILL.md"}, "http://invalid host with spaces/")
-		if result.Level != skillcheck.Error {
+		result := checkHTTPLink(types.ResultContext{Category: "Links", File: "SKILL.md"}, "http://invalid host with spaces/")
+		if result.Level != types.Error {
 			t.Errorf("expected Error for invalid URL, got level=%d", result.Level)
 		}
 		requireContains(t, result.Message, "invalid URL")

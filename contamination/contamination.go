@@ -4,6 +4,8 @@ import (
 	"math"
 	"sort"
 	"strings"
+
+	"github.com/dacharyc/skill-validator/util"
 )
 
 // Tools/platforms known to have multiple language interfaces
@@ -181,7 +183,7 @@ func Analyze(name, content string, codeLanguages []string) *Report {
 		factors += 0.3 * breadthScore
 	}
 
-	score := roundTo(math.Min(factors, 1.0), 4)
+	score := util.RoundTo(math.Min(factors, 1.0), 4)
 
 	// Contamination level
 	level := "low"
@@ -194,12 +196,12 @@ func Analyze(name, content string, codeLanguages []string) *Report {
 	return &Report{
 		MultiInterfaceTools:  multiTools,
 		CodeLanguages:        codeLanguages,
-		LanguageCategories:   sortedKeys(langCategories),
+		LanguageCategories:   util.SortedKeys(langCategories),
 		PrimaryCategory:      primaryCategory,
-		MismatchedCategories: sortedKeys(mismatchedCategories),
+		MismatchedCategories: util.SortedKeys(mismatchedCategories),
 		MismatchWeights:      mismatchWeights,
 		LanguageMismatch:     languageMismatch,
-		TechReferences:       sortedKeys(techRefs),
+		TechReferences:       util.SortedKeys(techRefs),
 		ScopeBreadth:         scopeBreadth,
 		ContaminationScore:   score,
 		ContaminationLevel:   level,
@@ -284,21 +286,4 @@ func findPrimaryCategory(codeLanguages []string) string {
 		}
 	}
 	return primary
-}
-
-func sortedKeys(m map[string]bool) []string {
-	if len(m) == 0 {
-		return []string{}
-	}
-	keys := make([]string, 0, len(m))
-	for k := range m {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-	return keys
-}
-
-func roundTo(val float64, places int) float64 {
-	pow := math.Pow(10, float64(places))
-	return math.Round(val*pow) / pow
 }

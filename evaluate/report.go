@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/dacharyc/skill-validator/judge"
+	"github.com/dacharyc/skill-validator/util"
 )
 
 // ReportList formats cached results in list mode.
@@ -57,7 +58,7 @@ func ReportCompare(w io.Writer, results []*judge.CachedResult, skillDir, format 
 
 func reportCompareText(w io.Writer, results []*judge.CachedResult, skillDir string) {
 	byFile := groupByFile(results)
-	files := sortedKeys(byFile)
+	files := util.SortedKeys(byFile)
 
 	_, _ = fmt.Fprintf(w, "\n%sScore comparison for: %s%s\n", ColorBold, skillDir, ColorReset)
 
@@ -127,7 +128,7 @@ func printCompareRow(w io.Writer, label string, entries []*judge.CachedResult, m
 
 func reportCompareMarkdown(w io.Writer, results []*judge.CachedResult, skillDir string) {
 	byFile := groupByFile(results)
-	files := sortedKeys(byFile)
+	files := util.SortedKeys(byFile)
 
 	_, _ = fmt.Fprintf(w, "## Score comparison for: %s\n", skillDir)
 
@@ -204,15 +205,6 @@ func groupByFile(results []*judge.CachedResult) map[string][]*judge.CachedResult
 		byFile[r.File] = append(byFile[r.File], r)
 	}
 	return byFile
-}
-
-func sortedKeys(m map[string][]*judge.CachedResult) []string {
-	keys := make([]string, 0, len(m))
-	for k := range m {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-	return keys
 }
 
 func uniqueModels(entries []*judge.CachedResult) []string {

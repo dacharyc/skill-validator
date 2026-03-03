@@ -6,7 +6,7 @@ import (
 
 	"github.com/dacharyc/skill-validator/contamination"
 	"github.com/dacharyc/skill-validator/content"
-	"github.com/dacharyc/skill-validator/skillcheck"
+	"github.com/dacharyc/skill-validator/types"
 )
 
 type jsonReport struct {
@@ -55,7 +55,7 @@ type jsonMultiReport struct {
 	Skills   []jsonReport `json:"skills"`
 }
 
-func buildJSONReport(r *skillcheck.Report, perFile bool) jsonReport {
+func buildJSONReport(r *types.Report, perFile bool) jsonReport {
 	out := jsonReport{
 		SkillDir: r.SkillDir,
 		Passed:   r.Errors == 0,
@@ -116,7 +116,7 @@ func buildJSONReport(r *skillcheck.Report, perFile bool) jsonReport {
 }
 
 // PrintJSON writes the report as JSON to the given writer.
-func PrintJSON(w io.Writer, r *skillcheck.Report, perFile bool) error {
+func PrintJSON(w io.Writer, r *types.Report, perFile bool) error {
 	out := buildJSONReport(r, perFile)
 	enc := json.NewEncoder(w)
 	enc.SetIndent("", "  ")
@@ -124,7 +124,7 @@ func PrintJSON(w io.Writer, r *skillcheck.Report, perFile bool) error {
 }
 
 // PrintMultiJSON writes the multi-skill report as JSON to the given writer.
-func PrintMultiJSON(w io.Writer, mr *skillcheck.MultiReport, perFile bool) error {
+func PrintMultiJSON(w io.Writer, mr *types.MultiReport, perFile bool) error {
 	out := jsonMultiReport{
 		Passed:   mr.Errors == 0,
 		Errors:   mr.Errors,

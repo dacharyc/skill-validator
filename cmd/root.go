@@ -8,6 +8,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/dacharyc/skill-validator/skillcheck"
+	"github.com/dacharyc/skill-validator/types"
 )
 
 const version = "v1.0.0"
@@ -57,14 +58,14 @@ func resolvePath(args []string) (string, error) {
 }
 
 // detectAndResolve resolves the path and detects skills.
-func detectAndResolve(args []string) (string, skillcheck.SkillMode, []string, error) {
+func detectAndResolve(args []string) (string, types.SkillMode, []string, error) {
 	absDir, err := resolvePath(args)
 	if err != nil {
 		return "", 0, nil, err
 	}
 
 	mode, dirs := skillcheck.DetectSkills(absDir)
-	if mode == skillcheck.NoSkill {
+	if mode == types.NoSkill {
 		return "", 0, nil, fmt.Errorf("no skills found in %s (expected SKILL.md or subdirectories containing SKILL.md)", args[0])
 	}
 

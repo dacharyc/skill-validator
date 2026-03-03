@@ -3,7 +3,7 @@ package structure
 import (
 	"testing"
 
-	"github.com/dacharyc/skill-validator/skillcheck"
+	"github.com/dacharyc/skill-validator/types"
 )
 
 func TestCheckInternalLinks(t *testing.T) {
@@ -12,14 +12,14 @@ func TestCheckInternalLinks(t *testing.T) {
 		writeFile(t, dir, "references/guide.md", "content")
 		body := "See [guide](references/guide.md)."
 		results := CheckInternalLinks(dir, body)
-		requireResult(t, results, skillcheck.Pass, "internal link: references/guide.md (exists)")
+		requireResult(t, results, types.Pass, "internal link: references/guide.md (exists)")
 	})
 
 	t.Run("missing file", func(t *testing.T) {
 		dir := t.TempDir()
 		body := "See [guide](references/missing.md)."
 		results := CheckInternalLinks(dir, body)
-		requireResult(t, results, skillcheck.Error, "broken internal link: references/missing.md (file not found)")
+		requireResult(t, results, types.Error, "broken internal link: references/missing.md (file not found)")
 	})
 
 	t.Run("skips HTTP links", func(t *testing.T) {
@@ -54,7 +54,7 @@ func TestCheckInternalLinks(t *testing.T) {
 		writeFile(t, dir, "references/guide.md", "# Heading\ncontent")
 		body := "See [config](references/guide.md#heading)."
 		results := CheckInternalLinks(dir, body)
-		requireResult(t, results, skillcheck.Pass, "internal link: references/guide.md (exists)")
+		requireResult(t, results, types.Pass, "internal link: references/guide.md (exists)")
 	})
 
 	t.Run("no links returns nil", func(t *testing.T) {
@@ -74,7 +74,7 @@ func TestCheckInternalLinks(t *testing.T) {
 		if len(results) != 1 {
 			t.Fatalf("expected 1 result (internal only), got %d", len(results))
 		}
-		requireResult(t, results, skillcheck.Pass, "internal link: references/guide.md (exists)")
+		requireResult(t, results, types.Pass, "internal link: references/guide.md (exists)")
 	})
 
 	t.Run("category is Structure", func(t *testing.T) {

@@ -6,7 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/dacharyc/skill-validator/skillcheck"
+	"github.com/dacharyc/skill-validator/types"
+	"github.com/dacharyc/skill-validator/util"
 )
 
 var recognizedDirs = map[string]bool{
@@ -35,9 +36,9 @@ var knownExtraneousFiles = map[string]string{
 	".gitignore":            ".gitignore",
 }
 
-func CheckStructure(dir string) []skillcheck.Result {
-	ctx := skillcheck.ResultContext{Category: "Structure"}
-	var results []skillcheck.Result
+func CheckStructure(dir string) []types.Result {
+	ctx := types.ResultContext{Category: "Structure"}
+	var results []types.Result
 
 	// Check SKILL.md exists
 	skillPath := filepath.Join(dir, "SKILL.md")
@@ -78,7 +79,7 @@ func CheckStructure(dir string) []skillcheck.Result {
 					hint := unknownDirHint(dir)
 					msg = fmt.Sprintf(
 						"unknown directory: %s/ (contains %d file%s) — agents using the standard skill structure won't discover these files%s",
-						name, fileCount, pluralS(fileCount), hint,
+						name, fileCount, util.PluralS(fileCount), hint,
 					)
 				}
 			}
@@ -101,7 +102,7 @@ func CheckStructure(dir string) []skillcheck.Result {
 	return results
 }
 
-func extraneousFileResult(ctx skillcheck.ResultContext, name string) skillcheck.Result {
+func extraneousFileResult(ctx types.ResultContext, name string) types.Result {
 	lower := strings.ToLower(name)
 	if lower == "agents.md" {
 		return ctx.WarnFile(name, fmt.Sprintf(
@@ -141,15 +142,8 @@ func unknownDirHint(dir string) string {
 	return fmt.Sprintf("; should this be %s?", strings.Join(candidates, " or "))
 }
 
-func pluralS(n int) string {
-	if n == 1 {
-		return ""
-	}
-	return "s"
-}
-
-func checkNesting(ctx skillcheck.ResultContext, dir, prefix string) []skillcheck.Result {
-	var results []skillcheck.Result
+func checkNesting(ctx types.ResultContext, dir, prefix string) []types.Result {
+	var results []types.Result
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		return results

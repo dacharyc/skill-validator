@@ -4,7 +4,8 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/dacharyc/skill-validator/links"
-	"github.com/dacharyc/skill-validator/skillcheck"
+	"github.com/dacharyc/skill-validator/skill"
+	"github.com/dacharyc/skill-validator/types"
 )
 
 var validateLinksCmd = &cobra.Command{
@@ -26,11 +27,11 @@ func runValidateLinks(cmd *cobra.Command, args []string) error {
 	}
 
 	switch mode {
-	case skillcheck.SingleSkill:
+	case types.SingleSkill:
 		r := runLinkChecks(dirs[0])
 		return outputReport(r)
-	case skillcheck.MultiSkill:
-		mr := &skillcheck.MultiReport{}
+	case types.MultiSkill:
+		mr := &types.MultiReport{}
 		for _, dir := range dirs {
 			r := runLinkChecks(dir)
 			mr.Skills = append(mr.Skills, r)
@@ -42,13 +43,13 @@ func runValidateLinks(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func runLinkChecks(dir string) *skillcheck.Report {
-	rpt := &skillcheck.Report{SkillDir: dir}
+func runLinkChecks(dir string) *types.Report {
+	rpt := &types.Report{SkillDir: dir}
 
-	s, err := skillcheck.LoadSkill(dir)
+	s, err := skill.Load(dir)
 	if err != nil {
 		rpt.Results = append(rpt.Results,
-			skillcheck.ResultContext{Category: "Links"}.Error(err.Error()))
+			types.ResultContext{Category: "Links"}.Error(err.Error()))
 		rpt.Errors = 1
 		return rpt
 	}
@@ -58,9 +59,9 @@ func runLinkChecks(dir string) *skillcheck.Report {
 	// Tally
 	for _, r := range rpt.Results {
 		switch r.Level {
-		case skillcheck.Error:
+		case types.Error:
 			rpt.Errors++
-		case skillcheck.Warning:
+		case types.Warning:
 			rpt.Warnings++
 		}
 	}
@@ -68,7 +69,7 @@ func runLinkChecks(dir string) *skillcheck.Report {
 	// If no results at all, add a pass result
 	if len(rpt.Results) == 0 {
 		rpt.Results = append(rpt.Results,
-			skillcheck.ResultContext{Category: "Links"}.Pass("all link checks passed"))
+			types.ResultContext{Category: "Links"}.Pass("all link checks passed"))
 	}
 
 	return rpt

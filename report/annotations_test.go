@@ -5,15 +5,15 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/dacharyc/skill-validator/skillcheck"
+	"github.com/dacharyc/skill-validator/types"
 )
 
 func TestPrintAnnotations_ErrorAndWarning(t *testing.T) {
-	r := &skillcheck.Report{
+	r := &types.Report{
 		SkillDir: "/workspace/skills/my-skill",
-		Results: []skillcheck.Result{
-			{Level: skillcheck.Error, Category: "Frontmatter", Message: "name is required", File: "SKILL.md"},
-			{Level: skillcheck.Warning, Category: "Structure", Message: "extraneous file", File: "README.md"},
+		Results: []types.Result{
+			{Level: types.Error, Category: "Frontmatter", Message: "name is required", File: "SKILL.md"},
+			{Level: types.Warning, Category: "Structure", Message: "extraneous file", File: "README.md"},
 		},
 	}
 
@@ -42,11 +42,11 @@ func TestPrintAnnotations_ErrorAndWarning(t *testing.T) {
 }
 
 func TestPrintAnnotations_SkipsPassAndInfo(t *testing.T) {
-	r := &skillcheck.Report{
+	r := &types.Report{
 		SkillDir: "/workspace/skills/my-skill",
-		Results: []skillcheck.Result{
-			{Level: skillcheck.Pass, Category: "Structure", Message: "SKILL.md found", File: "SKILL.md"},
-			{Level: skillcheck.Info, Category: "Links", Message: "HTTP 403", File: "SKILL.md"},
+		Results: []types.Result{
+			{Level: types.Pass, Category: "Structure", Message: "SKILL.md found", File: "SKILL.md"},
+			{Level: types.Info, Category: "Links", Message: "HTTP 403", File: "SKILL.md"},
 		},
 	}
 
@@ -59,10 +59,10 @@ func TestPrintAnnotations_SkipsPassAndInfo(t *testing.T) {
 }
 
 func TestPrintAnnotations_WithLineNumber(t *testing.T) {
-	r := &skillcheck.Report{
+	r := &types.Report{
 		SkillDir: "/workspace/skills/my-skill",
-		Results: []skillcheck.Result{
-			{Level: skillcheck.Error, Category: "Markdown", Message: "unclosed fence", File: "SKILL.md", Line: 42},
+		Results: []types.Result{
+			{Level: types.Error, Category: "Markdown", Message: "unclosed fence", File: "SKILL.md", Line: 42},
 		},
 	}
 
@@ -79,10 +79,10 @@ func TestPrintAnnotations_WithLineNumber(t *testing.T) {
 }
 
 func TestPrintAnnotations_NoFile(t *testing.T) {
-	r := &skillcheck.Report{
+	r := &types.Report{
 		SkillDir: "skills/my-skill",
-		Results: []skillcheck.Result{
-			{Level: skillcheck.Error, Category: "Overall", Message: "not a skill"},
+		Results: []types.Result{
+			{Level: types.Error, Category: "Overall", Message: "not a skill"},
 		},
 	}
 
@@ -97,18 +97,18 @@ func TestPrintAnnotations_NoFile(t *testing.T) {
 }
 
 func TestPrintMultiAnnotations(t *testing.T) {
-	mr := &skillcheck.MultiReport{
-		Skills: []*skillcheck.Report{
+	mr := &types.MultiReport{
+		Skills: []*types.Report{
 			{
 				SkillDir: "/workspace/skills/a",
-				Results: []skillcheck.Result{
-					{Level: skillcheck.Error, Category: "Structure", Message: "missing", File: "SKILL.md"},
+				Results: []types.Result{
+					{Level: types.Error, Category: "Structure", Message: "missing", File: "SKILL.md"},
 				},
 			},
 			{
 				SkillDir: "/workspace/skills/b",
-				Results: []skillcheck.Result{
-					{Level: skillcheck.Warning, Category: "Tokens", Message: "too large", File: "references/big.md"},
+				Results: []types.Result{
+					{Level: types.Warning, Category: "Tokens", Message: "too large", File: "references/big.md"},
 				},
 			},
 		},

@@ -468,18 +468,6 @@ func TestPrintJSON_WithRefs(t *testing.T) {
 	}
 }
 
-func TestPluralS(t *testing.T) {
-	if pluralS(1) != "" {
-		t.Error("pluralS(1) should be empty")
-	}
-	if pluralS(0) != "s" {
-		t.Error("pluralS(0) should be 's'")
-	}
-	if pluralS(2) != "s" {
-		t.Error("pluralS(2) should be 's'")
-	}
-}
-
 func TestPrintDimScore_Colors(t *testing.T) {
 	var buf bytes.Buffer
 

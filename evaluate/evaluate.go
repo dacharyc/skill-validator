@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/dacharyc/skill-validator/judge"
+	"github.com/dacharyc/skill-validator/skill"
 	"github.com/dacharyc/skill-validator/skillcheck"
 )
 
@@ -48,7 +49,7 @@ func EvaluateSkill(ctx context.Context, dir string, client judge.LLMClient, opts
 	skillName := filepath.Base(dir)
 
 	// Load skill
-	s, err := skillcheck.LoadSkill(dir)
+	s, err := skill.Load(dir)
 	if err != nil {
 		return nil, fmt.Errorf("loading skill: %w", err)
 	}
@@ -181,7 +182,7 @@ func EvaluateSingleFile(ctx context.Context, absPath string, client judge.LLMCli
 	}
 
 	// Load parent skill for context
-	s, err := skillcheck.LoadSkill(skillDir)
+	s, err := skill.Load(skillDir)
 	if err != nil {
 		return nil, fmt.Errorf("loading parent skill: %w", err)
 	}

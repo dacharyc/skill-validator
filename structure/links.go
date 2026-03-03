@@ -6,20 +6,20 @@ import (
 	"strings"
 
 	"github.com/dacharyc/skill-validator/links"
-	"github.com/dacharyc/skill-validator/skillcheck"
+	"github.com/dacharyc/skill-validator/types"
 )
 
 // CheckInternalLinks validates relative (internal) links in the skill body.
 // Broken internal links indicate a structural problem: the skill references
 // files that don't exist in the package.
-func CheckInternalLinks(dir, body string) []skillcheck.Result {
-	ctx := skillcheck.ResultContext{Category: "Structure", File: "SKILL.md"}
+func CheckInternalLinks(dir, body string) []types.Result {
+	ctx := types.ResultContext{Category: "Structure", File: "SKILL.md"}
 	allLinks := links.ExtractLinks(body)
 	if len(allLinks) == 0 {
 		return nil
 	}
 
-	var results []skillcheck.Result
+	var results []types.Result
 
 	for _, link := range allLinks {
 		// Skip template URLs containing {placeholder} variables (RFC 6570 URI Templates)

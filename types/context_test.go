@@ -1,4 +1,4 @@
-package skillcheck
+package types
 
 import "testing"
 

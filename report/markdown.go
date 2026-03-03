@@ -7,16 +7,17 @@ import (
 
 	"github.com/dacharyc/skill-validator/contamination"
 	"github.com/dacharyc/skill-validator/content"
-	"github.com/dacharyc/skill-validator/skillcheck"
+	"github.com/dacharyc/skill-validator/types"
+	"github.com/dacharyc/skill-validator/util"
 )
 
 // PrintMarkdown writes the report as GitHub-flavored markdown to the given writer.
-func PrintMarkdown(w io.Writer, r *skillcheck.Report, perFile bool) error {
+func PrintMarkdown(w io.Writer, r *types.Report, perFile bool) error {
 	_, _ = fmt.Fprintf(w, "## Validating skill: %s\n", r.SkillDir)
 
 	// Group results by category, preserving order of first appearance
 	var categories []string
-	grouped := make(map[string][]skillcheck.Result)
+	grouped := make(map[string][]types.Result)
 	for _, res := range r.Results {
 		if _, exists := grouped[res.Category]; !exists {
 			categories = append(categories, res.Category)
@@ -41,9 +42,9 @@ func PrintMarkdown(w io.Writer, r *skillcheck.Report, perFile bool) error {
 		total := 0
 		for _, tc := range r.TokenCounts {
 			total += tc.Tokens
-			_, _ = fmt.Fprintf(w, "| %s | %s |\n", tc.File, formatNumber(tc.Tokens))
+			_, _ = fmt.Fprintf(w, "| %s | %s |\n", tc.File, util.FormatNumber(tc.Tokens))
 		}
-		_, _ = fmt.Fprintf(w, "| **Total** | **%s** |\n", formatNumber(total))
+		_, _ = fmt.Fprintf(w, "| **Total** | **%s** |\n", util.FormatNumber(total))
 	}
 
 	// Other files token counts
@@ -55,9 +56,9 @@ func PrintMarkdown(w io.Writer, r *skillcheck.Report, perFile bool) error {
 		total := 0
 		for _, tc := range r.OtherTokenCounts {
 			total += tc.Tokens
-			_, _ = fmt.Fprintf(w, "| %s | %s |\n", tc.File, formatNumber(tc.Tokens))
+			_, _ = fmt.Fprintf(w, "| %s | %s |\n", tc.File, util.FormatNumber(tc.Tokens))
 		}
-		_, _ = fmt.Fprintf(w, "| **Total (other)** | **%s** |\n", formatNumber(total))
+		_, _ = fmt.Fprintf(w, "| **Total (other)** | **%s** |\n", util.FormatNumber(total))
 	}
 
 	// Content analysis
@@ -105,10 +106,10 @@ func PrintMarkdown(w io.Writer, r *skillcheck.Report, perFile bool) error {
 	} else {
 		parts := []string{}
 		if r.Errors > 0 {
-			parts = append(parts, fmt.Sprintf("%d error%s", r.Errors, pluralize(r.Errors)))
+			parts = append(parts, fmt.Sprintf("%d error%s", r.Errors, util.PluralS(r.Errors)))
 		}
 		if r.Warnings > 0 {
-			parts = append(parts, fmt.Sprintf("%d warning%s", r.Warnings, pluralize(r.Warnings)))
+			parts = append(parts, fmt.Sprintf("%d warning%s", r.Warnings, util.PluralS(r.Warnings)))
 		}
 		_, _ = fmt.Fprintf(w, "**Result: %s**\n", strings.Join(parts, ", "))
 	}
@@ -117,7 +118,7 @@ func PrintMarkdown(w io.Writer, r *skillcheck.Report, perFile bool) error {
 }
 
 // PrintMultiMarkdown writes the multi-skill report as GitHub-flavored markdown.
-func PrintMultiMarkdown(w io.Writer, mr *skillcheck.MultiReport, perFile bool) error {
+func PrintMultiMarkdown(w io.Writer, mr *types.MultiReport, perFile bool) error {
 	for i, r := range mr.Skills {
 		if i > 0 {
 			_, _ = fmt.Fprintf(w, "\n---\n\n")
@@ -139,7 +140,7 @@ func PrintMultiMarkdown(w io.Writer, mr *skillcheck.MultiReport, perFile bool) e
 		}
 	}
 
-	_, _ = fmt.Fprintf(w, "**%d skill%s validated: ", len(mr.Skills), pluralize(len(mr.Skills)))
+	_, _ = fmt.Fprintf(w, "**%d skill%s validated: ", len(mr.Skills), util.PluralS(len(mr.Skills)))
 	if failed == 0 {
 		_, _ = fmt.Fprintf(w, "all passed**\n")
 	} else {
@@ -153,10 +154,10 @@ func PrintMultiMarkdown(w io.Writer, mr *skillcheck.MultiReport, perFile bool) e
 
 	countParts := []string{}
 	if mr.Errors > 0 {
-		countParts = append(countParts, fmt.Sprintf("%d error%s", mr.Errors, pluralize(mr.Errors)))
+		countParts = append(countParts, fmt.Sprintf("%d error%s", mr.Errors, util.PluralS(mr.Errors)))
 	}
 	if mr.Warnings > 0 {
-		countParts = append(countParts, fmt.Sprintf("%d warning%s", mr.Warnings, pluralize(mr.Warnings)))
+		countParts = append(countParts, fmt.Sprintf("%d warning%s", mr.Warnings, util.PluralS(mr.Warnings)))
 	}
 	if len(countParts) > 0 {
 		_, _ = fmt.Fprintf(w, "**Total: %s**\n", strings.Join(countParts, ", "))
@@ -165,15 +166,15 @@ func PrintMultiMarkdown(w io.Writer, mr *skillcheck.MultiReport, perFile bool) e
 	return nil
 }
 
-func markdownLevelPrefix(level skillcheck.Level) string {
+func markdownLevelPrefix(level types.Level) string {
 	switch level {
-	case skillcheck.Pass:
+	case types.Pass:
 		return "**Pass:**"
-	case skillcheck.Info:
+	case types.Info:
 		return "**Info:**"
-	case skillcheck.Warning:
+	case types.Warning:
 		return "**Warning:**"
-	case skillcheck.Error:
+	case types.Error:
 		return "**Error:**"
 	default:
 		return ""
@@ -184,7 +185,7 @@ func printMarkdownContentReport(w io.Writer, title string, cr *content.Report) {
 	_, _ = fmt.Fprintf(w, "\n### %s\n\n", title)
 	_, _ = fmt.Fprintf(w, "| Metric | Value |\n")
 	_, _ = fmt.Fprintf(w, "| --- | ---: |\n")
-	_, _ = fmt.Fprintf(w, "| Word count | %s |\n", formatNumber(cr.WordCount))
+	_, _ = fmt.Fprintf(w, "| Word count | %s |\n", util.FormatNumber(cr.WordCount))
 	_, _ = fmt.Fprintf(w, "| Code block ratio | %.2f |\n", cr.CodeBlockRatio)
 	_, _ = fmt.Fprintf(w, "| Imperative ratio | %.2f |\n", cr.ImperativeRatio)
 	_, _ = fmt.Fprintf(w, "| Information density | %.2f |\n", cr.InformationDensity)
@@ -208,7 +209,7 @@ func printMarkdownContaminationReport(w io.Writer, title string, rr *contaminati
 	if rr.LanguageMismatch && len(rr.MismatchedCategories) > 0 {
 		_, _ = fmt.Fprintf(w, "\n- **Warning: Language mismatch:** %s (%d categor%s differ from primary)\n",
 			strings.Join(rr.MismatchedCategories, ", "),
-			len(rr.MismatchedCategories), ySuffix(len(rr.MismatchedCategories)))
+			len(rr.MismatchedCategories), util.YSuffix(len(rr.MismatchedCategories)))
 	}
 	if len(rr.MultiInterfaceTools) > 0 {
 		_, _ = fmt.Fprintf(w, "- **Multi-interface tool detected:** %s\n",

@@ -6,14 +6,14 @@ import (
 	"strings"
 
 	"github.com/dacharyc/skill-validator/skill"
-	"github.com/dacharyc/skill-validator/skillcheck"
+	"github.com/dacharyc/skill-validator/types"
 )
 
 var namePattern = regexp.MustCompile(`^[a-z0-9]+(-[a-z0-9]+)*$`)
 
-func CheckFrontmatter(s *skill.Skill) []skillcheck.Result {
-	ctx := skillcheck.ResultContext{Category: "Frontmatter", File: "SKILL.md"}
-	var results []skillcheck.Result
+func CheckFrontmatter(s *skill.Skill) []types.Result {
+	ctx := types.ResultContext{Category: "Frontmatter", File: "SKILL.md"}
+	var results []types.Result
 
 	// Check name
 	name := s.Frontmatter.Name
@@ -100,7 +100,7 @@ func CheckFrontmatter(s *skill.Skill) []skillcheck.Result {
 
 var quotedStringPattern = regexp.MustCompile(`"[^"]*"`)
 
-func checkDescriptionKeywordStuffing(ctx skillcheck.ResultContext, desc string) []skillcheck.Result {
+func checkDescriptionKeywordStuffing(ctx types.ResultContext, desc string) []types.Result {
 	// Heuristic 1: Many quoted strings with insufficient prose context suggest keyword stuffing.
 	// Descriptions that have substantial prose alongside quoted trigger lists are fine —
 	// the spec encourages keywords, and many good descriptions use a prose sentence
@@ -122,7 +122,7 @@ func checkDescriptionKeywordStuffing(ctx skillcheck.ResultContext, desc string) 
 		// If the prose (outside quotes) has fewer words than quoted strings,
 		// the description is dominated by keyword lists
 		if proseWordCount < len(quotes) {
-			return []skillcheck.Result{ctx.Warnf(
+			return []types.Result{ctx.Warnf(
 				"description contains %d quoted strings with little surrounding prose — "+
 					"this looks like keyword stuffing; per the spec, the description should "+
 					"concisely describe what the skill does and when to use it, not just list trigger phrases",
@@ -150,7 +150,7 @@ func checkDescriptionKeywordStuffing(ctx skillcheck.ResultContext, desc string) 
 			}
 		}
 		if shortCount*100/len(segments) >= 60 {
-			return []skillcheck.Result{ctx.Warnf(
+			return []types.Result{ctx.Warnf(
 				"description has %d comma-separated segments, most very short — "+
 					"this looks like a keyword list; per the spec, the description should "+
 					"concisely describe what the skill does and when to use it",

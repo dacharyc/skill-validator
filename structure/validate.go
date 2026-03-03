@@ -1,10 +1,9 @@
 package structure
 
 import (
-	"fmt"
-
 	"github.com/dacharyc/skill-validator/skill"
-	"github.com/dacharyc/skill-validator/skillcheck"
+	"github.com/dacharyc/skill-validator/types"
+	"github.com/dacharyc/skill-validator/util"
 )
 
 // Options configures which checks Validate runs.
@@ -13,8 +12,8 @@ type Options struct {
 }
 
 // ValidateMulti validates each directory and returns an aggregated report.
-func ValidateMulti(dirs []string, opts Options) *skillcheck.MultiReport {
-	mr := &skillcheck.MultiReport{}
+func ValidateMulti(dirs []string, opts Options) *types.MultiReport {
+	mr := &types.MultiReport{}
 	for _, dir := range dirs {
 		r := Validate(dir, opts)
 		mr.Skills = append(mr.Skills, r)
@@ -25,8 +24,8 @@ func ValidateMulti(dirs []string, opts Options) *skillcheck.MultiReport {
 }
 
 // Validate runs all checks against the skill in the given directory.
-func Validate(dir string, opts Options) *skillcheck.Report {
-	report := &skillcheck.Report{SkillDir: dir}
+func Validate(dir string, opts Options) *types.Report {
+	report := &types.Report{SkillDir: dir}
 
 	// Structure checks
 	structResults := CheckStructure(dir)
@@ -35,7 +34,7 @@ func Validate(dir string, opts Options) *skillcheck.Report {
 	// Check if SKILL.md was found; if not, skip further checks
 	hasSkillMD := false
 	for _, r := range structResults {
-		if r.Level == skillcheck.Pass && r.Message == "SKILL.md found" {
+		if r.Level == types.Pass && r.Message == "SKILL.md found" {
 			hasSkillMD = true
 			break
 		}
@@ -49,7 +48,7 @@ func Validate(dir string, opts Options) *skillcheck.Report {
 	s, err := skill.Load(dir)
 	if err != nil {
 		report.Results = append(report.Results,
-			skillcheck.ResultContext{Category: "Frontmatter", File: "SKILL.md"}.Error(err.Error()))
+			types.ResultContext{Category: "Frontmatter", File: "SKILL.md"}.Error(err.Error()))
 		report.Tally()
 		return report
 	}
@@ -81,8 +80,8 @@ func Validate(dir string, opts Options) *skillcheck.Report {
 	return report
 }
 
-func checkSkillRatio(standard, other []skillcheck.TokenCount) []skillcheck.Result {
-	ctx := skillcheck.ResultContext{Category: "Overall"}
+func checkSkillRatio(standard, other []types.TokenCount) []types.Result {
+	ctx := types.ResultContext{Category: "Overall"}
 	standardTotal := 0
 	for _, tc := range standard {
 		standardTotal += tc.Tokens
@@ -93,31 +92,16 @@ func checkSkillRatio(standard, other []skillcheck.TokenCount) []skillcheck.Resul
 	}
 
 	if otherTotal > 25_000 && standardTotal > 0 && otherTotal > standardTotal*10 {
-		return []skillcheck.Result{ctx.Errorf(
+		return []types.Result{ctx.Errorf(
 			"this content doesn't appear to be structured as a skill — "+
 				"there are %s tokens of non-standard content but only %s tokens in the "+
 				"standard skill structure (SKILL.md + references). This ratio suggests a "+
 				"build pipeline issue or content that belongs in a different format, not a skill. "+
 				"Per the spec, a skill should contain a focused SKILL.md with optional references, "+
 				"scripts, and assets.",
-			formatTokenCount(otherTotal), formatTokenCount(standardTotal),
+			util.FormatNumber(otherTotal), util.FormatNumber(standardTotal),
 		)}
 	}
 
 	return nil
-}
-
-func formatTokenCount(n int) string {
-	s := fmt.Sprintf("%d", n)
-	if n < 1000 {
-		return s
-	}
-	var result []byte
-	for i, c := range s {
-		if i > 0 && (len(s)-i)%3 == 0 {
-			result = append(result, ',')
-		}
-		result = append(result, byte(c))
-	}
-	return string(result)
 }

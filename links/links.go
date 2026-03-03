@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/dacharyc/skill-validator/skillcheck"
+	"github.com/dacharyc/skill-validator/types"
 )
 
 var (
@@ -23,19 +23,19 @@ var (
 
 type linkResult struct {
 	url    string
-	result skillcheck.Result
+	result types.Result
 }
 
 // CheckLinks validates external (HTTP/HTTPS) links in the skill body.
-func CheckLinks(dir, body string) []skillcheck.Result {
-	ctx := skillcheck.ResultContext{Category: "Links", File: "SKILL.md"}
+func CheckLinks(dir, body string) []types.Result {
+	ctx := types.ResultContext{Category: "Links", File: "SKILL.md"}
 	allLinks := ExtractLinks(body)
 	if len(allLinks) == 0 {
 		return nil
 	}
 
 	var (
-		results   []skillcheck.Result
+		results   []types.Result
 		httpLinks []string
 		mu        sync.Mutex
 		wg        sync.WaitGroup
@@ -149,7 +149,7 @@ func trimTrailingDelimiters(url string) string {
 	return url
 }
 
-func checkHTTPLink(ctx skillcheck.ResultContext, url string) skillcheck.Result {
+func checkHTTPLink(ctx types.ResultContext, url string) types.Result {
 	client := &http.Client{
 		Timeout: 10 * time.Second,
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {

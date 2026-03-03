@@ -4,63 +4,18 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/dacharyc/skill-validator/skill"
+	"github.com/dacharyc/skill-validator/types"
 )
-
-func TestLevelString(t *testing.T) {
-	tests := []struct {
-		level Level
-		want  string
-	}{
-		{Pass, "pass"},
-		{Info, "info"},
-		{Warning, "warning"},
-		{Error, "error"},
-		{Level(99), "unknown"},
-	}
-	for _, tt := range tests {
-		if got := tt.level.String(); got != tt.want {
-			t.Errorf("Level(%d).String() = %q, want %q", tt.level, got, tt.want)
-		}
-	}
-}
-
-func TestTally(t *testing.T) {
-	r := &Report{
-		Results: []Result{
-			{Level: Pass, Category: "A", Message: "ok"},
-			{Level: Error, Category: "B", Message: "bad"},
-			{Level: Warning, Category: "C", Message: "meh"},
-			{Level: Error, Category: "D", Message: "also bad"},
-			{Level: Info, Category: "E", Message: "fyi"},
-		},
-	}
-	r.Tally()
-	if r.Errors != 2 {
-		t.Errorf("Errors = %d, want 2", r.Errors)
-	}
-	if r.Warnings != 1 {
-		t.Errorf("Warnings = %d, want 1", r.Warnings)
-	}
-}
-
-func TestTally_Empty(t *testing.T) {
-	r := &Report{Errors: 5, Warnings: 3}
-	r.Tally()
-	if r.Errors != 0 {
-		t.Errorf("Errors = %d, want 0", r.Errors)
-	}
-	if r.Warnings != 0 {
-		t.Errorf("Warnings = %d, want 0", r.Warnings)
-	}
-}
 
 func TestLoadSkill(t *testing.T) {
 	dir := t.TempDir()
 	writeSkill(t, dir, "---\nname: test-skill\ndescription: A test\n---\n# Hello\n")
 
-	s, err := LoadSkill(dir)
+	s, err := skill.Load(dir)
 	if err != nil {
-		t.Fatalf("LoadSkill error: %v", err)
+		t.Fatalf("skill.Load error: %v", err)
 	}
 	if s.Frontmatter.Name != "test-skill" {
 		t.Errorf("Name = %q, want test-skill", s.Frontmatter.Name)
@@ -69,7 +24,7 @@ func TestLoadSkill(t *testing.T) {
 
 func TestLoadSkill_Missing(t *testing.T) {
 	dir := t.TempDir()
-	_, err := LoadSkill(dir)
+	_, err := skill.Load(dir)
 	if err == nil {
 		t.Error("expected error for missing SKILL.md")
 	}
@@ -176,7 +131,7 @@ func TestAnalyzeReferences_WithFiles(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	rpt := &Report{SkillDir: dir}
+	rpt := &types.Report{SkillDir: dir}
 	AnalyzeReferences(dir, rpt)
 
 	if rpt.ReferencesContentReport == nil {
@@ -207,7 +162,7 @@ func TestAnalyzeReferences_WithFiles(t *testing.T) {
 
 func TestAnalyzeReferences_NoFiles(t *testing.T) {
 	dir := t.TempDir()
-	rpt := &Report{SkillDir: dir}
+	rpt := &types.Report{SkillDir: dir}
 	AnalyzeReferences(dir, rpt)
 
 	if rpt.ReferencesContentReport != nil {
@@ -237,7 +192,7 @@ func TestDetectSkills(t *testing.T) {
 		dir := t.TempDir()
 		writeSkill(t, dir, "---\nname: test\n---\n")
 		mode, dirs := DetectSkills(dir)
-		if mode != SingleSkill {
+		if mode != types.SingleSkill {
 			t.Errorf("expected SingleSkill, got %d", mode)
 		}
 		if len(dirs) != 1 || dirs[0] != dir {
@@ -250,7 +205,7 @@ func TestDetectSkills(t *testing.T) {
 		writeSkill(t, filepath.Join(dir, "alpha"), "---\nname: alpha\n---\n")
 		writeSkill(t, filepath.Join(dir, "beta"), "---\nname: beta\n---\n")
 		mode, dirs := DetectSkills(dir)
-		if mode != MultiSkill {
+		if mode != types.MultiSkill {
 			t.Errorf("expected MultiSkill, got %d", mode)
 		}
 		if len(dirs) != 2 {
@@ -265,7 +220,7 @@ func TestDetectSkills(t *testing.T) {
 	t.Run("no skills", func(t *testing.T) {
 		dir := t.TempDir()
 		mode, dirs := DetectSkills(dir)
-		if mode != NoSkill {
+		if mode != types.NoSkill {
 			t.Errorf("expected NoSkill, got %d", mode)
 		}
 		if dirs != nil {
@@ -279,7 +234,7 @@ func TestDetectSkills(t *testing.T) {
 		writeSkill(t, dir, "---\nname: root\n---\n")
 		writeSkill(t, filepath.Join(dir, "sub"), "---\nname: sub\n---\n")
 		mode, dirs := DetectSkills(dir)
-		if mode != SingleSkill {
+		if mode != types.SingleSkill {
 			t.Errorf("expected SingleSkill (root precedence), got %d", mode)
 		}
 		if len(dirs) != 1 || dirs[0] != dir {
@@ -292,7 +247,7 @@ func TestDetectSkills(t *testing.T) {
 		writeSkill(t, filepath.Join(dir, ".hidden"), "---\nname: hidden\n---\n")
 		writeSkill(t, filepath.Join(dir, "visible"), "---\nname: visible\n---\n")
 		mode, dirs := DetectSkills(dir)
-		if mode != MultiSkill {
+		if mode != types.MultiSkill {
 			t.Errorf("expected MultiSkill, got %d", mode)
 		}
 		if len(dirs) != 1 {
@@ -311,7 +266,7 @@ func TestDetectSkills(t *testing.T) {
 		}
 		writeSkill(t, filepath.Join(dir, "has-skill"), "---\nname: has-skill\n---\n")
 		mode, dirs := DetectSkills(dir)
-		if mode != MultiSkill {
+		if mode != types.MultiSkill {
 			t.Errorf("expected MultiSkill, got %d", mode)
 		}
 		if len(dirs) != 1 {
@@ -336,7 +291,7 @@ func TestDetectSkills(t *testing.T) {
 			t.Fatal(err)
 		}
 		mode, dirs := DetectSkills(parent)
-		if mode != MultiSkill {
+		if mode != types.MultiSkill {
 			t.Errorf("expected MultiSkill, got %d", mode)
 		}
 		if len(dirs) != 1 {

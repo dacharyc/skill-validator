@@ -3,8 +3,8 @@ package cmd
 import (
 	"github.com/spf13/cobra"
 
-	"github.com/dacharyc/skill-validator/skillcheck"
 	"github.com/dacharyc/skill-validator/structure"
+	"github.com/dacharyc/skill-validator/types"
 )
 
 var (
@@ -37,10 +37,10 @@ func runValidateStructure(cmd *cobra.Command, args []string) error {
 	eopts := exitOpts{strict: strictStructure}
 
 	switch mode {
-	case skillcheck.SingleSkill:
+	case types.SingleSkill:
 		r := structure.Validate(dirs[0], opts)
 		return outputReportWithExitOpts(r, false, eopts)
-	case skillcheck.MultiSkill:
+	case types.MultiSkill:
 		mr := structure.ValidateMulti(dirs, opts)
 		return outputMultiReportWithExitOpts(mr, false, eopts)
 	}

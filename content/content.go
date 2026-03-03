@@ -1,9 +1,10 @@
 package content
 
 import (
-	"math"
 	"regexp"
 	"strings"
+
+	"github.com/dacharyc/skill-validator/util"
 )
 
 // Strong directive language markers
@@ -126,15 +127,15 @@ func Analyze(content string) *Report {
 	return &Report{
 		WordCount:              wordCount,
 		CodeBlockCount:         codeBlockCount,
-		CodeBlockRatio:         roundTo(codeBlockRatio, 4),
+		CodeBlockRatio:         util.RoundTo(codeBlockRatio, 4),
 		CodeLanguages:          codeLanguages,
 		SentenceCount:          sentenceCount,
 		ImperativeCount:        imperativeCount,
-		ImperativeRatio:        roundTo(imperativeRatio, 4),
-		InformationDensity:     roundTo(informationDensity, 4),
+		ImperativeRatio:        util.RoundTo(imperativeRatio, 4),
+		InformationDensity:     util.RoundTo(informationDensity, 4),
 		StrongMarkers:          strongCount,
 		WeakMarkers:            weakCount,
-		InstructionSpecificity: roundTo(instructionSpecificity, 4),
+		InstructionSpecificity: util.RoundTo(instructionSpecificity, 4),
 		SectionCount:           sectionCount,
 		ListItemCount:          listItemCount,
 	}
@@ -182,9 +183,4 @@ func countMarkerMatches(text string, patterns []string) int {
 		total += len(re.FindAllString(textLower, -1))
 	}
 	return total
-}
-
-func roundTo(val float64, places int) float64 {
-	pow := math.Pow(10, float64(places))
-	return math.Round(val*pow) / pow
 }

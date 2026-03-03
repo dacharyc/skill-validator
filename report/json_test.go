@@ -7,15 +7,15 @@ import (
 
 	"github.com/dacharyc/skill-validator/contamination"
 	"github.com/dacharyc/skill-validator/content"
-	"github.com/dacharyc/skill-validator/skillcheck"
+	"github.com/dacharyc/skill-validator/types"
 )
 
 func TestPrintJSON_Passed(t *testing.T) {
-	r := &skillcheck.Report{
+	r := &types.Report{
 		SkillDir: "/tmp/my-skill",
-		Results: []skillcheck.Result{
-			{Level: skillcheck.Pass, Category: "Structure", Message: "SKILL.md found"},
-			{Level: skillcheck.Pass, Category: "Frontmatter", Message: `name: "my-skill" (valid)`},
+		Results: []types.Result{
+			{Level: types.Pass, Category: "Structure", Message: "SKILL.md found"},
+			{Level: types.Pass, Category: "Frontmatter", Message: `name: "my-skill" (valid)`},
 		},
 		Errors:   0,
 		Warnings: 0,
@@ -59,12 +59,12 @@ func TestPrintJSON_Passed(t *testing.T) {
 }
 
 func TestPrintJSON_Failed(t *testing.T) {
-	r := &skillcheck.Report{
+	r := &types.Report{
 		SkillDir: "/tmp/bad-skill",
-		Results: []skillcheck.Result{
-			{Level: skillcheck.Pass, Category: "Structure", Message: "SKILL.md found"},
-			{Level: skillcheck.Error, Category: "Frontmatter", Message: "name is required"},
-			{Level: skillcheck.Warning, Category: "Structure", Message: "unknown directory: extras/"},
+		Results: []types.Result{
+			{Level: types.Pass, Category: "Structure", Message: "SKILL.md found"},
+			{Level: types.Error, Category: "Frontmatter", Message: "name is required"},
+			{Level: types.Warning, Category: "Structure", Message: "unknown directory: extras/"},
 		},
 		Errors:   1,
 		Warnings: 1,
@@ -102,13 +102,13 @@ func TestPrintJSON_Failed(t *testing.T) {
 }
 
 func TestPrintJSON_LevelStrings(t *testing.T) {
-	r := &skillcheck.Report{
+	r := &types.Report{
 		SkillDir: "/tmp/test",
-		Results: []skillcheck.Result{
-			{Level: skillcheck.Pass, Category: "A", Message: "p"},
-			{Level: skillcheck.Info, Category: "A", Message: "i"},
-			{Level: skillcheck.Warning, Category: "A", Message: "w"},
-			{Level: skillcheck.Error, Category: "A", Message: "e"},
+		Results: []types.Result{
+			{Level: types.Pass, Category: "A", Message: "p"},
+			{Level: types.Info, Category: "A", Message: "i"},
+			{Level: types.Warning, Category: "A", Message: "w"},
+			{Level: types.Error, Category: "A", Message: "e"},
 		},
 		Errors:   1,
 		Warnings: 1,
@@ -135,10 +135,10 @@ func TestPrintJSON_LevelStrings(t *testing.T) {
 }
 
 func TestPrintJSON_TokenCounts(t *testing.T) {
-	r := &skillcheck.Report{
+	r := &types.Report{
 		SkillDir: "/tmp/test",
-		Results:  []skillcheck.Result{},
-		TokenCounts: []skillcheck.TokenCount{
+		Results:  []types.Result{},
+		TokenCounts: []types.TokenCount{
 			{File: "SKILL.md body", Tokens: 1250},
 			{File: "references/guide.md", Tokens: 820},
 		},
@@ -173,10 +173,10 @@ func TestPrintJSON_TokenCounts(t *testing.T) {
 }
 
 func TestPrintJSON_NoTokenCounts(t *testing.T) {
-	r := &skillcheck.Report{
+	r := &types.Report{
 		SkillDir: "/tmp/test",
-		Results: []skillcheck.Result{
-			{Level: skillcheck.Error, Category: "Structure", Message: "SKILL.md not found"},
+		Results: []types.Result{
+			{Level: types.Error, Category: "Structure", Message: "SKILL.md not found"},
 		},
 		Errors: 1,
 	}
@@ -200,13 +200,13 @@ func TestPrintJSON_NoTokenCounts(t *testing.T) {
 }
 
 func TestPrintJSON_OtherTokenCounts(t *testing.T) {
-	r := &skillcheck.Report{
+	r := &types.Report{
 		SkillDir: "/tmp/test",
-		Results:  []skillcheck.Result{},
-		TokenCounts: []skillcheck.TokenCount{
+		Results:  []types.Result{},
+		TokenCounts: []types.TokenCount{
 			{File: "SKILL.md body", Tokens: 1250},
 		},
-		OtherTokenCounts: []skillcheck.TokenCount{
+		OtherTokenCounts: []types.TokenCount{
 			{File: "AGENTS.md", Tokens: 45000},
 			{File: "rules/rule1.md", Tokens: 850},
 		},
@@ -234,10 +234,10 @@ func TestPrintJSON_OtherTokenCounts(t *testing.T) {
 }
 
 func TestPrintJSON_SpecialCharacters(t *testing.T) {
-	r := &skillcheck.Report{
+	r := &types.Report{
 		SkillDir: "/tmp/test",
-		Results: []skillcheck.Result{
-			{Level: skillcheck.Error, Category: "Frontmatter", Message: `field contains "quotes" and <angle> & ampersand`},
+		Results: []types.Result{
+			{Level: types.Error, Category: "Frontmatter", Message: `field contains "quotes" and <angle> & ampersand`},
 		},
 		Errors: 1,
 	}
@@ -262,15 +262,15 @@ func TestPrintJSON_SpecialCharacters(t *testing.T) {
 }
 
 func TestPrintMultiJSON_AllPassed(t *testing.T) {
-	mr := &skillcheck.MultiReport{
-		Skills: []*skillcheck.Report{
+	mr := &types.MultiReport{
+		Skills: []*types.Report{
 			{
 				SkillDir: "/tmp/alpha",
-				Results:  []skillcheck.Result{{Level: skillcheck.Pass, Category: "Structure", Message: "ok"}},
+				Results:  []types.Result{{Level: types.Pass, Category: "Structure", Message: "ok"}},
 			},
 			{
 				SkillDir: "/tmp/beta",
-				Results:  []skillcheck.Result{{Level: skillcheck.Pass, Category: "Structure", Message: "ok"}},
+				Results:  []types.Result{{Level: types.Pass, Category: "Structure", Message: "ok"}},
 			},
 		},
 	}
@@ -310,17 +310,17 @@ func TestPrintMultiJSON_AllPassed(t *testing.T) {
 }
 
 func TestPrintMultiJSON_SomeFailed(t *testing.T) {
-	mr := &skillcheck.MultiReport{
-		Skills: []*skillcheck.Report{
+	mr := &types.MultiReport{
+		Skills: []*types.Report{
 			{
 				SkillDir: "/tmp/good",
-				Results:  []skillcheck.Result{{Level: skillcheck.Pass, Category: "Structure", Message: "ok"}},
+				Results:  []types.Result{{Level: types.Pass, Category: "Structure", Message: "ok"}},
 			},
 			{
 				SkillDir: "/tmp/bad",
-				Results: []skillcheck.Result{
-					{Level: skillcheck.Error, Category: "Frontmatter", Message: "name is required"},
-					{Level: skillcheck.Warning, Category: "Structure", Message: "unknown dir"},
+				Results: []types.Result{
+					{Level: types.Error, Category: "Frontmatter", Message: "name is required"},
+					{Level: types.Warning, Category: "Structure", Message: "unknown dir"},
 				},
 				Errors:   1,
 				Warnings: 1,
@@ -358,12 +358,12 @@ func TestPrintMultiJSON_SomeFailed(t *testing.T) {
 }
 
 func TestPrintMultiJSON_IncludesTokenCounts(t *testing.T) {
-	mr := &skillcheck.MultiReport{
-		Skills: []*skillcheck.Report{
+	mr := &types.MultiReport{
+		Skills: []*types.Report{
 			{
 				SkillDir: "/tmp/with-tokens",
-				Results:  []skillcheck.Result{{Level: skillcheck.Pass, Category: "Structure", Message: "ok"}},
-				TokenCounts: []skillcheck.TokenCount{
+				Results:  []types.Result{{Level: types.Pass, Category: "Structure", Message: "ok"}},
+				TokenCounts: []types.TokenCount{
 					{File: "SKILL.md body", Tokens: 500},
 					{File: "references/ref.md", Tokens: 300},
 				},
@@ -394,9 +394,9 @@ func TestPrintMultiJSON_IncludesTokenCounts(t *testing.T) {
 }
 
 func TestPrintJSON_ContaminationAnalysis(t *testing.T) {
-	r := &skillcheck.Report{
+	r := &types.Report{
 		SkillDir: "/tmp/test",
-		Results:  []skillcheck.Result{},
+		Results:  []types.Result{},
 		ContaminationReport: &contamination.Report{
 			MultiInterfaceTools:  []string{"mongodb"},
 			CodeLanguages:        []string{"python", "javascript", "bash"},
@@ -454,9 +454,9 @@ func TestPrintJSON_ContaminationAnalysis(t *testing.T) {
 }
 
 func TestPrintJSON_NoContaminationAnalysis(t *testing.T) {
-	r := &skillcheck.Report{
+	r := &types.Report{
 		SkillDir: "/tmp/test",
-		Results:  []skillcheck.Result{},
+		Results:  []types.Result{},
 	}
 
 	var buf bytes.Buffer
@@ -475,9 +475,9 @@ func TestPrintJSON_NoContaminationAnalysis(t *testing.T) {
 }
 
 func TestPrintJSON_ContentAnalysis(t *testing.T) {
-	r := &skillcheck.Report{
+	r := &types.Report{
 		SkillDir: "/tmp/test",
-		Results:  []skillcheck.Result{},
+		Results:  []types.Result{},
 		ContentReport: &content.Report{
 			WordCount:              500,
 			CodeBlockCount:         3,
@@ -530,9 +530,9 @@ func TestPrintJSON_ContentAnalysis(t *testing.T) {
 }
 
 func TestPrintJSON_NoContentAnalysis(t *testing.T) {
-	r := &skillcheck.Report{
+	r := &types.Report{
 		SkillDir: "/tmp/test",
-		Results:  []skillcheck.Result{},
+		Results:  []types.Result{},
 	}
 
 	var buf bytes.Buffer
@@ -551,11 +551,11 @@ func TestPrintJSON_NoContentAnalysis(t *testing.T) {
 }
 
 func TestPrintMultiJSON_WithContamination(t *testing.T) {
-	mr := &skillcheck.MultiReport{
-		Skills: []*skillcheck.Report{
+	mr := &types.MultiReport{
+		Skills: []*types.Report{
 			{
 				SkillDir: "/tmp/skill-a",
-				Results:  []skillcheck.Result{{Level: skillcheck.Pass, Category: "Structure", Message: "ok"}},
+				Results:  []types.Result{{Level: types.Pass, Category: "Structure", Message: "ok"}},
 				ContaminationReport: &contamination.Report{
 					ContaminationLevel: "low",
 					ContaminationScore: 0.0,
@@ -564,7 +564,7 @@ func TestPrintMultiJSON_WithContamination(t *testing.T) {
 			},
 			{
 				SkillDir: "/tmp/skill-b",
-				Results:  []skillcheck.Result{{Level: skillcheck.Pass, Category: "Structure", Message: "ok"}},
+				Results:  []types.Result{{Level: types.Pass, Category: "Structure", Message: "ok"}},
 				ContaminationReport: &contamination.Report{
 					ContaminationLevel: "high",
 					ContaminationScore: 0.6,

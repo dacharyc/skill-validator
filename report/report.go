@@ -7,24 +7,26 @@ import (
 
 	"github.com/dacharyc/skill-validator/contamination"
 	"github.com/dacharyc/skill-validator/content"
-	"github.com/dacharyc/skill-validator/skillcheck"
+	"github.com/dacharyc/skill-validator/types"
+	"github.com/dacharyc/skill-validator/util"
 )
 
+// Shorthand aliases for color constants to keep format strings compact.
 const (
-	colorReset  = "\033[0m"
-	colorRed    = "\033[31m"
-	colorGreen  = "\033[32m"
-	colorYellow = "\033[33m"
-	colorCyan   = "\033[36m"
-	colorBold   = "\033[1m"
+	colorReset  = util.ColorReset
+	colorRed    = util.ColorRed
+	colorGreen  = util.ColorGreen
+	colorYellow = util.ColorYellow
+	colorCyan   = util.ColorCyan
+	colorBold   = util.ColorBold
 )
 
-func Print(w io.Writer, r *skillcheck.Report, perFile bool) {
+func Print(w io.Writer, r *types.Report, perFile bool) {
 	_, _ = fmt.Fprintf(w, "\n%sValidating skill: %s%s\n", colorBold, r.SkillDir, colorReset)
 
 	// Group results by category, preserving order of first appearance
 	var categories []string
-	grouped := make(map[string][]skillcheck.Result)
+	grouped := make(map[string][]types.Result)
 	for _, res := range r.Results {
 		if _, exists := grouped[res.Category]; !exists {
 			categories = append(categories, res.Category)
@@ -55,13 +57,13 @@ func Print(w io.Writer, r *skillcheck.Report, perFile bool) {
 		for _, tc := range r.TokenCounts {
 			total += tc.Tokens
 			padding := maxFileLen - len(tc.File) + 2
-			_, _ = fmt.Fprintf(w, "  %s%s:%s%s%s tokens\n", colorCyan, tc.File, colorReset, strings.Repeat(" ", padding), formatNumber(tc.Tokens))
+			_, _ = fmt.Fprintf(w, "  %s%s:%s%s%s tokens\n", colorCyan, tc.File, colorReset, strings.Repeat(" ", padding), util.FormatNumber(tc.Tokens))
 		}
 
 		separator := strings.Repeat("─", maxFileLen+20)
 		_, _ = fmt.Fprintf(w, "  %s\n", separator)
 		padding := maxFileLen - len("Total") + 2
-		_, _ = fmt.Fprintf(w, "  %sTotal:%s%s%s tokens\n", colorBold, colorReset, strings.Repeat(" ", padding), formatNumber(total))
+		_, _ = fmt.Fprintf(w, "  %sTotal:%s%s%s tokens\n", colorBold, colorReset, strings.Repeat(" ", padding), util.FormatNumber(total))
 	}
 
 	// Other files token counts
@@ -88,7 +90,7 @@ func Print(w io.Writer, r *skillcheck.Report, perFile bool) {
 				countColor = colorYellow
 				countColorEnd = colorReset
 			}
-			_, _ = fmt.Fprintf(w, "  %s%s:%s%s%s%s tokens%s\n", colorCyan, tc.File, colorReset, strings.Repeat(" ", padding), countColor, formatNumber(tc.Tokens), countColorEnd)
+			_, _ = fmt.Fprintf(w, "  %s%s:%s%s%s%s tokens%s\n", colorCyan, tc.File, colorReset, strings.Repeat(" ", padding), countColor, util.FormatNumber(tc.Tokens), countColorEnd)
 		}
 
 		separator := strings.Repeat("─", maxFileLen+20)
@@ -104,7 +106,7 @@ func Print(w io.Writer, r *skillcheck.Report, perFile bool) {
 			totalColor = colorYellow
 			totalColorEnd = colorReset
 		}
-		_, _ = fmt.Fprintf(w, "  %s%s:%s%s%s%s tokens%s\n", colorBold, label, colorReset, strings.Repeat(" ", padding), totalColor, formatNumber(total), totalColorEnd)
+		_, _ = fmt.Fprintf(w, "  %s%s:%s%s%s%s tokens%s\n", colorBold, label, colorReset, strings.Repeat(" ", padding), totalColor, util.FormatNumber(total), totalColorEnd)
 	}
 
 	// Content analysis
@@ -152,10 +154,10 @@ func Print(w io.Writer, r *skillcheck.Report, perFile bool) {
 	} else {
 		parts := []string{}
 		if r.Errors > 0 {
-			parts = append(parts, fmt.Sprintf("%s%d error%s%s", colorRed, r.Errors, pluralize(r.Errors), colorReset))
+			parts = append(parts, fmt.Sprintf("%s%d error%s%s", colorRed, r.Errors, util.PluralS(r.Errors), colorReset))
 		}
 		if r.Warnings > 0 {
-			parts = append(parts, fmt.Sprintf("%s%d warning%s%s", colorYellow, r.Warnings, pluralize(r.Warnings), colorReset))
+			parts = append(parts, fmt.Sprintf("%s%d warning%s%s", colorYellow, r.Warnings, util.PluralS(r.Warnings), colorReset))
 		}
 		_, _ = fmt.Fprintf(w, "%sResult: %s%s\n", colorBold, strings.Join(parts, ", "), colorReset)
 	}
@@ -163,7 +165,7 @@ func Print(w io.Writer, r *skillcheck.Report, perFile bool) {
 }
 
 // PrintMulti prints each skill report separated by a line, with an overall summary.
-func PrintMulti(w io.Writer, mr *skillcheck.MultiReport, perFile bool) {
+func PrintMulti(w io.Writer, mr *types.MultiReport, perFile bool) {
 	for i, r := range mr.Skills {
 		if i > 0 {
 			_, _ = fmt.Fprintf(w, "\n%s\n", strings.Repeat("━", 60))
@@ -182,7 +184,7 @@ func PrintMulti(w io.Writer, mr *skillcheck.MultiReport, perFile bool) {
 	}
 
 	_, _ = fmt.Fprintf(w, "%s\n", strings.Repeat("━", 60))
-	_, _ = fmt.Fprintf(w, "\n%s%d skill%s validated: ", colorBold, len(mr.Skills), pluralize(len(mr.Skills)))
+	_, _ = fmt.Fprintf(w, "\n%s%d skill%s validated: ", colorBold, len(mr.Skills), util.PluralS(len(mr.Skills)))
 	if failed == 0 {
 		_, _ = fmt.Fprintf(w, "%sall passed%s\n", colorGreen, colorReset)
 	} else {
@@ -196,10 +198,10 @@ func PrintMulti(w io.Writer, mr *skillcheck.MultiReport, perFile bool) {
 
 	countParts := []string{}
 	if mr.Errors > 0 {
-		countParts = append(countParts, fmt.Sprintf("%s%d error%s%s", colorRed, mr.Errors, pluralize(mr.Errors), colorReset))
+		countParts = append(countParts, fmt.Sprintf("%s%d error%s%s", colorRed, mr.Errors, util.PluralS(mr.Errors), colorReset))
 	}
 	if mr.Warnings > 0 {
-		countParts = append(countParts, fmt.Sprintf("%s%d warning%s%s", colorYellow, mr.Warnings, pluralize(mr.Warnings), colorReset))
+		countParts = append(countParts, fmt.Sprintf("%s%d warning%s%s", colorYellow, mr.Warnings, util.PluralS(mr.Warnings), colorReset))
 	}
 	if len(countParts) > 0 {
 		_, _ = fmt.Fprintf(w, "%sTotal: %s%s\n", colorBold, strings.Join(countParts, ", "), colorReset)
@@ -209,7 +211,7 @@ func PrintMulti(w io.Writer, mr *skillcheck.MultiReport, perFile bool) {
 
 func printContentReport(w io.Writer, title string, cr *content.Report) {
 	_, _ = fmt.Fprintf(w, "\n%s%s%s\n", colorBold, title, colorReset)
-	_, _ = fmt.Fprintf(w, "  Word count:               %s\n", formatNumber(cr.WordCount))
+	_, _ = fmt.Fprintf(w, "  Word count:               %s\n", util.FormatNumber(cr.WordCount))
 	_, _ = fmt.Fprintf(w, "  Code block ratio:         %.2f\n", cr.CodeBlockRatio)
 	_, _ = fmt.Fprintf(w, "  Imperative ratio:         %.2f\n", cr.ImperativeRatio)
 	_, _ = fmt.Fprintf(w, "  Information density:      %.2f\n", cr.InformationDensity)
@@ -234,7 +236,7 @@ func printContaminationReport(w io.Writer, title string, rr *contamination.Repor
 	if rr.LanguageMismatch && len(rr.MismatchedCategories) > 0 {
 		_, _ = fmt.Fprintf(w, "  %s⚠ Language mismatch: %s (%d categor%s differ from primary)%s\n",
 			colorYellow, strings.Join(rr.MismatchedCategories, ", "),
-			len(rr.MismatchedCategories), ySuffix(len(rr.MismatchedCategories)), colorReset)
+			len(rr.MismatchedCategories), util.YSuffix(len(rr.MismatchedCategories)), colorReset)
 	}
 	if len(rr.MultiInterfaceTools) > 0 {
 		_, _ = fmt.Fprintf(w, "  %sℹ Multi-interface tool detected: %s%s\n",
@@ -243,47 +245,17 @@ func printContaminationReport(w io.Writer, title string, rr *contamination.Repor
 	_, _ = fmt.Fprintf(w, "  Scope breadth: %d\n", rr.ScopeBreadth)
 }
 
-func formatLevel(level skillcheck.Level) (string, string) {
+func formatLevel(level types.Level) (string, string) {
 	switch level {
-	case skillcheck.Pass:
+	case types.Pass:
 		return "✓", colorGreen
-	case skillcheck.Info:
+	case types.Info:
 		return "ℹ", colorCyan
-	case skillcheck.Warning:
+	case types.Warning:
 		return "⚠", colorYellow
-	case skillcheck.Error:
+	case types.Error:
 		return "✗", colorRed
 	default:
 		return "?", colorReset
 	}
-}
-
-func formatNumber(n int) string {
-	s := fmt.Sprintf("%d", n)
-	if n < 1000 {
-		return s
-	}
-	// Insert commas
-	var result []byte
-	for i, c := range s {
-		if i > 0 && (len(s)-i)%3 == 0 {
-			result = append(result, ',')
-		}
-		result = append(result, byte(c))
-	}
-	return string(result)
-}
-
-func pluralize(n int) string {
-	if n == 1 {
-		return ""
-	}
-	return "s"
-}
-
-func ySuffix(n int) string {
-	if n == 1 {
-		return "y"
-	}
-	return "ies"
 }

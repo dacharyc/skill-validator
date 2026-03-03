@@ -3,7 +3,7 @@ package structure
 import (
 	"testing"
 
-	"github.com/dacharyc/skill-validator/skillcheck"
+	"github.com/dacharyc/skill-validator/types"
 )
 
 func TestFindUnclosedFence(t *testing.T) {
@@ -139,34 +139,34 @@ func TestCheckMarkdown(t *testing.T) {
 		dir := t.TempDir()
 		writeFile(t, dir, "references/guide.md", "# Guide\n```go\nfmt.Println()\n```\n")
 		results := CheckMarkdown(dir, "# Body\nSome text.")
-		requireNoLevel(t, results, skillcheck.Error)
+		requireNoLevel(t, results, types.Error)
 	})
 
 	t.Run("unclosed fence in body", func(t *testing.T) {
 		dir := t.TempDir()
 		results := CheckMarkdown(dir, "# Body\n```\ncode without closing")
-		requireResultContaining(t, results, skillcheck.Error, "SKILL.md has an unclosed code fence")
-		requireResultContaining(t, results, skillcheck.Error, "line 2")
+		requireResultContaining(t, results, types.Error, "SKILL.md has an unclosed code fence")
+		requireResultContaining(t, results, types.Error, "line 2")
 	})
 
 	t.Run("unclosed fence in reference", func(t *testing.T) {
 		dir := t.TempDir()
 		writeFile(t, dir, "references/broken.md", "# Ref\n```\nunclosed")
 		results := CheckMarkdown(dir, "Clean body.")
-		requireResultContaining(t, results, skillcheck.Error, "references/broken.md has an unclosed code fence")
+		requireResultContaining(t, results, types.Error, "references/broken.md has an unclosed code fence")
 	})
 
 	t.Run("skips non-md reference files", func(t *testing.T) {
 		dir := t.TempDir()
 		writeFile(t, dir, "references/data.json", "```not markdown")
 		results := CheckMarkdown(dir, "Clean body.")
-		requireNoLevel(t, results, skillcheck.Error)
+		requireNoLevel(t, results, types.Error)
 	})
 
 	t.Run("skips hidden reference files", func(t *testing.T) {
 		dir := t.TempDir()
 		writeFile(t, dir, "references/.hidden.md", "```unclosed")
 		results := CheckMarkdown(dir, "Clean body.")
-		requireNoLevel(t, results, skillcheck.Error)
+		requireNoLevel(t, results, types.Error)
 	})
 }

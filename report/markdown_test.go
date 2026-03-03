@@ -7,15 +7,15 @@ import (
 
 	"github.com/dacharyc/skill-validator/contamination"
 	"github.com/dacharyc/skill-validator/content"
-	"github.com/dacharyc/skill-validator/skillcheck"
+	"github.com/dacharyc/skill-validator/types"
 )
 
 func TestPrintMarkdown_Passed(t *testing.T) {
-	r := &skillcheck.Report{
+	r := &types.Report{
 		SkillDir: "/tmp/my-skill",
-		Results: []skillcheck.Result{
-			{Level: skillcheck.Pass, Category: "Structure", Message: "SKILL.md found"},
-			{Level: skillcheck.Pass, Category: "Frontmatter", Message: `name: "my-skill" (valid)`},
+		Results: []types.Result{
+			{Level: types.Pass, Category: "Structure", Message: "SKILL.md found"},
+			{Level: types.Pass, Category: "Frontmatter", Message: `name: "my-skill" (valid)`},
 		},
 		Errors:   0,
 		Warnings: 0,
@@ -45,12 +45,12 @@ func TestPrintMarkdown_Passed(t *testing.T) {
 }
 
 func TestPrintMarkdown_WithErrors(t *testing.T) {
-	r := &skillcheck.Report{
+	r := &types.Report{
 		SkillDir: "/tmp/bad-skill",
-		Results: []skillcheck.Result{
-			{Level: skillcheck.Pass, Category: "Structure", Message: "SKILL.md found"},
-			{Level: skillcheck.Error, Category: "Frontmatter", Message: "name is required"},
-			{Level: skillcheck.Warning, Category: "Structure", Message: "unknown directory: extras/"},
+		Results: []types.Result{
+			{Level: types.Pass, Category: "Structure", Message: "SKILL.md found"},
+			{Level: types.Error, Category: "Frontmatter", Message: "name is required"},
+			{Level: types.Warning, Category: "Structure", Message: "unknown directory: extras/"},
 		},
 		Errors:   1,
 		Warnings: 1,
@@ -74,10 +74,10 @@ func TestPrintMarkdown_WithErrors(t *testing.T) {
 }
 
 func TestPrintMarkdown_TokenCounts(t *testing.T) {
-	r := &skillcheck.Report{
+	r := &types.Report{
 		SkillDir: "/tmp/test",
-		Results:  []skillcheck.Result{},
-		TokenCounts: []skillcheck.TokenCount{
+		Results:  []types.Result{},
+		TokenCounts: []types.TokenCount{
 			{File: "SKILL.md body", Tokens: 1250},
 			{File: "references/guide.md", Tokens: 820},
 		},
@@ -107,13 +107,13 @@ func TestPrintMarkdown_TokenCounts(t *testing.T) {
 }
 
 func TestPrintMarkdown_OtherTokenCounts(t *testing.T) {
-	r := &skillcheck.Report{
+	r := &types.Report{
 		SkillDir: "/tmp/test",
-		Results:  []skillcheck.Result{},
-		TokenCounts: []skillcheck.TokenCount{
+		Results:  []types.Result{},
+		TokenCounts: []types.TokenCount{
 			{File: "SKILL.md body", Tokens: 1250},
 		},
-		OtherTokenCounts: []skillcheck.TokenCount{
+		OtherTokenCounts: []types.TokenCount{
 			{File: "AGENTS.md", Tokens: 45000},
 			{File: "rules/rule1.md", Tokens: 850},
 		},
@@ -137,9 +137,9 @@ func TestPrintMarkdown_OtherTokenCounts(t *testing.T) {
 }
 
 func TestPrintMarkdown_ContentAnalysis(t *testing.T) {
-	r := &skillcheck.Report{
+	r := &types.Report{
 		SkillDir: "/tmp/test",
-		Results:  []skillcheck.Result{},
+		Results:  []types.Result{},
 		ContentReport: &content.Report{
 			WordCount:              1250,
 			CodeBlockCount:         5,
@@ -176,9 +176,9 @@ func TestPrintMarkdown_ContentAnalysis(t *testing.T) {
 }
 
 func TestPrintMarkdown_ContaminationAnalysis(t *testing.T) {
-	r := &skillcheck.Report{
+	r := &types.Report{
 		SkillDir: "/tmp/test",
-		Results:  []skillcheck.Result{},
+		Results:  []types.Result{},
 		ContaminationReport: &contamination.Report{
 			ContaminationLevel:   "high",
 			ContaminationScore:   0.7,
@@ -220,10 +220,10 @@ func TestPrintMarkdown_ContaminationAnalysis(t *testing.T) {
 }
 
 func TestPrintMarkdown_MinimalData(t *testing.T) {
-	r := &skillcheck.Report{
+	r := &types.Report{
 		SkillDir: "/tmp/minimal",
-		Results: []skillcheck.Result{
-			{Level: skillcheck.Pass, Category: "Structure", Message: "ok"},
+		Results: []types.Result{
+			{Level: types.Pass, Category: "Structure", Message: "ok"},
 		},
 	}
 
@@ -248,16 +248,16 @@ func TestPrintMarkdown_MinimalData(t *testing.T) {
 }
 
 func TestPrintMultiMarkdown(t *testing.T) {
-	mr := &skillcheck.MultiReport{
-		Skills: []*skillcheck.Report{
+	mr := &types.MultiReport{
+		Skills: []*types.Report{
 			{
 				SkillDir: "/tmp/alpha",
-				Results:  []skillcheck.Result{{Level: skillcheck.Pass, Category: "Structure", Message: "ok"}},
+				Results:  []types.Result{{Level: types.Pass, Category: "Structure", Message: "ok"}},
 			},
 			{
 				SkillDir: "/tmp/beta",
-				Results: []skillcheck.Result{
-					{Level: skillcheck.Error, Category: "Frontmatter", Message: "name is required"},
+				Results: []types.Result{
+					{Level: types.Error, Category: "Frontmatter", Message: "name is required"},
 				},
 				Errors: 1,
 			},
@@ -289,15 +289,15 @@ func TestPrintMultiMarkdown(t *testing.T) {
 }
 
 func TestPrintMultiMarkdown_AllPassed(t *testing.T) {
-	mr := &skillcheck.MultiReport{
-		Skills: []*skillcheck.Report{
+	mr := &types.MultiReport{
+		Skills: []*types.Report{
 			{
 				SkillDir: "/tmp/a",
-				Results:  []skillcheck.Result{{Level: skillcheck.Pass, Category: "Structure", Message: "ok"}},
+				Results:  []types.Result{{Level: types.Pass, Category: "Structure", Message: "ok"}},
 			},
 			{
 				SkillDir: "/tmp/b",
-				Results:  []skillcheck.Result{{Level: skillcheck.Pass, Category: "Structure", Message: "ok"}},
+				Results:  []types.Result{{Level: types.Pass, Category: "Structure", Message: "ok"}},
 			},
 		},
 	}
@@ -318,16 +318,16 @@ func TestPrintMultiMarkdown_AllPassed(t *testing.T) {
 }
 
 func TestPrintMarkdown_NoAnsiCodes(t *testing.T) {
-	r := &skillcheck.Report{
+	r := &types.Report{
 		SkillDir: "/tmp/test",
-		Results: []skillcheck.Result{
-			{Level: skillcheck.Pass, Category: "Structure", Message: "SKILL.md found"},
-			{Level: skillcheck.Error, Category: "Frontmatter", Message: "name is required"},
-			{Level: skillcheck.Warning, Category: "Structure", Message: "unknown dir"},
+		Results: []types.Result{
+			{Level: types.Pass, Category: "Structure", Message: "SKILL.md found"},
+			{Level: types.Error, Category: "Frontmatter", Message: "name is required"},
+			{Level: types.Warning, Category: "Structure", Message: "unknown dir"},
 		},
 		Errors:   1,
 		Warnings: 1,
-		TokenCounts: []skillcheck.TokenCount{
+		TokenCounts: []types.TokenCount{
 			{File: "SKILL.md body", Tokens: 1250},
 		},
 		ContentReport: &content.Report{
@@ -360,10 +360,10 @@ func TestPrintMarkdown_NoAnsiCodes(t *testing.T) {
 }
 
 func TestPrintMarkdown_PerFileReports(t *testing.T) {
-	r := &skillcheck.Report{
+	r := &types.Report{
 		SkillDir: "/tmp/test",
-		Results:  []skillcheck.Result{{Level: skillcheck.Pass, Category: "Structure", Message: "ok"}},
-		ReferenceReports: []skillcheck.ReferenceFileReport{
+		Results:  []types.Result{{Level: types.Pass, Category: "Structure", Message: "ok"}},
+		ReferenceReports: []types.ReferenceFileReport{
 			{
 				File: "guide.md",
 				ContentReport: &content.Report{

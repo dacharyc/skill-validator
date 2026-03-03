@@ -7,15 +7,15 @@ import (
 
 	"github.com/dacharyc/skill-validator/contamination"
 	"github.com/dacharyc/skill-validator/content"
-	"github.com/dacharyc/skill-validator/skillcheck"
+	"github.com/dacharyc/skill-validator/types"
 )
 
 func TestPrint_Passed(t *testing.T) {
-	r := &skillcheck.Report{
+	r := &types.Report{
 		SkillDir: "/tmp/my-skill",
-		Results: []skillcheck.Result{
-			{Level: skillcheck.Pass, Category: "Structure", Message: "SKILL.md found"},
-			{Level: skillcheck.Pass, Category: "Frontmatter", Message: `name: "my-skill" (valid)`},
+		Results: []types.Result{
+			{Level: types.Pass, Category: "Structure", Message: "SKILL.md found"},
+			{Level: types.Pass, Category: "Frontmatter", Message: `name: "my-skill" (valid)`},
 		},
 		Errors:   0,
 		Warnings: 0,
@@ -40,12 +40,12 @@ func TestPrint_Passed(t *testing.T) {
 }
 
 func TestPrint_WithErrors(t *testing.T) {
-	r := &skillcheck.Report{
+	r := &types.Report{
 		SkillDir: "/tmp/bad-skill",
-		Results: []skillcheck.Result{
-			{Level: skillcheck.Pass, Category: "Structure", Message: "SKILL.md found"},
-			{Level: skillcheck.Error, Category: "Frontmatter", Message: "name is required"},
-			{Level: skillcheck.Warning, Category: "Structure", Message: "unknown directory: extras/"},
+		Results: []types.Result{
+			{Level: types.Pass, Category: "Structure", Message: "SKILL.md found"},
+			{Level: types.Error, Category: "Frontmatter", Message: "name is required"},
+			{Level: types.Warning, Category: "Structure", Message: "unknown directory: extras/"},
 		},
 		Errors:   1,
 		Warnings: 1,
@@ -73,11 +73,11 @@ func TestPrint_WithErrors(t *testing.T) {
 }
 
 func TestPrint_InfoLevel(t *testing.T) {
-	r := &skillcheck.Report{
+	r := &types.Report{
 		SkillDir: "/tmp/info-skill",
-		Results: []skillcheck.Result{
-			{Level: skillcheck.Pass, Category: "Structure", Message: "SKILL.md found"},
-			{Level: skillcheck.Info, Category: "Links", Message: "https://example.com (HTTP 403 — may block automated requests)"},
+		Results: []types.Result{
+			{Level: types.Pass, Category: "Structure", Message: "SKILL.md found"},
+			{Level: types.Info, Category: "Links", Message: "https://example.com (HTTP 403 — may block automated requests)"},
 		},
 		Errors:   0,
 		Warnings: 0,
@@ -99,14 +99,14 @@ func TestPrint_InfoLevel(t *testing.T) {
 }
 
 func TestPrint_Pluralization(t *testing.T) {
-	r := &skillcheck.Report{
+	r := &types.Report{
 		SkillDir: "/tmp/test",
-		Results: []skillcheck.Result{
-			{Level: skillcheck.Error, Category: "A", Message: "err1"},
-			{Level: skillcheck.Error, Category: "A", Message: "err2"},
-			{Level: skillcheck.Warning, Category: "B", Message: "warn1"},
-			{Level: skillcheck.Warning, Category: "B", Message: "warn2"},
-			{Level: skillcheck.Warning, Category: "B", Message: "warn3"},
+		Results: []types.Result{
+			{Level: types.Error, Category: "A", Message: "err1"},
+			{Level: types.Error, Category: "A", Message: "err2"},
+			{Level: types.Warning, Category: "B", Message: "warn1"},
+			{Level: types.Warning, Category: "B", Message: "warn2"},
+			{Level: types.Warning, Category: "B", Message: "warn3"},
 		},
 		Errors:   2,
 		Warnings: 3,
@@ -125,10 +125,10 @@ func TestPrint_Pluralization(t *testing.T) {
 }
 
 func TestPrint_TokenCounts(t *testing.T) {
-	r := &skillcheck.Report{
+	r := &types.Report{
 		SkillDir: "/tmp/test",
-		Results:  []skillcheck.Result{},
-		TokenCounts: []skillcheck.TokenCount{
+		Results:  []types.Result{},
+		TokenCounts: []types.TokenCount{
 			{File: "SKILL.md body", Tokens: 1250},
 			{File: "references/guide.md", Tokens: 820},
 		},
@@ -161,10 +161,10 @@ func TestPrint_TokenCounts(t *testing.T) {
 }
 
 func TestPrint_NoTokenCounts(t *testing.T) {
-	r := &skillcheck.Report{
+	r := &types.Report{
 		SkillDir: "/tmp/test",
-		Results: []skillcheck.Result{
-			{Level: skillcheck.Error, Category: "Structure", Message: "SKILL.md not found"},
+		Results: []types.Result{
+			{Level: types.Error, Category: "Structure", Message: "SKILL.md not found"},
 		},
 		Errors: 1,
 	}
@@ -179,12 +179,12 @@ func TestPrint_NoTokenCounts(t *testing.T) {
 }
 
 func TestPrint_CategoryGrouping(t *testing.T) {
-	r := &skillcheck.Report{
+	r := &types.Report{
 		SkillDir: "/tmp/test",
-		Results: []skillcheck.Result{
-			{Level: skillcheck.Pass, Category: "Structure", Message: "a"},
-			{Level: skillcheck.Pass, Category: "Frontmatter", Message: "b"},
-			{Level: skillcheck.Pass, Category: "Structure", Message: "c"},
+		Results: []types.Result{
+			{Level: types.Pass, Category: "Structure", Message: "a"},
+			{Level: types.Pass, Category: "Frontmatter", Message: "b"},
+			{Level: types.Pass, Category: "Structure", Message: "c"},
 		},
 	}
 
@@ -206,35 +206,14 @@ func TestPrint_CategoryGrouping(t *testing.T) {
 	}
 }
 
-func TestFormatNumber(t *testing.T) {
-	tests := []struct {
-		input int
-		want  string
-	}{
-		{0, "0"},
-		{1, "1"},
-		{999, "999"},
-		{1000, "1,000"},
-		{1250, "1,250"},
-		{12345, "12,345"},
-		{1000000, "1,000,000"},
-	}
-	for _, tt := range tests {
-		got := formatNumber(tt.input)
-		if got != tt.want {
-			t.Errorf("formatNumber(%d) = %q, want %q", tt.input, got, tt.want)
-		}
-	}
-}
-
 func TestPrint_OtherTokenCounts(t *testing.T) {
-	r := &skillcheck.Report{
+	r := &types.Report{
 		SkillDir: "/tmp/test",
-		Results:  []skillcheck.Result{},
-		TokenCounts: []skillcheck.TokenCount{
+		Results:  []types.Result{},
+		TokenCounts: []types.TokenCount{
 			{File: "SKILL.md body", Tokens: 1250},
 		},
-		OtherTokenCounts: []skillcheck.TokenCount{
+		OtherTokenCounts: []types.TokenCount{
 			{File: "AGENTS.md", Tokens: 45000},
 			{File: "rules/rule1.md", Tokens: 850},
 		},
@@ -265,10 +244,10 @@ func TestPrint_OtherTokenCounts(t *testing.T) {
 }
 
 func TestPrint_OtherTokenCountsColors(t *testing.T) {
-	r := &skillcheck.Report{
+	r := &types.Report{
 		SkillDir: "/tmp/test",
-		Results:  []skillcheck.Result{},
-		OtherTokenCounts: []skillcheck.TokenCount{
+		Results:  []types.Result{},
+		OtherTokenCounts: []types.TokenCount{
 			{File: "small.md", Tokens: 500},
 			{File: "medium.md", Tokens: 15000},
 			{File: "large.md", Tokens: 40000},
@@ -309,10 +288,10 @@ func TestPrint_OtherTokenCountsColors(t *testing.T) {
 }
 
 func TestPrint_OtherTokenCountsTotalRed(t *testing.T) {
-	r := &skillcheck.Report{
+	r := &types.Report{
 		SkillDir: "/tmp/test",
-		Results:  []skillcheck.Result{},
-		OtherTokenCounts: []skillcheck.TokenCount{
+		Results:  []types.Result{},
+		OtherTokenCounts: []types.TokenCount{
 			{File: "huge1.md", Tokens: 60000},
 			{File: "huge2.md", Tokens: 50000},
 		},
@@ -332,10 +311,10 @@ func TestPrint_OtherTokenCountsTotalRed(t *testing.T) {
 }
 
 func TestPrint_NoOtherTokenCounts(t *testing.T) {
-	r := &skillcheck.Report{
+	r := &types.Report{
 		SkillDir: "/tmp/test",
-		Results:  []skillcheck.Result{},
-		TokenCounts: []skillcheck.TokenCount{
+		Results:  []types.Result{},
+		TokenCounts: []types.TokenCount{
 			{File: "SKILL.md body", Tokens: 1250},
 		},
 	}
@@ -349,28 +328,16 @@ func TestPrint_NoOtherTokenCounts(t *testing.T) {
 	}
 }
 
-func TestPluralize(t *testing.T) {
-	if pluralize(0) != "s" {
-		t.Error("pluralize(0) should be 's'")
-	}
-	if pluralize(1) != "" {
-		t.Error("pluralize(1) should be ''")
-	}
-	if pluralize(2) != "s" {
-		t.Error("pluralize(2) should be 's'")
-	}
-}
-
 func TestPrintMulti_AllPassed(t *testing.T) {
-	mr := &skillcheck.MultiReport{
-		Skills: []*skillcheck.Report{
+	mr := &types.MultiReport{
+		Skills: []*types.Report{
 			{
 				SkillDir: "/tmp/alpha",
-				Results:  []skillcheck.Result{{Level: skillcheck.Pass, Category: "Structure", Message: "SKILL.md found"}},
+				Results:  []types.Result{{Level: types.Pass, Category: "Structure", Message: "SKILL.md found"}},
 			},
 			{
 				SkillDir: "/tmp/beta",
-				Results:  []skillcheck.Result{{Level: skillcheck.Pass, Category: "Structure", Message: "SKILL.md found"}},
+				Results:  []types.Result{{Level: types.Pass, Category: "Structure", Message: "SKILL.md found"}},
 			},
 		},
 	}
@@ -401,17 +368,17 @@ func TestPrintMulti_AllPassed(t *testing.T) {
 }
 
 func TestPrintMulti_SomeFailed(t *testing.T) {
-	mr := &skillcheck.MultiReport{
-		Skills: []*skillcheck.Report{
+	mr := &types.MultiReport{
+		Skills: []*types.Report{
 			{
 				SkillDir: "/tmp/good",
-				Results:  []skillcheck.Result{{Level: skillcheck.Pass, Category: "Structure", Message: "ok"}},
+				Results:  []types.Result{{Level: types.Pass, Category: "Structure", Message: "ok"}},
 			},
 			{
 				SkillDir: "/tmp/bad",
-				Results: []skillcheck.Result{
-					{Level: skillcheck.Error, Category: "Structure", Message: "fail"},
-					{Level: skillcheck.Warning, Category: "Structure", Message: "warn"},
+				Results: []types.Result{
+					{Level: types.Error, Category: "Structure", Message: "fail"},
+					{Level: types.Warning, Category: "Structure", Message: "warn"},
 				},
 				Errors:   1,
 				Warnings: 1,
@@ -446,11 +413,11 @@ func TestPrintMulti_SomeFailed(t *testing.T) {
 }
 
 func TestPrintMulti_SingleSkill(t *testing.T) {
-	mr := &skillcheck.MultiReport{
-		Skills: []*skillcheck.Report{
+	mr := &types.MultiReport{
+		Skills: []*types.Report{
 			{
 				SkillDir: "/tmp/only",
-				Results:  []skillcheck.Result{{Level: skillcheck.Pass, Category: "Structure", Message: "ok"}},
+				Results:  []types.Result{{Level: types.Pass, Category: "Structure", Message: "ok"}},
 			},
 		},
 	}
@@ -466,9 +433,9 @@ func TestPrintMulti_SingleSkill(t *testing.T) {
 }
 
 func TestPrint_ContentAnalysis(t *testing.T) {
-	r := &skillcheck.Report{
+	r := &types.Report{
 		SkillDir: "/tmp/test",
-		Results:  []skillcheck.Result{},
+		Results:  []types.Result{},
 		ContentReport: &content.Report{
 			WordCount:              1250,
 			CodeBlockCount:         5,
@@ -523,9 +490,9 @@ func TestPrint_ContentAnalysis(t *testing.T) {
 }
 
 func TestPrint_NoContentAnalysis(t *testing.T) {
-	r := &skillcheck.Report{
+	r := &types.Report{
 		SkillDir: "/tmp/test",
-		Results:  []skillcheck.Result{},
+		Results:  []types.Result{},
 	}
 
 	var buf bytes.Buffer
@@ -538,9 +505,9 @@ func TestPrint_NoContentAnalysis(t *testing.T) {
 }
 
 func TestPrint_ContaminationAnalysis_Low(t *testing.T) {
-	r := &skillcheck.Report{
+	r := &types.Report{
 		SkillDir: "/tmp/test",
-		Results:  []skillcheck.Result{},
+		Results:  []types.Result{},
 		ContaminationReport: &contamination.Report{
 			ContaminationLevel: "low",
 			ContaminationScore: 0.0,
@@ -584,9 +551,9 @@ func TestPrint_ContaminationAnalysis_Low(t *testing.T) {
 }
 
 func TestPrint_ContaminationAnalysis_Medium(t *testing.T) {
-	r := &skillcheck.Report{
+	r := &types.Report{
 		SkillDir: "/tmp/test",
-		Results:  []skillcheck.Result{},
+		Results:  []types.Result{},
 		ContaminationReport: &contamination.Report{
 			ContaminationLevel:   "medium",
 			ContaminationScore:   0.35,
@@ -615,9 +582,9 @@ func TestPrint_ContaminationAnalysis_Medium(t *testing.T) {
 }
 
 func TestPrint_ContaminationAnalysis_High(t *testing.T) {
-	r := &skillcheck.Report{
+	r := &types.Report{
 		SkillDir: "/tmp/test",
-		Results:  []skillcheck.Result{},
+		Results:  []types.Result{},
 		ContaminationReport: &contamination.Report{
 			ContaminationLevel:   "high",
 			ContaminationScore:   0.7,
@@ -650,9 +617,9 @@ func TestPrint_ContaminationAnalysis_High(t *testing.T) {
 }
 
 func TestPrint_NoContaminationAnalysis(t *testing.T) {
-	r := &skillcheck.Report{
+	r := &types.Report{
 		SkillDir: "/tmp/test",
-		Results:  []skillcheck.Result{},
+		Results:  []types.Result{},
 	}
 
 	var buf bytes.Buffer
@@ -665,9 +632,9 @@ func TestPrint_NoContaminationAnalysis(t *testing.T) {
 }
 
 func TestPrint_ContaminationAnalysis_NoPrimaryCategory(t *testing.T) {
-	r := &skillcheck.Report{
+	r := &types.Report{
 		SkillDir: "/tmp/test",
-		Results:  []skillcheck.Result{},
+		Results:  []types.Result{},
 		ContaminationReport: &contamination.Report{
 			ContaminationLevel: "low",
 			ContaminationScore: 0.0,
@@ -685,24 +652,24 @@ func TestPrint_ContaminationAnalysis_NoPrimaryCategory(t *testing.T) {
 }
 
 func TestPrintMulti_AggregatedCounts(t *testing.T) {
-	mr := &skillcheck.MultiReport{
-		Skills: []*skillcheck.Report{
+	mr := &types.MultiReport{
+		Skills: []*types.Report{
 			{
 				SkillDir: "/tmp/a",
-				Results: []skillcheck.Result{
-					{Level: skillcheck.Error, Category: "A", Message: "e1"},
-					{Level: skillcheck.Error, Category: "A", Message: "e2"},
-					{Level: skillcheck.Warning, Category: "A", Message: "w1"},
+				Results: []types.Result{
+					{Level: types.Error, Category: "A", Message: "e1"},
+					{Level: types.Error, Category: "A", Message: "e2"},
+					{Level: types.Warning, Category: "A", Message: "w1"},
 				},
 				Errors:   2,
 				Warnings: 1,
 			},
 			{
 				SkillDir: "/tmp/b",
-				Results: []skillcheck.Result{
-					{Level: skillcheck.Error, Category: "A", Message: "e3"},
-					{Level: skillcheck.Warning, Category: "A", Message: "w2"},
-					{Level: skillcheck.Warning, Category: "A", Message: "w3"},
+				Results: []types.Result{
+					{Level: types.Error, Category: "A", Message: "e3"},
+					{Level: types.Warning, Category: "A", Message: "w2"},
+					{Level: types.Warning, Category: "A", Message: "w3"},
 				},
 				Errors:   1,
 				Warnings: 2,

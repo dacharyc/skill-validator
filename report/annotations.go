@@ -5,14 +5,14 @@ import (
 	"io"
 	"path/filepath"
 
-	"github.com/dacharyc/skill-validator/skillcheck"
+	"github.com/dacharyc/skill-validator/types"
 )
 
 // PrintAnnotations writes GitHub Actions workflow command annotations for
 // errors and warnings in the report. Pass and Info results are skipped.
 // workDir is the working directory used to compute relative file paths;
 // in CI this is typically the repository root.
-func PrintAnnotations(w io.Writer, r *skillcheck.Report, workDir string) {
+func PrintAnnotations(w io.Writer, r *types.Report, workDir string) {
 	for _, res := range r.Results {
 		line := formatAnnotation(r.SkillDir, res, workDir)
 		if line != "" {
@@ -22,18 +22,18 @@ func PrintAnnotations(w io.Writer, r *skillcheck.Report, workDir string) {
 }
 
 // PrintMultiAnnotations writes annotations for all skills in a multi-report.
-func PrintMultiAnnotations(w io.Writer, mr *skillcheck.MultiReport, workDir string) {
+func PrintMultiAnnotations(w io.Writer, mr *types.MultiReport, workDir string) {
 	for _, r := range mr.Skills {
 		PrintAnnotations(w, r, workDir)
 	}
 }
 
-func formatAnnotation(skillDir string, res skillcheck.Result, workDir string) string {
+func formatAnnotation(skillDir string, res types.Result, workDir string) string {
 	var cmd string
 	switch res.Level {
-	case skillcheck.Error:
+	case types.Error:
 		cmd = "error"
-	case skillcheck.Warning:
+	case types.Warning:
 		cmd = "warning"
 	default:
 		return ""

@@ -12,8 +12,10 @@ import (
 	"github.com/dacharyc/skill-validator/content"
 	"github.com/dacharyc/skill-validator/links"
 	"github.com/dacharyc/skill-validator/report"
+	"github.com/dacharyc/skill-validator/skill"
 	"github.com/dacharyc/skill-validator/skillcheck"
 	"github.com/dacharyc/skill-validator/structure"
+	"github.com/dacharyc/skill-validator/types"
 )
 
 // fixtureDir returns the absolute path to a testdata fixture.
@@ -36,7 +38,7 @@ func TestValidateCommand_ValidSkill(t *testing.T) {
 	if r.Errors != 0 {
 		t.Errorf("expected 0 errors, got %d", r.Errors)
 		for _, res := range r.Results {
-			if res.Level == skillcheck.Error {
+			if res.Level == types.Error {
 				t.Logf("  error: %s: %s", res.Category, res.Message)
 			}
 		}
@@ -93,7 +95,7 @@ func TestValidateCommand_MultiSkill(t *testing.T) {
 	dir := fixtureDir(t, "multi-skill")
 
 	mode, dirs := skillcheck.DetectSkills(dir)
-	if mode != skillcheck.MultiSkill {
+	if mode != types.MultiSkill {
 		t.Fatalf("expected MultiSkill, got %d", mode)
 	}
 
@@ -106,7 +108,7 @@ func TestValidateCommand_MultiSkill(t *testing.T) {
 func TestValidateLinks_ValidSkill(t *testing.T) {
 	dir := fixtureDir(t, "valid-skill")
 
-	s, err := skillcheck.LoadSkill(dir)
+	s, err := skill.Load(dir)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -121,7 +123,7 @@ func TestValidateLinks_ValidSkill(t *testing.T) {
 	r := structure.Validate(dir, structure.Options{})
 	foundLink := false
 	for _, res := range r.Results {
-		if res.Level == skillcheck.Pass && strings.Contains(res.Message, "references/guide.md") {
+		if res.Level == types.Pass && strings.Contains(res.Message, "references/guide.md") {
 			foundLink = true
 		}
 	}
@@ -133,7 +135,7 @@ func TestValidateLinks_ValidSkill(t *testing.T) {
 func TestValidateLinks_InvalidSkill(t *testing.T) {
 	dir := fixtureDir(t, "invalid-skill")
 
-	s, err := skillcheck.LoadSkill(dir)
+	s, err := skill.Load(dir)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -148,7 +150,7 @@ func TestValidateLinks_InvalidSkill(t *testing.T) {
 	r := structure.Validate(dir, structure.Options{})
 	foundBroken := false
 	for _, res := range r.Results {
-		if res.Level == skillcheck.Error && strings.Contains(res.Message, "missing.md") {
+		if res.Level == types.Error && strings.Contains(res.Message, "missing.md") {
 			foundBroken = true
 		}
 	}
@@ -160,7 +162,7 @@ func TestValidateLinks_InvalidSkill(t *testing.T) {
 func TestAnalyzeContent_ValidSkill(t *testing.T) {
 	dir := fixtureDir(t, "valid-skill")
 
-	s, err := skillcheck.LoadSkill(dir)
+	s, err := skill.Load(dir)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -178,7 +180,7 @@ func TestAnalyzeContent_ValidSkill(t *testing.T) {
 func TestAnalyzeContent_RichSkill(t *testing.T) {
 	dir := fixtureDir(t, "rich-skill")
 
-	s, err := skillcheck.LoadSkill(dir)
+	s, err := skill.Load(dir)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -221,7 +223,7 @@ func TestAnalyzeContent_RichSkill(t *testing.T) {
 func TestAnalyzeContamination_ValidSkill(t *testing.T) {
 	dir := fixtureDir(t, "valid-skill")
 
-	s, err := skillcheck.LoadSkill(dir)
+	s, err := skill.Load(dir)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -237,7 +239,7 @@ func TestAnalyzeContamination_ValidSkill(t *testing.T) {
 func TestAnalyzeContamination_RichSkill(t *testing.T) {
 	dir := fixtureDir(t, "rich-skill")
 
-	s, err := skillcheck.LoadSkill(dir)
+	s, err := skill.Load(dir)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -278,7 +280,7 @@ func TestCheckCommand_AllChecks(t *testing.T) {
 	if r.Errors != 0 {
 		t.Errorf("expected 0 errors, got %d", r.Errors)
 		for _, res := range r.Results {
-			if res.Level == skillcheck.Error {
+			if res.Level == types.Error {
 				t.Logf("  error: %s: %s", res.Category, res.Message)
 			}
 		}
@@ -496,7 +498,7 @@ func TestCheckCommand_BrokenFrontmatter_AllChecks(t *testing.T) {
 	}
 	foundFMError := false
 	for _, res := range r.Results {
-		if res.Level == skillcheck.Error && res.Category == "Frontmatter" {
+		if res.Level == types.Error && res.Category == "Frontmatter" {
 			foundFMError = true
 		}
 	}
@@ -790,7 +792,7 @@ func TestDetectAndResolve_SingleSkill(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if mode != skillcheck.SingleSkill {
+	if mode != types.SingleSkill {
 		t.Errorf("expected SingleSkill, got %d", mode)
 	}
 	if len(dirs) != 1 {
@@ -804,7 +806,7 @@ func TestDetectAndResolve_MultiSkill(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if mode != skillcheck.MultiSkill {
+	if mode != types.MultiSkill {
 		t.Errorf("expected MultiSkill, got %d", mode)
 	}
 	if len(dirs) < 2 {
@@ -836,7 +838,7 @@ func TestRunContaminationAnalysis_ValidSkill(t *testing.T) {
 	}
 	hasPass := false
 	for _, res := range r.Results {
-		if res.Level == skillcheck.Pass && res.Category == "Contamination" {
+		if res.Level == types.Pass && res.Category == "Contamination" {
 			hasPass = true
 		}
 	}
@@ -975,7 +977,7 @@ func TestRunLinkChecks_ValidSkill(t *testing.T) {
 	if r.Errors != 0 {
 		t.Errorf("expected 0 errors, got %d", r.Errors)
 		for _, res := range r.Results {
-			if res.Level == skillcheck.Error {
+			if res.Level == types.Error {
 				t.Logf("  error: %s: %s", res.Category, res.Message)
 			}
 		}
@@ -1020,7 +1022,7 @@ func TestRunAllChecks_MultiSkill(t *testing.T) {
 		"contamination": true,
 	}
 
-	mr := &skillcheck.MultiReport{}
+	mr := &types.MultiReport{}
 	for _, d := range dirs {
 		r := runAllChecks(d, enabled, structure.Options{})
 		mr.Skills = append(mr.Skills, r)
@@ -1153,7 +1155,7 @@ func TestOutputJSON_MultiSkill(t *testing.T) {
 		"contamination": true,
 	}
 
-	mr := &skillcheck.MultiReport{}
+	mr := &types.MultiReport{}
 	for _, d := range dirs {
 		r := runAllChecks(d, enabled, structure.Options{})
 		mr.Skills = append(mr.Skills, r)

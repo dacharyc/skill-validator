@@ -3,7 +3,7 @@ package structure
 import (
 	"testing"
 
-	"github.com/dacharyc/skill-validator/skillcheck"
+	"github.com/dacharyc/skill-validator/types"
 )
 
 func TestCheckOrphanFiles(t *testing.T) {
@@ -16,10 +16,10 @@ func TestCheckOrphanFiles(t *testing.T) {
 		body := "See references/guide.md and scripts/setup.sh and assets/logo.png"
 		results := CheckOrphanFiles(dir, body)
 
-		requireResult(t, results, skillcheck.Pass, "all files in scripts/ are referenced")
-		requireResult(t, results, skillcheck.Pass, "all files in references/ are referenced")
-		requireResult(t, results, skillcheck.Pass, "all files in assets/ are referenced")
-		requireNoLevel(t, results, skillcheck.Warning)
+		requireResult(t, results, types.Pass, "all files in scripts/ are referenced")
+		requireResult(t, results, types.Pass, "all files in references/ are referenced")
+		requireResult(t, results, types.Pass, "all files in assets/ are referenced")
+		requireNoLevel(t, results, types.Warning)
 	})
 
 	t.Run("orphan in references", func(t *testing.T) {
@@ -30,7 +30,7 @@ func TestCheckOrphanFiles(t *testing.T) {
 		body := "See references/guide.md for details."
 		results := CheckOrphanFiles(dir, body)
 
-		requireResultContaining(t, results, skillcheck.Warning, "potentially unreferenced file: references/unused.md")
+		requireResultContaining(t, results, types.Warning, "potentially unreferenced file: references/unused.md")
 	})
 
 	t.Run("orphan in scripts", func(t *testing.T) {
@@ -40,7 +40,7 @@ func TestCheckOrphanFiles(t *testing.T) {
 		body := "No references to scripts here."
 		results := CheckOrphanFiles(dir, body)
 
-		requireResultContaining(t, results, skillcheck.Warning, "potentially unreferenced file: scripts/setup.sh")
+		requireResultContaining(t, results, types.Warning, "potentially unreferenced file: scripts/setup.sh")
 	})
 
 	t.Run("empty directories produce no results", func(t *testing.T) {
@@ -72,8 +72,8 @@ func TestCheckOrphanFiles(t *testing.T) {
 
 		// logo.png is reached (referenced from body) but not scanned for further refs
 		// so references/secret.md should be an orphan
-		requireResultContaining(t, results, skillcheck.Warning, "potentially unreferenced file: references/secret.md")
-		requireNoResultContaining(t, results, skillcheck.Warning, "assets/logo.png")
+		requireResultContaining(t, results, types.Warning, "potentially unreferenced file: references/secret.md")
+		requireNoResultContaining(t, results, types.Warning, "assets/logo.png")
 	})
 
 	t.Run("directory-relative reference from referenced file", func(t *testing.T) {
@@ -87,8 +87,8 @@ func TestCheckOrphanFiles(t *testing.T) {
 		results := CheckOrphanFiles(dir, body)
 
 		// The image should be reached (indirectly via guide.md), not flagged as orphan
-		requireNoResultContaining(t, results, skillcheck.Warning, "references/images/diagram.png")
-		requireResult(t, results, skillcheck.Pass, "all files in references/ are referenced")
+		requireNoResultContaining(t, results, types.Warning, "references/images/diagram.png")
+		requireResult(t, results, types.Pass, "all files in references/ are referenced")
 	})
 
 	t.Run("root-level file bridges SKILL.md to scripts", func(t *testing.T) {
@@ -100,8 +100,8 @@ func TestCheckOrphanFiles(t *testing.T) {
 		body := "For form filling, read FORMS.md and follow its instructions."
 		results := CheckOrphanFiles(dir, body)
 
-		requireNoResultContaining(t, results, skillcheck.Warning, "scripts/fill_form.py")
-		requireResult(t, results, skillcheck.Pass, "all files in scripts/ are referenced")
+		requireNoResultContaining(t, results, types.Warning, "scripts/fill_form.py")
+		requireResult(t, results, types.Pass, "all files in scripts/ are referenced")
 	})
 
 	t.Run("package.json bridges SKILL.md to scripts when referenced", func(t *testing.T) {
@@ -114,7 +114,7 @@ func TestCheckOrphanFiles(t *testing.T) {
 		results := CheckOrphanFiles(dir, body)
 
 		// package.json is mentioned so it gets scanned, finding scripts/validate.js
-		requireNoResultContaining(t, results, skillcheck.Warning, "scripts/validate.js")
+		requireNoResultContaining(t, results, types.Warning, "scripts/validate.js")
 	})
 
 	t.Run("package.json not scanned when SKILL.md only mentions npm commands", func(t *testing.T) {
@@ -127,7 +127,7 @@ func TestCheckOrphanFiles(t *testing.T) {
 		results := CheckOrphanFiles(dir, body)
 
 		// package.json is not mentioned, so scripts/validate.js stays orphaned
-		requireResultContaining(t, results, skillcheck.Warning, "potentially unreferenced file: scripts/validate.js")
+		requireResultContaining(t, results, types.Warning, "potentially unreferenced file: scripts/validate.js")
 	})
 
 	t.Run("root file matched case-insensitively", func(t *testing.T) {
@@ -139,8 +139,8 @@ func TestCheckOrphanFiles(t *testing.T) {
 		body := "For form filling, read FORMS.md and follow its instructions."
 		results := CheckOrphanFiles(dir, body)
 
-		requireNoResultContaining(t, results, skillcheck.Warning, "scripts/fill_form.py")
-		requireResult(t, results, skillcheck.Pass, "all files in scripts/ are referenced")
+		requireNoResultContaining(t, results, types.Warning, "scripts/fill_form.py")
+		requireResult(t, results, types.Pass, "all files in scripts/ are referenced")
 	})
 
 	t.Run("script referenced without extension gets specific warning", func(t *testing.T) {
@@ -150,10 +150,10 @@ func TestCheckOrphanFiles(t *testing.T) {
 		body := "Run `python scripts/check_fields <file.pdf>` to check."
 		results := CheckOrphanFiles(dir, body)
 
-		requireResultContaining(t, results, skillcheck.Warning,
+		requireResultContaining(t, results, types.Warning,
 			"file scripts/check_fields.py is referenced without its extension (as scripts/check_fields in SKILL.md) — include the .py extension so agents can reliably locate the file")
 		// Should NOT also emit the generic orphan warning
-		requireNoResultContaining(t, results, skillcheck.Warning, "potentially unreferenced file: scripts/check_fields.py")
+		requireNoResultContaining(t, results, types.Warning, "potentially unreferenced file: scripts/check_fields.py")
 	})
 
 	t.Run("extensionless match via intermediary file", func(t *testing.T) {
@@ -164,7 +164,7 @@ func TestCheckOrphanFiles(t *testing.T) {
 		body := "For form filling, read forms.md."
 		results := CheckOrphanFiles(dir, body)
 
-		requireResultContaining(t, results, skillcheck.Warning,
+		requireResultContaining(t, results, types.Warning,
 			"file scripts/check_fields.py is referenced without its extension (as scripts/check_fields in forms.md)")
 	})
 
@@ -176,9 +176,9 @@ func TestCheckOrphanFiles(t *testing.T) {
 		body := "Run scripts/run.py to start."
 		results := CheckOrphanFiles(dir, body)
 
-		requireNoResultContaining(t, results, skillcheck.Warning, "__init__.py")
-		requireNoResultContaining(t, results, skillcheck.Info, "__init__.py")
-		requireResult(t, results, skillcheck.Pass, "all files in scripts/ are referenced")
+		requireNoResultContaining(t, results, types.Warning, "__init__.py")
+		requireNoResultContaining(t, results, types.Info, "__init__.py")
+		requireResult(t, results, types.Pass, "all files in scripts/ are referenced")
 	})
 
 	t.Run("__init__.py not flagged even when directory is orphaned", func(t *testing.T) {
@@ -189,8 +189,8 @@ func TestCheckOrphanFiles(t *testing.T) {
 		body := "No references here."
 		results := CheckOrphanFiles(dir, body)
 
-		requireNoResultContaining(t, results, skillcheck.Warning, "__init__.py")
-		requireResultContaining(t, results, skillcheck.Warning, "potentially unreferenced file: scripts/run.py")
+		requireNoResultContaining(t, results, types.Warning, "__init__.py")
+		requireResultContaining(t, results, types.Warning, "potentially unreferenced file: scripts/run.py")
 	})
 
 	t.Run("nested __init__.py excluded from checks", func(t *testing.T) {
@@ -201,8 +201,8 @@ func TestCheckOrphanFiles(t *testing.T) {
 		body := "No references here."
 		results := CheckOrphanFiles(dir, body)
 
-		requireNoResultContaining(t, results, skillcheck.Warning, "__init__.py")
-		requireResultContaining(t, results, skillcheck.Warning, "scripts/pkg/helpers.py")
+		requireNoResultContaining(t, results, types.Warning, "__init__.py")
+		requireResultContaining(t, results, types.Warning, "scripts/pkg/helpers.py")
 	})
 
 	t.Run("full extension match takes priority over extensionless", func(t *testing.T) {
@@ -213,8 +213,8 @@ func TestCheckOrphanFiles(t *testing.T) {
 		body := "Run scripts/setup.sh to configure."
 		results := CheckOrphanFiles(dir, body)
 
-		requireResult(t, results, skillcheck.Pass, "all files in scripts/ are referenced")
-		requireNoResultContaining(t, results, skillcheck.Warning, "referenced without its extension")
+		requireResult(t, results, types.Pass, "all files in scripts/ are referenced")
+		requireNoResultContaining(t, results, types.Warning, "referenced without its extension")
 	})
 
 	t.Run("unreferenced root file does not get scanned", func(t *testing.T) {
@@ -227,7 +227,7 @@ func TestCheckOrphanFiles(t *testing.T) {
 		results := CheckOrphanFiles(dir, body)
 
 		// notes.md is never mentioned, so it shouldn't be scanned, and the script stays orphaned
-		requireResultContaining(t, results, skillcheck.Warning, "potentially unreferenced file: scripts/secret.sh")
+		requireResultContaining(t, results, types.Warning, "potentially unreferenced file: scripts/secret.sh")
 	})
 
 	t.Run("Python import resolves sibling module", func(t *testing.T) {
@@ -239,8 +239,8 @@ func TestCheckOrphanFiles(t *testing.T) {
 		body := "Run scripts/main.py to start."
 		results := CheckOrphanFiles(dir, body)
 
-		requireNoResultContaining(t, results, skillcheck.Warning, "scripts/helpers.py")
-		requireResult(t, results, skillcheck.Pass, "all files in scripts/ are referenced")
+		requireNoResultContaining(t, results, types.Warning, "scripts/helpers.py")
+		requireResult(t, results, types.Pass, "all files in scripts/ are referenced")
 	})
 
 	t.Run("Python import resolves dotted module path", func(t *testing.T) {
@@ -252,8 +252,8 @@ func TestCheckOrphanFiles(t *testing.T) {
 		body := "Run scripts/main.py to start."
 		results := CheckOrphanFiles(dir, body)
 
-		requireNoResultContaining(t, results, skillcheck.Warning, "scripts/helpers/merge_runs.py")
-		requireResult(t, results, skillcheck.Pass, "all files in scripts/ are referenced")
+		requireNoResultContaining(t, results, types.Warning, "scripts/helpers/merge_runs.py")
+		requireResult(t, results, types.Pass, "all files in scripts/ are referenced")
 	})
 
 	t.Run("Python relative import resolves", func(t *testing.T) {
@@ -265,8 +265,8 @@ func TestCheckOrphanFiles(t *testing.T) {
 		body := "Run scripts/pkg/main.py to start."
 		results := CheckOrphanFiles(dir, body)
 
-		requireNoResultContaining(t, results, skillcheck.Warning, "scripts/pkg/utils.py")
-		requireResult(t, results, skillcheck.Pass, "all files in scripts/ are referenced")
+		requireNoResultContaining(t, results, types.Warning, "scripts/pkg/utils.py")
+		requireResult(t, results, types.Pass, "all files in scripts/ are referenced")
 	})
 
 	t.Run("Python import does not match non-Python files", func(t *testing.T) {
@@ -279,7 +279,7 @@ func TestCheckOrphanFiles(t *testing.T) {
 
 		// .sh file should not be resolved by Python imports; it's matched
 		// via the extensionless fallback since "data_loader" appears in the text
-		requireResultContaining(t, results, skillcheck.Warning,
+		requireResultContaining(t, results, types.Warning,
 			"file scripts/data_loader.sh is referenced without its extension")
 	})
 
@@ -296,9 +296,9 @@ func TestCheckOrphanFiles(t *testing.T) {
 		results := CheckOrphanFiles(dir, body)
 
 		// base.py should be reached via: pack.py → __init__.py → .base
-		requireNoResultContaining(t, results, skillcheck.Warning, "scripts/validators/base.py")
+		requireNoResultContaining(t, results, types.Warning, "scripts/validators/base.py")
 		// extra.py is not imported by __init__.py, so it stays orphaned
-		requireResultContaining(t, results, skillcheck.Warning, "potentially unreferenced file: scripts/validators/extra.py")
+		requireResultContaining(t, results, types.Warning, "potentially unreferenced file: scripts/validators/extra.py")
 	})
 
 	t.Run("multiple orphans across directories", func(t *testing.T) {
@@ -310,8 +310,8 @@ func TestCheckOrphanFiles(t *testing.T) {
 		body := "No references to any files."
 		results := CheckOrphanFiles(dir, body)
 
-		requireResultContaining(t, results, skillcheck.Warning, "potentially unreferenced file: references/unused1.md")
-		requireResultContaining(t, results, skillcheck.Warning, "potentially unreferenced file: scripts/unused2.sh")
-		requireResultContaining(t, results, skillcheck.Warning, "potentially unreferenced file: assets/unused3.png")
+		requireResultContaining(t, results, types.Warning, "potentially unreferenced file: references/unused1.md")
+		requireResultContaining(t, results, types.Warning, "potentially unreferenced file: scripts/unused2.sh")
+		requireResultContaining(t, results, types.Warning, "potentially unreferenced file: assets/unused3.png")
 	})
 }

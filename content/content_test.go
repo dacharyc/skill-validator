@@ -1,7 +1,6 @@
 package content
 
 import (
-	"math"
 	"testing"
 )
 
@@ -166,24 +165,5 @@ Never skip validation. Ensure all checks pass.
 	}
 	if r.InstructionSpecificity <= 0 || r.InstructionSpecificity > 1.0 {
 		t.Errorf("expected specificity in (0, 1], got %f", r.InstructionSpecificity)
-	}
-}
-
-func TestRoundTo(t *testing.T) {
-	tests := []struct {
-		val    float64
-		places int
-		want   float64
-	}{
-		{0.12345, 4, 0.1235},
-		{0.5, 2, 0.5},
-		{1.0, 4, 1.0},
-		{0.0, 4, 0.0},
-	}
-	for _, tt := range tests {
-		got := roundTo(tt.val, tt.places)
-		if math.Abs(got-tt.want) > 1e-10 {
-			t.Errorf("roundTo(%f, %d) = %f, want %f", tt.val, tt.places, got, tt.want)
-		}
 	}
 }
