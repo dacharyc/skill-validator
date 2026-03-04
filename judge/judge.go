@@ -98,7 +98,7 @@ func SkillDimensions() []string { return append([]string{}, skillDims...) }
 func RefDimensions() []string { return append([]string{}, refDims...) }
 
 // ---------------------------------------------------------------------------
-// Judge prompts — ported from analysis/llm_judge.py
+// Judge prompts
 // ---------------------------------------------------------------------------
 
 const skillJudgePrompt = `You are evaluating the quality of an "Agent Skill" — a markdown document that instructs an AI coding agent how to perform a specific task.  Score this skill on 6 dimensions, each from 1 (worst) to 5 (best). Use the full range — reserve 5 for genuinely excellent output and do not round up:

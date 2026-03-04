@@ -678,7 +678,7 @@ These checks validate conformance with the [Agent Skills specification](https://
 
 ### Content analysis (`analyze content`)
 
-Computes content quality metrics ported from the [agent-skill-analysis](https://github.com/dacharyc/agent-skill-analysis) research project. Analyzes SKILL.md and markdown files in `references/` (aggregate and per-file):
+Computes content quality metrics for SKILL.md and markdown files in `references/` (aggregate and per-file):
 
 - **Word count**: total words in SKILL.md
 - **Code block count / ratio**: number and proportion of fenced code blocks
@@ -706,7 +706,7 @@ Detects cross-language contamination — where code examples in one language cou
 
 ### LLM scoring (`score evaluate`)
 
-Uses an LLM-as-judge approach ported from the [agent-skill-analysis](https://github.com/dacharyc/agent-skill-analysis) research project. The scoring prompts instruct the LLM to evaluate skill content on specific quality dimensions, returning structured JSON scores.
+Uses an LLM-as-judge approach to evaluate skill content. The scoring prompts instruct the LLM to evaluate content on specific quality dimensions, returning structured JSON scores.
 
 **SKILL.md** is scored on 6 dimensions (1-5 each):
 - **Clarity**: How clear and unambiguous are the instructions?
