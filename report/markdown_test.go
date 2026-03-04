@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/dacharyc/skill-validator/types"
+	"github.com/agent-ecosystem/skill-validator/types"
 )
 
 func TestPrintMarkdown_Passed(t *testing.T) {

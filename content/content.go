@@ -7,8 +7,8 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/dacharyc/skill-validator/types"
-	"github.com/dacharyc/skill-validator/util"
+	"github.com/agent-ecosystem/skill-validator/types"
+	"github.com/agent-ecosystem/skill-validator/util"
 )
 
 // strongMarkerRes contains pre-compiled patterns for strong directive language

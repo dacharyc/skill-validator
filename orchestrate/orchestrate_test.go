@@ -8,10 +8,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/dacharyc/skill-validator/report"
-	"github.com/dacharyc/skill-validator/skillcheck"
-	"github.com/dacharyc/skill-validator/structure"
-	"github.com/dacharyc/skill-validator/types"
+	"github.com/agent-ecosystem/skill-validator/report"
+	"github.com/agent-ecosystem/skill-validator/skillcheck"
+	"github.com/agent-ecosystem/skill-validator/structure"
+	"github.com/agent-ecosystem/skill-validator/types"
 )
 
 // fixtureDir returns the absolute path to a testdata fixture.

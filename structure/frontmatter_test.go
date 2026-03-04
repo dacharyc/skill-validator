@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/dacharyc/skill-validator/skill"
-	"github.com/dacharyc/skill-validator/types"
+	"github.com/agent-ecosystem/skill-validator/skill"
+	"github.com/agent-ecosystem/skill-validator/types"
 )
 
 func makeSkill(dir, name, desc string) *skill.Skill {

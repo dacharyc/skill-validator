@@ -6,14 +6,14 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/dacharyc/skill-validator/contamination"
-	"github.com/dacharyc/skill-validator/content"
-	"github.com/dacharyc/skill-validator/links"
-	"github.com/dacharyc/skill-validator/orchestrate"
-	"github.com/dacharyc/skill-validator/skill"
-	"github.com/dacharyc/skill-validator/skillcheck"
-	"github.com/dacharyc/skill-validator/structure"
-	"github.com/dacharyc/skill-validator/types"
+	"github.com/agent-ecosystem/skill-validator/contamination"
+	"github.com/agent-ecosystem/skill-validator/content"
+	"github.com/agent-ecosystem/skill-validator/links"
+	"github.com/agent-ecosystem/skill-validator/orchestrate"
+	"github.com/agent-ecosystem/skill-validator/skill"
+	"github.com/agent-ecosystem/skill-validator/skillcheck"
+	"github.com/agent-ecosystem/skill-validator/structure"
+	"github.com/agent-ecosystem/skill-validator/types"
 )
 
 // fixtureDir returns the absolute path to a testdata fixture.

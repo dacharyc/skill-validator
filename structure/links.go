@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/dacharyc/skill-validator/links"
-	"github.com/dacharyc/skill-validator/types"
+	"github.com/agent-ecosystem/skill-validator/links"
+	"github.com/agent-ecosystem/skill-validator/types"
 )
 
 // CheckInternalLinks validates relative (internal) links in the skill body.

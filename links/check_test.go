@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dacharyc/skill-validator/types"
+	"github.com/agent-ecosystem/skill-validator/types"
 )
 
 // writeFile creates a file at dir/relPath with the given content, creating directories as needed.

@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/dacharyc/skill-validator/cmd"
+	"github.com/agent-ecosystem/skill-validator/cmd"
 )
 
 func main() {

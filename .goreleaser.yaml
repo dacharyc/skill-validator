@@ -18,10 +18,10 @@ archives:
 brews:
   - directory: Formula
     repository:
-      owner: dacharyc
+      owner: agent-ecosystem
       name: homebrew-tap
       token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
-    homepage: https://github.com/dacharyc/skill-validator
+    homepage: https://github.com/agent-ecosystem/skill-validator
     description: CLI tool that validates and scores Agent Skill packages
     license: MIT
     install: |

@@ -6,8 +6,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/dacharyc/skill-validator/report"
-	"github.com/dacharyc/skill-validator/types"
+	"github.com/agent-ecosystem/skill-validator/report"
+	"github.com/agent-ecosystem/skill-validator/types"
 )
 
 var validateCmd = &cobra.Command{

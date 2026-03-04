@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/dacharyc/skill-validator/evaluate"
-	"github.com/dacharyc/skill-validator/judge"
+	"github.com/agent-ecosystem/skill-validator/evaluate"
+	"github.com/agent-ecosystem/skill-validator/judge"
 )
 
 // This example demonstrates scoring a skill directory with caching and

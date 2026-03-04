@@ -6,8 +6,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/dacharyc/skill-validator/judge"
-	"github.com/dacharyc/skill-validator/report"
+	"github.com/agent-ecosystem/skill-validator/judge"
+	"github.com/agent-ecosystem/skill-validator/report"
 )
 
 var (

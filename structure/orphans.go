@@ -7,7 +7,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/dacharyc/skill-validator/types"
+	"github.com/agent-ecosystem/skill-validator/types"
 )
 
 // orderedRecognizedDirs lists the recognized subdirectories in a stable order

@@ -9,10 +9,10 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/dacharyc/skill-validator/evaluate"
-	"github.com/dacharyc/skill-validator/judge"
-	"github.com/dacharyc/skill-validator/report"
-	"github.com/dacharyc/skill-validator/types"
+	"github.com/agent-ecosystem/skill-validator/evaluate"
+	"github.com/agent-ecosystem/skill-validator/judge"
+	"github.com/agent-ecosystem/skill-validator/report"
+	"github.com/agent-ecosystem/skill-validator/types"
 )
 
 var (

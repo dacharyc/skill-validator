@@ -3,8 +3,8 @@ package cmd
 import (
 	"github.com/spf13/cobra"
 
-	"github.com/dacharyc/skill-validator/orchestrate"
-	"github.com/dacharyc/skill-validator/types"
+	"github.com/agent-ecosystem/skill-validator/orchestrate"
+	"github.com/agent-ecosystem/skill-validator/types"
 )
 
 var perFileContent bool

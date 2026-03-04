@@ -5,8 +5,8 @@ import (
 	"io"
 	"strings"
 
-	"github.com/dacharyc/skill-validator/types"
-	"github.com/dacharyc/skill-validator/util"
+	"github.com/agent-ecosystem/skill-validator/types"
+	"github.com/agent-ecosystem/skill-validator/util"
 )
 
 // PrintMarkdown writes the report as GitHub-flavored markdown to the given writer.

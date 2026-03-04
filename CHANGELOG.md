@@ -24,7 +24,7 @@ First stable release. Includes the complete CLI and importable library packages.
 - `--strict` mode for CI (treats warnings as errors)
 - Multi-skill directory detection
 - Pre-commit hook support for all major agent platforms
-- Homebrew install via `dacharyc/tap`
+- Homebrew install via `agent-ecosystem/tap`
 
 ### Library
 

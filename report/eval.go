@@ -6,9 +6,9 @@ import (
 	"io"
 	"strings"
 
-	"github.com/dacharyc/skill-validator/evaluate"
-	"github.com/dacharyc/skill-validator/types"
-	"github.com/dacharyc/skill-validator/util"
+	"github.com/agent-ecosystem/skill-validator/evaluate"
+	"github.com/agent-ecosystem/skill-validator/types"
+	"github.com/agent-ecosystem/skill-validator/util"
 )
 
 // FormatEvalResults formats a single EvalResult in the given format.

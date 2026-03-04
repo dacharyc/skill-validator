@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dacharyc/skill-validator/judge"
+	"github.com/agent-ecosystem/skill-validator/judge"
 )
 
 // --- Test data helpers ---

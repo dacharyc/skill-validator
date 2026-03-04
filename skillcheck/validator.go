@@ -9,10 +9,10 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/dacharyc/skill-validator/contamination"
-	"github.com/dacharyc/skill-validator/content"
-	"github.com/dacharyc/skill-validator/types"
-	"github.com/dacharyc/skill-validator/util"
+	"github.com/agent-ecosystem/skill-validator/contamination"
+	"github.com/agent-ecosystem/skill-validator/content"
+	"github.com/agent-ecosystem/skill-validator/types"
+	"github.com/agent-ecosystem/skill-validator/util"
 )
 
 // DetectSkills determines whether dir is a single skill, a multi-skill

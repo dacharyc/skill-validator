@@ -17,7 +17,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/dacharyc/skill-validator/types"
+	"github.com/agent-ecosystem/skill-validator/types"
 )
 
 // SkillScores holds the LLM judge scores for a SKILL.md file.

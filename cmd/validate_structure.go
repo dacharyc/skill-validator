@@ -3,8 +3,8 @@ package cmd
 import (
 	"github.com/spf13/cobra"
 
-	"github.com/dacharyc/skill-validator/structure"
-	"github.com/dacharyc/skill-validator/types"
+	"github.com/agent-ecosystem/skill-validator/structure"
+	"github.com/agent-ecosystem/skill-validator/types"
 )
 
 var (

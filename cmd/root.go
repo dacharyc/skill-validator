@@ -7,8 +7,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/dacharyc/skill-validator/skillcheck"
-	"github.com/dacharyc/skill-validator/types"
+	"github.com/agent-ecosystem/skill-validator/skillcheck"
+	"github.com/agent-ecosystem/skill-validator/types"
 )
 
 const version = "v1.0.0"

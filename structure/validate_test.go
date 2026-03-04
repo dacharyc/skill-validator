@@ -4,8 +4,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/dacharyc/skill-validator/skillcheck"
-	"github.com/dacharyc/skill-validator/types"
+	"github.com/agent-ecosystem/skill-validator/skillcheck"
+	"github.com/agent-ecosystem/skill-validator/types"
 )
 
 func TestValidate(t *testing.T) {

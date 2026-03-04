@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/dacharyc/skill-validator/types"
-	"github.com/dacharyc/skill-validator/util"
+	"github.com/agent-ecosystem/skill-validator/types"
+	"github.com/agent-ecosystem/skill-validator/util"
 )
 
 // recognizedDirs lists the directory names defined by the skill spec.

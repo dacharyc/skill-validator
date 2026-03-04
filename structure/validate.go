@@ -4,9 +4,9 @@
 package structure
 
 import (
-	"github.com/dacharyc/skill-validator/skill"
-	"github.com/dacharyc/skill-validator/types"
-	"github.com/dacharyc/skill-validator/util"
+	"github.com/agent-ecosystem/skill-validator/skill"
+	"github.com/agent-ecosystem/skill-validator/types"
+	"github.com/agent-ecosystem/skill-validator/util"
 )
 
 // Options configures which checks Validate runs.

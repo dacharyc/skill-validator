@@ -6,11 +6,11 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/dacharyc/skill-validator/orchestrate"
-	"github.com/dacharyc/skill-validator/report"
-	"github.com/dacharyc/skill-validator/skillcheck"
-	"github.com/dacharyc/skill-validator/structure"
-	"github.com/dacharyc/skill-validator/types"
+	"github.com/agent-ecosystem/skill-validator/orchestrate"
+	"github.com/agent-ecosystem/skill-validator/report"
+	"github.com/agent-ecosystem/skill-validator/skillcheck"
+	"github.com/agent-ecosystem/skill-validator/structure"
+	"github.com/agent-ecosystem/skill-validator/types"
 )
 
 func ExampleRunAllChecks() {

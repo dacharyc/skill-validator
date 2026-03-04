@@ -1,4 +1,4 @@
-module github.com/dacharyc/skill-validator
+module github.com/agent-ecosystem/skill-validator
 
 go 1.25.5
 

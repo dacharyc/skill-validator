@@ -14,10 +14,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/dacharyc/skill-validator/judge"
-	"github.com/dacharyc/skill-validator/skill"
-	"github.com/dacharyc/skill-validator/skillcheck"
-	"github.com/dacharyc/skill-validator/util"
+	"github.com/agent-ecosystem/skill-validator/judge"
+	"github.com/agent-ecosystem/skill-validator/skill"
+	"github.com/agent-ecosystem/skill-validator/skillcheck"
+	"github.com/agent-ecosystem/skill-validator/util"
 )
 
 // ProgressFunc receives progress events during evaluation.

@@ -5,8 +5,8 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/dacharyc/skill-validator/skill"
-	"github.com/dacharyc/skill-validator/types"
+	"github.com/agent-ecosystem/skill-validator/skill"
+	"github.com/agent-ecosystem/skill-validator/types"
 )
 
 var namePattern = regexp.MustCompile(`^[a-z0-9]+(-[a-z0-9]+)*$`)

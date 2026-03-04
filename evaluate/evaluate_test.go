@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/dacharyc/skill-validator/judge"
+	"github.com/agent-ecosystem/skill-validator/judge"
 )
 
 func TestFindParentSkillDir(t *testing.T) {

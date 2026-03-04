@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/dacharyc/skill-validator/types"
+	"github.com/agent-ecosystem/skill-validator/types"
 )
 
 type linkResult struct {

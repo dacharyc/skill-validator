@@ -1,6 +1,6 @@
 # skill-validator
 
-[![CI](https://github.com/dacharyc/skill-validator/actions/workflows/ci.yml/badge.svg)](https://github.com/dacharyc/skill-validator/actions/workflows/ci.yml)
+[![CI](https://github.com/agent-ecosystem/skill-validator/actions/workflows/ci.yml/badge.svg)](https://github.com/agent-ecosystem/skill-validator/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 A CLI tool that validates and scores [Agent Skill](https://agentskills.io) packages.
@@ -52,20 +52,20 @@ You can install the CLI in three ways:
 #### Homebrew
 
 ```
-brew tap dacharyc/tap
+brew tap agent-ecosystem/tap
 brew install skill-validator
 ```
 
 #### Using Go
 
 ```
-go install github.com/dacharyc/skill-validator/cmd/skill-validator@latest
+go install github.com/agent-ecosystem/skill-validator/cmd/skill-validator@latest
 ```
 
 Or build from source:
 
 ```
-git clone https://github.com/dacharyc/skill-validator.git
+git clone https://github.com/agent-ecosystem/skill-validator.git
 cd skill-validator
 go build -o skill-validator ./cmd/skill-validator
 ```
@@ -76,7 +76,7 @@ go build -o skill-validator ./cmd/skill-validator
 
 ```yaml
 repos:
-  - repo: https://github.com/dacharyc/skill-validator
+  - repo: https://github.com/agent-ecosystem/skill-validator
     rev: v0.5.0
     hooks:
       - id: skill-validator-claude
@@ -98,13 +98,13 @@ The validation and scoring packages are importable for use in custom tooling, CI
 
 ```go
 import (
-    "github.com/dacharyc/skill-validator/orchestrate"
-    "github.com/dacharyc/skill-validator/judge"
-    "github.com/dacharyc/skill-validator/evaluate"
+    "github.com/agent-ecosystem/skill-validator/orchestrate"
+    "github.com/agent-ecosystem/skill-validator/judge"
+    "github.com/agent-ecosystem/skill-validator/evaluate"
 )
 ```
 
-API documentation and runnable examples are on [pkg.go.dev](https://pkg.go.dev/github.com/dacharyc/skill-validator).
+API documentation and runnable examples are on [pkg.go.dev](https://pkg.go.dev/github.com/agent-ecosystem/skill-validator).
 
 #### Custom LLM providers
 
@@ -553,7 +553,7 @@ jobs:
 
       - name: Install skill-validator
         run: |
-          brew install dacharyc/tap/skill-validator
+          brew install agent-ecosystem/tap/skill-validator
 
       - name: Validate skills
         run: |

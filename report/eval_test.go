@@ -5,9 +5,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/dacharyc/skill-validator/evaluate"
-	"github.com/dacharyc/skill-validator/judge"
-	"github.com/dacharyc/skill-validator/util"
+	"github.com/agent-ecosystem/skill-validator/evaluate"
+	"github.com/agent-ecosystem/skill-validator/judge"
+	"github.com/agent-ecosystem/skill-validator/util"
 )
 
 func TestPrintEvalText(t *testing.T) {

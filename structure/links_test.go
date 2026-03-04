@@ -3,7 +3,7 @@ package structure
 import (
 	"testing"
 
-	"github.com/dacharyc/skill-validator/types"
+	"github.com/agent-ecosystem/skill-validator/types"
 )
 
 func TestCheckInternalLinks(t *testing.T) {

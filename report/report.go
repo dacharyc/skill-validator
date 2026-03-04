@@ -8,8 +8,8 @@ import (
 	"io"
 	"strings"
 
-	"github.com/dacharyc/skill-validator/types"
-	"github.com/dacharyc/skill-validator/util"
+	"github.com/agent-ecosystem/skill-validator/types"
+	"github.com/agent-ecosystem/skill-validator/util"
 )
 
 // Shorthand aliases for ANSI color constants to keep format strings compact.

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/dacharyc/skill-validator/judge"
+	"github.com/agent-ecosystem/skill-validator/judge"
 )
 
 func ExampleNewClient() {

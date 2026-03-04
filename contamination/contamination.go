@@ -10,8 +10,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/dacharyc/skill-validator/types"
-	"github.com/dacharyc/skill-validator/util"
+	"github.com/agent-ecosystem/skill-validator/types"
+	"github.com/agent-ecosystem/skill-validator/util"
 )
 
 // multiInterfaceTools maps tool/platform names to the language identifiers

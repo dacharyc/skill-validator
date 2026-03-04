@@ -7,9 +7,9 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/dacharyc/skill-validator/judge"
-	"github.com/dacharyc/skill-validator/types"
-	"github.com/dacharyc/skill-validator/util"
+	"github.com/agent-ecosystem/skill-validator/judge"
+	"github.com/agent-ecosystem/skill-validator/types"
+	"github.com/agent-ecosystem/skill-validator/util"
 )
 
 // List formats cached results in list mode.

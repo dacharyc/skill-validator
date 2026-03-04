@@ -9,7 +9,7 @@ import (
 	"sort"
 	"time"
 
-	"github.com/dacharyc/skill-validator/types"
+	"github.com/agent-ecosystem/skill-validator/types"
 )
 
 // CachedResult holds a scoring result with metadata for cache storage.
