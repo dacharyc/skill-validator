@@ -17,24 +17,36 @@ var recognizedDirs = map[string]bool{
 	"assets":     true,
 }
 
-// Files commonly found in repos but not intended for agent consumption.
-// Per Anthropic best practices: "A skill should only contain essential files
-// that directly support its functionality."
-// See: github.com/anthropics/skills → skill-creator
-var knownExtraneousFiles = map[string]string{
-	"readme.md":             "README.md",
-	"readme":                "README",
-	"changelog.md":          "CHANGELOG.md",
-	"changelog":             "CHANGELOG",
-	"license":               "LICENSE",
-	"license.md":            "LICENSE.md",
-	"license.txt":           "LICENSE.txt",
-	"contributing.md":       "CONTRIBUTING.md",
-	"code_of_conduct.md":    "CODE_OF_CONDUCT.md",
-	"installation_guide.md": "INSTALLATION_GUIDE.md",
-	"quick_reference.md":    "QUICK_REFERENCE.md",
-	"makefile":              "Makefile",
-	".gitignore":            ".gitignore",
+// rootFileCategory classifies root-level files in a skill directory.
+type rootFileCategory int
+
+const (
+	categoryExtraneous rootFileCategory = iota
+	categoryReference
+	categoryScript
+	categoryAsset
+)
+
+// scriptExtensions lists file extensions that are script-equivalent.
+var scriptExtensions = map[string]bool{
+	".py": true, ".sh": true, ".bash": true, ".js": true, ".ts": true,
+	".jsx": true, ".tsx": true, ".rb": true, ".go": true, ".rs": true,
+	".pl": true, ".lua": true, ".php": true, ".r": true,
+}
+
+// classifyRootFile determines the category of a non-SKILL.md root file.
+func classifyRootFile(name string) rootFileCategory {
+	if util.IsExtraneousFile(name) {
+		return categoryExtraneous
+	}
+	ext := strings.ToLower(filepath.Ext(name))
+	if ext == ".md" {
+		return categoryReference
+	}
+	if scriptExtensions[ext] {
+		return categoryScript
+	}
+	return categoryAsset
 }
 
 // CheckStructure validates the directory layout of a skill package. It checks
@@ -59,6 +71,7 @@ func CheckStructure(dir string) []types.Result {
 		return results
 	}
 
+	supportFileCount := 0
 	for _, entry := range entries {
 		name := entry.Name()
 		if strings.HasPrefix(name, ".") {
@@ -66,7 +79,12 @@ func CheckStructure(dir string) []types.Result {
 		}
 		if !entry.IsDir() {
 			if name != "SKILL.md" {
-				results = append(results, extraneousFileResult(ctx, name))
+				cat := classifyRootFile(name)
+				if cat == categoryExtraneous {
+					results = append(results, extraneousFileResult(ctx, name))
+				} else {
+					supportFileCount++
+				}
 			}
 			continue
 		}
@@ -89,6 +107,13 @@ func CheckStructure(dir string) []types.Result {
 			}
 			results = append(results, ctx.Warn(msg))
 		}
+	}
+
+	if supportFileCount >= 5 {
+		results = append(results, ctx.Infof(
+			"%d support files at root — consider organizing them into references/, scripts/, and assets/ subdirectories",
+			supportFileCount,
+		))
 	}
 
 	// Check for deep nesting in recognized directories
@@ -116,18 +141,10 @@ func extraneousFileResult(ctx types.ResultContext, name string) types.Result {
 			name,
 		))
 	}
-	if _, known := knownExtraneousFiles[lower]; known {
-		return ctx.WarnFile(name, fmt.Sprintf(
-			"%s is not needed in a skill — agents may load it into their context window, "+
-				"taking space from your actual task (Anthropic best practices: skills should only "+
-				"contain files that directly support agent functionality)",
-			name,
-		))
-	}
 	return ctx.WarnFile(name, fmt.Sprintf(
-		"unexpected file at root: %s — if agents need this file, move it into "+
-			"references/ or assets/ as appropriate; otherwise remove it to avoid "+
-			"unnecessary context window usage",
+		"%s is not needed in a skill — agents may load it into their context window, "+
+			"taking space from your actual task (Anthropic best practices: skills should only "+
+			"contain files that directly support agent functionality)",
 		name,
 	))
 }

@@ -64,17 +64,19 @@ func ReadSkillRaw(dir string) string {
 	return string(data)
 }
 
-// ReadReferencesMarkdownFiles reads all .md files from <dir>/references/ and returns
-// a map from filename to content. Returns nil if no references dir or no .md files
-// are found.
+// ReadReferencesMarkdownFiles reads all .md files from <dir>/references/ and
+// non-extraneous root .md files. Returns a map from filename to content, or nil
+// if no qualifying files are found. Root files that collide with a references/
+// filename are skipped (subdirectory takes precedence).
 func ReadReferencesMarkdownFiles(dir string) map[string]string {
+	files := make(map[string]string)
+
 	refsDir := filepath.Join(dir, "references")
 	entries, err := os.ReadDir(refsDir)
 	if err != nil {
-		return nil
+		entries = nil
 	}
 
-	files := make(map[string]string)
 	for _, entry := range entries {
 		if entry.IsDir() || strings.HasPrefix(entry.Name(), ".") {
 			continue
@@ -87,6 +89,34 @@ func ReadReferencesMarkdownFiles(dir string) map[string]string {
 			continue
 		}
 		files[entry.Name()] = string(data)
+	}
+
+	// Scan root-level .md files that are not extraneous and not SKILL.md.
+	rootEntries, err := os.ReadDir(dir)
+	if err == nil {
+		for _, entry := range rootEntries {
+			if entry.IsDir() || strings.HasPrefix(entry.Name(), ".") {
+				continue
+			}
+			if strings.EqualFold(entry.Name(), "SKILL.md") {
+				continue
+			}
+			if !strings.HasSuffix(strings.ToLower(entry.Name()), ".md") {
+				continue
+			}
+			if util.IsExtraneousFile(entry.Name()) {
+				continue
+			}
+			// Skip if a references/ file with the same name already exists.
+			if _, exists := files[entry.Name()]; exists {
+				continue
+			}
+			data, err := os.ReadFile(filepath.Join(dir, entry.Name()))
+			if err != nil {
+				continue
+			}
+			files[entry.Name()] = string(data)
+		}
 	}
 
 	if len(files) == 0 {

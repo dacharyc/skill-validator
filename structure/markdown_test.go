@@ -169,4 +169,19 @@ func TestCheckMarkdown(t *testing.T) {
 		results := CheckMarkdown(dir, "Clean body.")
 		requireNoLevel(t, results, types.Error)
 	})
+
+	t.Run("unclosed fence in root md file", func(t *testing.T) {
+		dir := t.TempDir()
+		writeFile(t, dir, "guide.md", "# Guide\n```\nunclosed fence")
+		results := CheckMarkdown(dir, "Clean body.")
+		requireResultContaining(t, results, types.Error, "guide.md has an unclosed code fence")
+		requireResultContaining(t, results, types.Error, "line 2")
+	})
+
+	t.Run("root extraneous md not checked for fences", func(t *testing.T) {
+		dir := t.TempDir()
+		writeFile(t, dir, "README.md", "```unclosed")
+		results := CheckMarkdown(dir, "Clean body.")
+		requireNoLevel(t, results, types.Error)
+	})
 }

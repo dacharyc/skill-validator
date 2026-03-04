@@ -104,6 +104,114 @@ func TestCheckTokens(t *testing.T) {
 	})
 }
 
+func TestCheckTokens_RootFlatLayout(t *testing.T) {
+	t.Run("root md counted as reference tokens", func(t *testing.T) {
+		dir := t.TempDir()
+		writeFile(t, dir, "SKILL.md", "content")
+		writeFile(t, dir, "guide.md", "# Guide\n\nSome reference content.")
+		_, counts, otherCounts := CheckTokens(dir, "body")
+		// body + guide.md = 2
+		if len(counts) != 2 {
+			t.Fatalf("expected 2 token counts, got %d", len(counts))
+		}
+		if counts[1].File != "guide.md" {
+			t.Errorf("expected guide.md, got %s", counts[1].File)
+		}
+		if counts[1].Tokens <= 0 {
+			t.Errorf("expected positive tokens for guide.md")
+		}
+		if len(otherCounts) != 0 {
+			t.Errorf("expected 0 other counts, got %d", len(otherCounts))
+		}
+	})
+
+	t.Run("root md aggregated with references dir", func(t *testing.T) {
+		dir := t.TempDir()
+		writeFile(t, dir, "SKILL.md", "content")
+		writeFile(t, dir, "guide.md", "Root guide content.")
+		writeFile(t, dir, "references/api.md", "API docs.")
+		_, counts, _ := CheckTokens(dir, "body")
+		// body + references/api.md + guide.md = 3
+		if len(counts) != 3 {
+			t.Fatalf("expected 3 token counts, got %d", len(counts))
+		}
+		files := map[string]bool{}
+		for _, c := range counts {
+			files[c.File] = true
+		}
+		if !files["guide.md"] {
+			t.Error("expected guide.md in counts")
+		}
+		if !files["references/api.md"] {
+			t.Error("expected references/api.md in counts")
+		}
+	})
+
+	t.Run("root md per-file limits apply", func(t *testing.T) {
+		dir := t.TempDir()
+		writeFile(t, dir, "SKILL.md", "content")
+		writeFile(t, dir, "big-guide.md", generateContent(11_000))
+		results, _, _ := CheckTokens(dir, "body")
+		requireResultContaining(t, results, types.Warning, "big-guide.md")
+		requireResultContaining(t, results, types.Warning, "consider splitting")
+	})
+
+	t.Run("root script not token counted", func(t *testing.T) {
+		dir := t.TempDir()
+		writeFile(t, dir, "SKILL.md", "content")
+		writeFile(t, dir, "setup.py", "print('hello')")
+		_, counts, otherCounts := CheckTokens(dir, "body")
+		if len(counts) != 1 {
+			t.Fatalf("expected 1 token count (body only), got %d", len(counts))
+		}
+		if len(otherCounts) != 0 {
+			t.Fatalf("expected 0 other counts, got %d", len(otherCounts))
+		}
+	})
+
+	t.Run("root asset text file in token counts", func(t *testing.T) {
+		dir := t.TempDir()
+		writeFile(t, dir, "SKILL.md", "content")
+		writeFile(t, dir, "config.yaml", "key: value")
+		_, counts, _ := CheckTokens(dir, "body")
+		if len(counts) != 2 {
+			t.Fatalf("expected 2 token counts, got %d", len(counts))
+		}
+		if counts[1].File != "config.yaml" {
+			t.Errorf("expected config.yaml, got %s", counts[1].File)
+		}
+	})
+
+	t.Run("root md skipped when same name in references", func(t *testing.T) {
+		dir := t.TempDir()
+		writeFile(t, dir, "SKILL.md", "content")
+		writeFile(t, dir, "references/guide.md", "Refs version.")
+		writeFile(t, dir, "guide.md", "Root version — should be skipped.")
+		_, counts, _ := CheckTokens(dir, "body")
+		// body + references/guide.md = 2 (root guide.md deduplicated)
+		if len(counts) != 2 {
+			t.Fatalf("expected 2 token counts (body + references/guide.md), got %d", len(counts))
+		}
+		for _, c := range counts {
+			if c.File == "guide.md" {
+				t.Error("root guide.md should be skipped when references/guide.md exists")
+			}
+		}
+	})
+
+	t.Run("root support files not in other counts", func(t *testing.T) {
+		dir := t.TempDir()
+		writeFile(t, dir, "SKILL.md", "content")
+		writeFile(t, dir, "guide.md", "guide")
+		writeFile(t, dir, "setup.py", "setup")
+		writeFile(t, dir, "config.yaml", "config")
+		_, _, otherCounts := CheckTokens(dir, "body")
+		if len(otherCounts) != 0 {
+			t.Fatalf("expected 0 other counts, got %d", len(otherCounts))
+		}
+	})
+}
+
 // generateContent creates a string of approximately the target token count.
 // Uses repetitive sentences (~10 tokens each).
 func generateContent(approxTokens int) string {
@@ -172,11 +280,11 @@ func TestCheckTokens_AggregateRefLimits(t *testing.T) {
 }
 
 func TestCountOtherFiles(t *testing.T) {
-	t.Run("counts extra root files", func(t *testing.T) {
+	t.Run("counts extraneous root files", func(t *testing.T) {
 		dir := t.TempDir()
 		writeFile(t, dir, "SKILL.md", "---\nname: test\n---\nbody")
 		writeFile(t, dir, "AGENTS.md", "Some agent content here.")
-		writeFile(t, dir, "metadata.json", `{"key": "value"}`)
+		writeFile(t, dir, "README.md", "Readme content.")
 		_, _, otherCounts := CheckTokens(dir, "body")
 		if len(otherCounts) != 2 {
 			t.Fatalf("expected 2 other counts, got %d", len(otherCounts))
@@ -191,8 +299,8 @@ func TestCountOtherFiles(t *testing.T) {
 		if !files["AGENTS.md"] {
 			t.Error("expected AGENTS.md in other counts")
 		}
-		if !files["metadata.json"] {
-			t.Error("expected metadata.json in other counts")
+		if !files["README.md"] {
+			t.Error("expected README.md in other counts")
 		}
 	})
 
@@ -222,13 +330,13 @@ func TestCountOtherFiles(t *testing.T) {
 		writeFile(t, dir, "SKILL.md", "content")
 		writeFile(t, dir, "image.png", "fake png data")
 		writeFile(t, dir, "archive.zip", "fake zip data")
-		writeFile(t, dir, "notes.txt", "text content")
+		writeFile(t, dir, "CHANGELOG.md", "text content")
 		_, _, otherCounts := CheckTokens(dir, "body")
 		if len(otherCounts) != 1 {
-			t.Fatalf("expected 1 other count (notes.txt only), got %d", len(otherCounts))
+			t.Fatalf("expected 1 other count (CHANGELOG.md only), got %d", len(otherCounts))
 		}
-		if otherCounts[0].File != "notes.txt" {
-			t.Errorf("expected notes.txt, got %s", otherCounts[0].File)
+		if otherCounts[0].File != "CHANGELOG.md" {
+			t.Errorf("expected CHANGELOG.md, got %s", otherCounts[0].File)
 		}
 	})
 
@@ -236,13 +344,13 @@ func TestCountOtherFiles(t *testing.T) {
 		dir := t.TempDir()
 		writeFile(t, dir, "SKILL.md", "content")
 		writeFile(t, dir, ".hidden", "secret")
-		writeFile(t, dir, "visible.txt", "visible content")
+		writeFile(t, dir, "LICENSE", "visible content")
 		_, _, otherCounts := CheckTokens(dir, "body")
 		if len(otherCounts) != 1 {
 			t.Fatalf("expected 1 other count, got %d", len(otherCounts))
 		}
-		if otherCounts[0].File != "visible.txt" {
-			t.Errorf("expected visible.txt, got %s", otherCounts[0].File)
+		if otherCounts[0].File != "LICENSE" {
+			t.Errorf("expected LICENSE, got %s", otherCounts[0].File)
 		}
 	})
 
@@ -272,7 +380,8 @@ func TestCheckTokens_OtherFilesLimits(t *testing.T) {
 	t.Run("other files under soft limit", func(t *testing.T) {
 		dir := t.TempDir()
 		writeFile(t, dir, "SKILL.md", "content")
-		writeFile(t, dir, "extra.md", generateContent(5_000))
+		// Use an unknown directory so files land in "other" counts.
+		writeFile(t, dir, "extras/small.md", generateContent(5_000))
 		results, _, _ := CheckTokens(dir, "body")
 		requireNoResultContaining(t, results, types.Warning, "non-standard files total")
 		requireNoResultContaining(t, results, types.Error, "non-standard files total")
@@ -281,8 +390,8 @@ func TestCheckTokens_OtherFilesLimits(t *testing.T) {
 	t.Run("other files exceed soft limit", func(t *testing.T) {
 		dir := t.TempDir()
 		writeFile(t, dir, "SKILL.md", "content")
-		writeFile(t, dir, "extra1.md", generateContent(15_000))
-		writeFile(t, dir, "extra2.md", generateContent(15_000))
+		writeFile(t, dir, "extras/file1.md", generateContent(15_000))
+		writeFile(t, dir, "extras/file2.md", generateContent(15_000))
 		results, _, _ := CheckTokens(dir, "body")
 		requireResultContaining(t, results, types.Warning, "non-standard files total")
 		requireResultContaining(t, results, types.Warning, "could consume a significant portion")

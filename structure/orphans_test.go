@@ -301,6 +301,62 @@ func TestCheckOrphanFiles(t *testing.T) {
 		requireResultContaining(t, results, types.Warning, "potentially unreferenced file: scripts/validators/extra.py")
 	})
 
+	t.Run("root support file referenced passes", func(t *testing.T) {
+		dir := t.TempDir()
+		writeFile(t, dir, "guide.md", "guide content")
+		writeFile(t, dir, "setup.py", "#!/usr/bin/env python3")
+
+		body := "Read guide.md and run setup.py to configure."
+		results := CheckOrphanFiles(dir, body)
+
+		requireResult(t, results, types.Pass, "all root support files are referenced")
+		requireNoLevel(t, results, types.Warning)
+	})
+
+	t.Run("root support file unreferenced is orphan", func(t *testing.T) {
+		dir := t.TempDir()
+		writeFile(t, dir, "guide.md", "guide content")
+		writeFile(t, dir, "unused.py", "#!/usr/bin/env python3")
+
+		body := "Read guide.md for details."
+		results := CheckOrphanFiles(dir, body)
+
+		requireResultContaining(t, results, types.Warning, "potentially unreferenced file: unused.py")
+	})
+
+	t.Run("root file bridges to scripts dir", func(t *testing.T) {
+		dir := t.TempDir()
+		writeFile(t, dir, "guide.md", "Run scripts/deploy.sh to deploy.")
+		writeFile(t, dir, "scripts/deploy.sh", "#!/bin/bash")
+
+		body := "Read guide.md for deployment instructions."
+		results := CheckOrphanFiles(dir, body)
+
+		requireNoResultContaining(t, results, types.Warning, "scripts/deploy.sh")
+		requireResult(t, results, types.Pass, "all files in scripts/ are referenced")
+	})
+
+	t.Run("extraneous file not inventoried as root support", func(t *testing.T) {
+		dir := t.TempDir()
+		writeFile(t, dir, "README.md", "readme content")
+
+		body := "No references."
+		results := CheckOrphanFiles(dir, body)
+
+		// README.md is extraneous, not inventoried — no orphan warning
+		requireNoResultContaining(t, results, types.Warning, "README.md")
+	})
+
+	t.Run("root support file case-insensitive match", func(t *testing.T) {
+		dir := t.TempDir()
+		writeFile(t, dir, "Guide.md", "guide content")
+
+		body := "Read guide.md for details."
+		results := CheckOrphanFiles(dir, body)
+
+		requireResult(t, results, types.Pass, "all root support files are referenced")
+	})
+
 	t.Run("multiple orphans across directories", func(t *testing.T) {
 		dir := t.TempDir()
 		writeFile(t, dir, "references/unused1.md", "content")

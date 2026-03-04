@@ -19,6 +19,29 @@ func CheckMarkdown(dir, body string) []types.Result {
 			"SKILL.md has an unclosed code fence starting at line %d — this may cause agents to misinterpret everything after it as code", line))
 	}
 
+	// Check root-level .md files (reference-equivalent).
+	if rootEntries, err := os.ReadDir(dir); err == nil {
+		for _, entry := range rootEntries {
+			if entry.IsDir() || strings.HasPrefix(entry.Name(), ".") {
+				continue
+			}
+			if strings.EqualFold(entry.Name(), "SKILL.md") {
+				continue
+			}
+			if classifyRootFile(entry.Name()) != categoryReference {
+				continue
+			}
+			data, err := os.ReadFile(filepath.Join(dir, entry.Name()))
+			if err != nil {
+				continue
+			}
+			if line, ok := FindUnclosedFence(string(data)); ok {
+				results = append(results, ctx.ErrorAtLinef(entry.Name(), line,
+					"%s has an unclosed code fence starting at line %d — this may cause agents to misinterpret everything after it as code", entry.Name(), line))
+			}
+		}
+	}
+
 	// Check .md files in references/
 	refsDir := filepath.Join(dir, "references")
 	entries, err := os.ReadDir(refsDir)

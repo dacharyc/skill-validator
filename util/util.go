@@ -8,6 +8,7 @@ import (
 	"math"
 	"path/filepath"
 	"sort"
+	"strings"
 )
 
 // --- Color constants for terminal output ---
@@ -74,6 +75,39 @@ func YSuffix(n int) string {
 // SkillNameFromDir derives a skill name from a directory path.
 func SkillNameFromDir(dir string) string {
 	return filepath.Base(dir)
+}
+
+// --- Extraneous file detection ---
+
+// knownExtraneousFiles maps lower-cased filenames to their canonical display
+// form. These files are commonly found in repos but not intended for agent
+// consumption. Per Anthropic best practices: "A skill should only contain
+// essential files that directly support its functionality."
+var knownExtraneousFiles = map[string]string{
+	"readme.md":             "README.md",
+	"readme":                "README",
+	"changelog.md":          "CHANGELOG.md",
+	"changelog":             "CHANGELOG",
+	"license":               "LICENSE",
+	"license.md":            "LICENSE.md",
+	"license.txt":           "LICENSE.txt",
+	"contributing.md":       "CONTRIBUTING.md",
+	"code_of_conduct.md":    "CODE_OF_CONDUCT.md",
+	"installation_guide.md": "INSTALLATION_GUIDE.md",
+	"quick_reference.md":    "QUICK_REFERENCE.md",
+	"makefile":              "Makefile",
+	".gitignore":            ".gitignore",
+}
+
+// IsExtraneousFile returns true if name is agents.md (case-insensitive)
+// or a known extraneous file.
+func IsExtraneousFile(name string) bool {
+	lower := strings.ToLower(name)
+	if lower == "agents.md" {
+		return true
+	}
+	_, known := knownExtraneousFiles[lower]
+	return known
 }
 
 // --- Map helpers ---

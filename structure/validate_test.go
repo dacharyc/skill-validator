@@ -110,7 +110,8 @@ func TestValidate(t *testing.T) {
 	t.Run("no skill ratio error when other content is small", func(t *testing.T) {
 		dir := t.TempDir()
 		writeSkill(t, dir, "---\nname: "+dirName(dir)+"\ndescription: desc\n---\n# Body\n")
-		writeFile(t, dir, "extra.md", "A small extra file.")
+		// Use an extraneous file so it lands in "other" counts rather than standard counts.
+		writeFile(t, dir, "CHANGELOG.md", "A small changelog.")
 		report := Validate(dir, Options{})
 		requireNoResultContaining(t, report.Results, types.Error, "doesn't appear to be structured as a skill")
 	})
@@ -123,6 +124,35 @@ func TestValidate(t *testing.T) {
 			t.Errorf("expected 1 error, got %d", report.Errors)
 		}
 		requireResultContaining(t, report.Results, types.Error, "parsing frontmatter YAML")
+	})
+
+	t.Run("flat layout not penalized by skill ratio", func(t *testing.T) {
+		dir := t.TempDir()
+		writeSkill(t, dir, "---\nname: "+dirName(dir)+"\ndescription: desc\n---\n# Body\n")
+		writeFile(t, dir, "guide.md", "A reference guide.")
+		writeFile(t, dir, "setup.py", "#!/usr/bin/env python3")
+		writeFile(t, dir, "config.yaml", "key: value")
+		report := Validate(dir, Options{})
+		requireNoResultContaining(t, report.Results, types.Error, "doesn't appear to be structured as a skill")
+		if report.Errors != 0 {
+			t.Errorf("expected 0 errors, got %d", report.Errors)
+		}
+	})
+
+	t.Run("flat-skill fixture integration", func(t *testing.T) {
+		fixtureDir := "../testdata/flat-skill"
+		report := Validate(fixtureDir, Options{})
+		// Should only get README.md warning, no errors
+		if report.Errors != 0 {
+			t.Errorf("expected 0 errors, got %d", report.Errors)
+			for _, r := range report.Results {
+				if r.Level == types.Error {
+					t.Logf("  error: %s: %s", r.Category, r.Message)
+				}
+			}
+		}
+		// README.md should be warned
+		requireResultContaining(t, report.Results, types.Warning, "README.md is not needed in a skill")
 	})
 }
 

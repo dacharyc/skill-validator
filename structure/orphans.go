@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/agent-ecosystem/skill-validator/types"
+	"github.com/agent-ecosystem/skill-validator/util"
 )
 
 // orderedRecognizedDirs lists the recognized subdirectories in a stable order
@@ -82,7 +83,10 @@ func CheckOrphanFiles(dir, body string) []types.Result {
 			if reached[relPath] {
 				continue
 			}
+			isRootFile := !strings.Contains(relPath, string(filepath.Separator))
 			if containsReference(item.text, sourceDir, relPath) {
+				markReached(relPath, item.source, dir, &queue, reached, reachedFrom, inventory)
+			} else if isRootFile && containsReferenceCaseInsensitive(lowerText, relPath) {
 				markReached(relPath, item.source, dir, &queue, reached, reachedFrom, inventory)
 			} else if isPython && pythonImportReaches(item.text, item.source, relPath) {
 				// Python import resolution takes priority over the extensionless
@@ -122,33 +126,47 @@ func CheckOrphanFiles(dir, body string) []types.Result {
 		if len(dirFiles) == 0 {
 			continue
 		}
+		results = append(results, reportOrphans(ctx, dirFiles, reached, reachedFrom, missingExtension,
+			fmt.Sprintf("all files in %s/ are referenced", d))...)
+	}
 
-		hasOrphans := false
-		for _, relPath := range dirFiles {
-			if !reached[relPath] {
-				hasOrphans = true
-				results = append(results, ctx.WarnFile(relPath,
-					fmt.Sprintf("potentially unreferenced file: %s — agents may not discover this file without an explicit reference in SKILL.md or a referenced file", relPath)))
-			} else if missingExtension[relPath] {
-				ext := filepath.Ext(relPath)
-				noExt := strings.TrimSuffix(relPath, ext)
-				results = append(results, ctx.WarnFile(relPath,
-					fmt.Sprintf("file %s is referenced without its extension (as %s in %s) — include the %s extension so agents can reliably locate the file", relPath, noExt, reachedFrom[relPath], ext)))
-			}
-		}
-
-		if !hasOrphans {
-			results = append(results, ctx.Passf("all files in %s/ are referenced", d))
-		}
+	// Report root-level support file orphans.
+	rootSupport := rootInventoryFiles(inventory)
+	if len(rootSupport) > 0 {
+		results = append(results, reportOrphans(ctx, rootSupport, reached, reachedFrom, missingExtension,
+			"all root support files are referenced")...)
 	}
 
 	return results
 }
 
-// rootTextFiles returns the names of text files in the skill root directory,
-// excluding SKILL.md. These files aren't tracked as inventory (we don't warn
-// about them being orphaned), but they participate in the BFS as intermediaries
-// that can bridge SKILL.md to files in recognized directories.
+// reportOrphans generates orphan/missing-extension/pass results for a group of files.
+func reportOrphans(ctx types.ResultContext, files []string, reached map[string]bool, reachedFrom map[string]string, missingExtension map[string]bool, passMsg string) []types.Result {
+	var results []types.Result
+	hasOrphans := false
+	for _, relPath := range files {
+		if !reached[relPath] {
+			hasOrphans = true
+			results = append(results, ctx.WarnFile(relPath,
+				fmt.Sprintf("potentially unreferenced file: %s — agents may not discover this file without an explicit reference in SKILL.md or a referenced file", relPath)))
+		} else if missingExtension[relPath] {
+			ext := filepath.Ext(relPath)
+			noExt := strings.TrimSuffix(relPath, ext)
+			results = append(results, ctx.WarnFile(relPath,
+				fmt.Sprintf("file %s is referenced without its extension (as %s in %s) — include the %s extension so agents can reliably locate the file", relPath, noExt, reachedFrom[relPath], ext)))
+		}
+	}
+	if !hasOrphans {
+		results = append(results, ctx.Pass(passMsg))
+	}
+	return results
+}
+
+// rootTextFiles returns the names of extraneous text files in the skill root
+// directory. These files act as intermediaries in the BFS — they can bridge
+// SKILL.md to inventoried files — but are not themselves inventoried. Root
+// support files (references, scripts, assets) are now in inventory and don't
+// need to be returned here.
 func rootTextFiles(dir string) []string {
 	entries, err := os.ReadDir(dir)
 	if err != nil {
@@ -163,14 +181,15 @@ func rootTextFiles(dir string) []string {
 		if strings.EqualFold(name, "SKILL.md") {
 			continue
 		}
-		if isTextFile(name) {
+		if util.IsExtraneousFile(name) && isTextFile(name) {
 			files = append(files, name)
 		}
 	}
 	return files
 }
 
-// inventoryFiles collects relative paths for all files under recognized directories.
+// inventoryFiles collects relative paths for all files under recognized
+// directories, plus root-level support files (non-extraneous, non-SKILL.md).
 func inventoryFiles(dir string) []string {
 	var files []string
 	for _, d := range orderedRecognizedDirs {
@@ -197,6 +216,25 @@ func inventoryFiles(dir string) []string {
 			continue
 		}
 	}
+
+	// Collect root-level support files.
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return files
+	}
+	for _, entry := range entries {
+		if entry.IsDir() || strings.HasPrefix(entry.Name(), ".") {
+			continue
+		}
+		if strings.EqualFold(entry.Name(), "SKILL.md") {
+			continue
+		}
+		if classifyRootFile(entry.Name()) == categoryExtraneous {
+			continue
+		}
+		files = append(files, entry.Name())
+	}
+
 	return files
 }
 
@@ -345,6 +383,25 @@ func pythonPackageInits(text, source, dir string) []string {
 		}
 	}
 	return inits
+}
+
+// containsReferenceCaseInsensitive checks whether lowerText (already lowered)
+// contains the lowercase form of relPath. Used for root-level support files
+// where skill authors commonly use different casing.
+func containsReferenceCaseInsensitive(lowerText, relPath string) bool {
+	return strings.Contains(lowerText, strings.ToLower(relPath))
+}
+
+// rootInventoryFiles returns inventory entries that have no path separator
+// (i.e., root-level files).
+func rootInventoryFiles(inventory []string) []string {
+	var out []string
+	for _, f := range inventory {
+		if !strings.Contains(f, string(filepath.Separator)) {
+			out = append(out, f)
+		}
+	}
+	return out
 }
 
 // isTextFile checks whether the file extension indicates a scannable text file.

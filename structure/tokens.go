@@ -58,12 +58,14 @@ func CheckTokens(dir, body string) ([]types.Result, []types.TokenCount, []types.
 
 	// Count tokens for files in references/
 	refTotal := 0
+	refsNames := make(map[string]bool) // track names to deduplicate against root .md files
 	refsDir := filepath.Join(dir, "references")
 	if entries, err := os.ReadDir(refsDir); err == nil {
 		for _, entry := range entries {
 			if entry.IsDir() || strings.HasPrefix(entry.Name(), ".") {
 				continue
 			}
+			refsNames[strings.ToLower(entry.Name())] = true
 			path := filepath.Join(refsDir, entry.Name())
 			data, err := os.ReadFile(path)
 			if err != nil {
@@ -79,21 +81,46 @@ func CheckTokens(dir, body string) ([]types.Result, []types.TokenCount, []types.
 				Tokens: fileTokens,
 			})
 			refTotal += fileTokens
+			results = append(results, checkRefFileLimit(ctx, relPath, fileTokens)...)
+		}
+	}
 
-			// Per-file limits
-			if fileTokens > refFileHardLimit {
-				results = append(results, ctx.ErrorFilef(relPath,
-					"%s is %d tokens — this will consume 12-20%% of a typical context window "+
-						"and meaningfully degrade agent performance; split into smaller focused files",
-					relPath, fileTokens,
-				))
-			} else if fileTokens > refFileSoftLimit {
-				results = append(results, ctx.WarnFilef(relPath,
-					"%s is %d tokens — consider splitting into smaller focused files "+
-						"so agents load only what they need",
-					relPath, fileTokens,
-				))
+	// Count root-level support files: .md as reference tokens, text assets as asset tokens.
+	// Skip root .md files that collide with a references/ file (subdirectory takes precedence).
+	rootEntries, _ := os.ReadDir(dir)
+	for _, entry := range rootEntries {
+		if entry.IsDir() || strings.HasPrefix(entry.Name(), ".") {
+			continue
+		}
+		if strings.EqualFold(entry.Name(), "SKILL.md") {
+			continue
+		}
+		cat := classifyRootFile(entry.Name())
+		if cat == categoryReference {
+			if refsNames[strings.ToLower(entry.Name())] {
+				continue
 			}
+			data, err := os.ReadFile(filepath.Join(dir, entry.Name()))
+			if err != nil {
+				results = append(results, ctx.WarnFilef(entry.Name(), "could not read %s: %v", entry.Name(), err))
+				continue
+			}
+			tokens, _, _ := enc.Encode(string(data))
+			fileTokens := len(tokens)
+			counts = append(counts, types.TokenCount{File: entry.Name(), Tokens: fileTokens})
+			refTotal += fileTokens
+			results = append(results, checkRefFileLimit(ctx, entry.Name(), fileTokens)...)
+		} else if cat == categoryAsset {
+			ext := strings.ToLower(filepath.Ext(entry.Name()))
+			if !textAssetExtensions[ext] {
+				continue
+			}
+			data, err := os.ReadFile(filepath.Join(dir, entry.Name()))
+			if err != nil {
+				continue
+			}
+			tokens, _, _ := enc.Encode(string(data))
+			counts = append(counts, types.TokenCount{File: entry.Name(), Tokens: len(tokens)})
 		}
 	}
 
@@ -247,6 +274,10 @@ func countOtherFiles(dir string, enc tokenizer.Codec) []types.TokenCount {
 			if binaryExtensions[strings.ToLower(filepath.Ext(name))] {
 				continue
 			}
+			// Skip root support files — they're counted as references/assets.
+			if classifyRootFile(name) != categoryExtraneous {
+				continue
+			}
 			data, err := os.ReadFile(filepath.Join(dir, name))
 			if err != nil {
 				continue
@@ -257,6 +288,26 @@ func countOtherFiles(dir string, enc tokenizer.Codec) []types.TokenCount {
 	}
 
 	return counts
+}
+
+// checkRefFileLimit returns warning/error results if a reference file exceeds
+// per-file token thresholds.
+func checkRefFileLimit(ctx types.ResultContext, relPath string, fileTokens int) []types.Result {
+	if fileTokens > refFileHardLimit {
+		return []types.Result{ctx.ErrorFilef(relPath,
+			"%s is %d tokens — this will consume 12-20%% of a typical context window "+
+				"and meaningfully degrade agent performance; split into smaller focused files",
+			relPath, fileTokens,
+		)}
+	}
+	if fileTokens > refFileSoftLimit {
+		return []types.Result{ctx.WarnFilef(relPath,
+			"%s is %d tokens — consider splitting into smaller focused files "+
+				"so agents load only what they need",
+			relPath, fileTokens,
+		)}
+	}
+	return nil
 }
 
 func countFilesInDir(rootDir, dirName string, enc tokenizer.Codec) []types.TokenCount {

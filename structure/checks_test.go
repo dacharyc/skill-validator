@@ -145,14 +145,12 @@ func TestCheckStructure(t *testing.T) {
 		requireResultContaining(t, results, types.Warning, "LICENSE is not needed in a skill")
 	})
 
-	t.Run("unknown file at root", func(t *testing.T) {
+	t.Run("support file at root not warned", func(t *testing.T) {
 		dir := t.TempDir()
 		writeFile(t, dir, "SKILL.md", "content")
 		writeFile(t, dir, "notes.txt", "some notes")
 		results := CheckStructure(dir)
-		requireResultContaining(t, results, types.Warning, "unexpected file at root: notes.txt")
-		requireResultContaining(t, results, types.Warning, "move it into references/ or assets/")
-		requireResultContaining(t, results, types.Warning, "otherwise remove it")
+		requireNoLevel(t, results, types.Warning)
 	})
 
 	t.Run("deep nesting", func(t *testing.T) {
@@ -175,6 +173,54 @@ func TestCheckStructure(t *testing.T) {
 		results := CheckStructure(dir)
 		requireResult(t, results, types.Pass, "SKILL.md found")
 		requireNoLevel(t, results, types.Warning)
+	})
+
+	t.Run("flat layout md file not warned", func(t *testing.T) {
+		dir := t.TempDir()
+		writeFile(t, dir, "SKILL.md", "content")
+		writeFile(t, dir, "guide.md", "guide content")
+		results := CheckStructure(dir)
+		requireNoLevel(t, results, types.Warning)
+	})
+
+	t.Run("flat layout script file not warned", func(t *testing.T) {
+		dir := t.TempDir()
+		writeFile(t, dir, "SKILL.md", "content")
+		writeFile(t, dir, "setup.py", "#!/usr/bin/env python3")
+		results := CheckStructure(dir)
+		requireNoLevel(t, results, types.Warning)
+	})
+
+	t.Run("flat layout asset file not warned", func(t *testing.T) {
+		dir := t.TempDir()
+		writeFile(t, dir, "SKILL.md", "content")
+		writeFile(t, dir, "config.yaml", "key: value")
+		results := CheckStructure(dir)
+		requireNoLevel(t, results, types.Warning)
+	})
+
+	t.Run("5+ support files emits info hint", func(t *testing.T) {
+		dir := t.TempDir()
+		writeFile(t, dir, "SKILL.md", "content")
+		writeFile(t, dir, "guide.md", "guide")
+		writeFile(t, dir, "setup.py", "setup")
+		writeFile(t, dir, "config.yaml", "config")
+		writeFile(t, dir, "helpers.sh", "helpers")
+		writeFile(t, dir, "data.json", "data")
+		results := CheckStructure(dir)
+		requireResultContaining(t, results, types.Info, "5 support files at root")
+		requireResultContaining(t, results, types.Info, "consider organizing")
+	})
+
+	t.Run("4 support files no hint", func(t *testing.T) {
+		dir := t.TempDir()
+		writeFile(t, dir, "SKILL.md", "content")
+		writeFile(t, dir, "guide.md", "guide")
+		writeFile(t, dir, "setup.py", "setup")
+		writeFile(t, dir, "config.yaml", "config")
+		writeFile(t, dir, "helpers.sh", "helpers")
+		results := CheckStructure(dir)
+		requireNoLevel(t, results, types.Info)
 	})
 
 	t.Run("hidden dirs inside recognized dirs are skipped", func(t *testing.T) {

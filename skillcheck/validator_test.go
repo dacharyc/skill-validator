@@ -118,6 +118,64 @@ func TestReadReferencesMarkdownFiles_OnlyNonMd(t *testing.T) {
 	}
 }
 
+func TestReadReferencesMarkdownFiles_RootMdIncluded(t *testing.T) {
+	dir := t.TempDir()
+	writeSkill(t, dir, "---\nname: test\n---\n")
+	if err := os.WriteFile(filepath.Join(dir, "guide.md"), []byte("# Guide"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	files := ReadReferencesMarkdownFiles(dir)
+	if files == nil {
+		t.Fatal("expected non-nil map")
+	}
+	if files["guide.md"] != "# Guide" {
+		t.Errorf("guide.md content = %q, want %q", files["guide.md"], "# Guide")
+	}
+}
+
+func TestReadReferencesMarkdownFiles_RootCollisionSkipped(t *testing.T) {
+	dir := t.TempDir()
+	writeSkill(t, dir, "---\nname: test\n---\n")
+	refsDir := filepath.Join(dir, "references")
+	if err := os.MkdirAll(refsDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(refsDir, "guide.md"), []byte("# Refs Guide"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "guide.md"), []byte("# Root Guide"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	files := ReadReferencesMarkdownFiles(dir)
+	if len(files) != 1 {
+		t.Fatalf("expected 1 file, got %d", len(files))
+	}
+	if files["guide.md"] != "# Refs Guide" {
+		t.Errorf("guide.md content = %q, want refs version", files["guide.md"])
+	}
+}
+
+func TestReadReferencesMarkdownFiles_ExtraneousExcluded(t *testing.T) {
+	dir := t.TempDir()
+	writeSkill(t, dir, "---\nname: test\n---\n")
+	if err := os.WriteFile(filepath.Join(dir, "README.md"), []byte("# Readme"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "guide.md"), []byte("# Guide"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	files := ReadReferencesMarkdownFiles(dir)
+	if _, exists := files["README.md"]; exists {
+		t.Error("README.md should be excluded as extraneous")
+	}
+	if files["guide.md"] != "# Guide" {
+		t.Errorf("guide.md content = %q", files["guide.md"])
+	}
+}
+
 func TestAnalyzeReferences_WithFiles(t *testing.T) {
 	dir := t.TempDir()
 	refsDir := filepath.Join(dir, "references")
