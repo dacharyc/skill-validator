@@ -72,10 +72,10 @@ func reportCompareText(w io.Writer, results []*judge.CachedResult, skillDir stri
 
 		_, _ = fmt.Fprintf(w, "  %-22s", "Dimension")
 		for _, m := range models {
-			_, _ = fmt.Fprintf(w, " %-15s", truncateModel(m))
+			_, _ = fmt.Fprintf(w, " %-25s", truncateModel(m))
 		}
 		_, _ = fmt.Fprintln(w)
-		_, _ = fmt.Fprintf(w, "  %s\n", strings.Repeat("─", 22+16*len(models)))
+		_, _ = fmt.Fprintf(w, "  %s\n", strings.Repeat("─", 22+26*len(models)))
 
 		dims := dimensionLabels(entries)
 		for _, label := range dims {
@@ -91,14 +91,14 @@ func printCompareRowScored(w io.Writer, label string, models []string, modelScor
 	for _, m := range models {
 		s := modelScored[m]
 		if s == nil {
-			_, _ = fmt.Fprintf(w, " %-15s", "-")
+			_, _ = fmt.Fprintf(w, " %-25s", "-")
 			continue
 		}
 		if isOverall {
-			_, _ = fmt.Fprintf(w, " %-15s", fmt.Sprintf("%.2f/5", s.OverallScore()))
+			_, _ = fmt.Fprintf(w, " %-25s", fmt.Sprintf("%.2f/5", s.OverallScore()))
 		} else {
 			val := dimValueByLabel(s, label)
-			_, _ = fmt.Fprintf(w, " %-15s", fmt.Sprintf("%d/5", val))
+			_, _ = fmt.Fprintf(w, " %-25s", fmt.Sprintf("%d/5", val))
 		}
 	}
 	_, _ = fmt.Fprintln(w)
@@ -312,8 +312,8 @@ func printCachedScoresMarkdown(w io.Writer, r *judge.CachedResult) {
 }
 
 func truncateModel(model string) string {
-	if len(model) > 14 {
-		return model[:11] + "..."
+	if len(model) > 24 {
+		return model[:21] + "..."
 	}
 	return model
 }

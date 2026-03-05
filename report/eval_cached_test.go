@@ -240,10 +240,10 @@ func TestTruncateModel(t *testing.T) {
 	if got := truncateModel("short"); got != "short" {
 		t.Errorf("truncateModel(short) = %q", got)
 	}
-	long := "very-long-model-name-here"
+	long := "claude-sonnet-4-5-20250929-v1:0"
 	got := truncateModel(long)
-	if len(got) > 14 {
-		t.Errorf("truncateModel should truncate to <=14 chars, got %q (%d)", got, len(got))
+	if len(got) > 24 {
+		t.Errorf("truncateModel should truncate to <=24 chars, got %q (%d)", got, len(got))
 	}
 	if !strings.HasSuffix(got, "...") {
 		t.Errorf("truncated model should end with ..., got %q", got)
