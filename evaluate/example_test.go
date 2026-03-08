@@ -53,7 +53,7 @@ func ExampleEvaluateSkill_refsOnly() {
 	client, err := judge.NewClient(judge.ClientOptions{
 		Provider: "openai",
 		APIKey:   os.Getenv("OPENAI_API_KEY"),
-		Model:    "gpt-4o",
+		Model:    "gpt-5.2",
 	})
 	if err != nil {
 		panic(err)

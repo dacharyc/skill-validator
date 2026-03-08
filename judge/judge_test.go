@@ -329,8 +329,8 @@ func TestNewClient_OpenAI(t *testing.T) {
 	if c.Provider() != "openai" {
 		t.Errorf("provider = %s, want openai", c.Provider())
 	}
-	if c.ModelName() != "gpt-4o" {
-		t.Errorf("model = %s, want gpt-4o", c.ModelName())
+	if c.ModelName() != "gpt-5.2" {
+		t.Errorf("model = %s, want gpt-5.2", c.ModelName())
 	}
 }
 

@@ -27,7 +27,7 @@ func ExampleNewClient_openai() {
 	client, err := judge.NewClient(judge.ClientOptions{
 		Provider: "openai",
 		APIKey:   "your-api-key",
-		Model:    "gpt-4o",
+		Model:    "gpt-5.2",
 	})
 	if err != nil {
 		panic(err)
@@ -35,7 +35,7 @@ func ExampleNewClient_openai() {
 
 	fmt.Printf("Provider: %s, Model: %s\n", client.Provider(), client.ModelName())
 	// Output:
-	// Provider: openai, Model: gpt-4o
+	// Provider: openai, Model: gpt-5.2
 }
 
 // This example shows how to score a SKILL.md file. It requires a valid

@@ -62,7 +62,7 @@ func NewClient(opts ClientOptions) (LLMClient, error) {
 	case "openai":
 		model := opts.Model
 		if model == "" {
-			model = "gpt-4o"
+			model = "gpt-5.2"
 		}
 		baseURL := opts.BaseURL
 		if baseURL == "" {
