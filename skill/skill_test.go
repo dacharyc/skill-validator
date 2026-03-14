@@ -282,3 +282,21 @@ func TestUnrecognizedFields(t *testing.T) {
 		t.Error("expected another in unrecognized fields")
 	}
 }
+
+func TestRolesFieldIsRecognized(t *testing.T) {
+	dir := t.TempDir()
+	content := "---\nname: test\ndescription: desc\nroles: [frontend, backend]\n---\nBody\n"
+	if err := os.WriteFile(filepath.Join(dir, "SKILL.md"), []byte(content), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	s, err := Load(dir)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if fields := s.UnrecognizedFields(); len(fields) != 0 {
+		t.Errorf("roles should be recognized, got unrecognized: %v", fields)
+	}
+	if len(s.Frontmatter.Roles) != 2 {
+		t.Errorf("expected 2 roles, got %v", s.Frontmatter.Roles)
+	}
+}

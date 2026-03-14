@@ -22,6 +22,7 @@ type Frontmatter struct {
 	Compatibility string            `yaml:"compatibility"`
 	Metadata      map[string]string `yaml:"metadata"`
 	AllowedTools  AllowedTools      `yaml:"allowed-tools"`
+	Roles         []string          `yaml:"roles"`
 }
 
 // AllowedTools handles the type ambiguity in the allowed-tools field.
@@ -76,6 +77,7 @@ var knownFrontmatterFields = map[string]bool{
 	"compatibility": true,
 	"metadata":      true,
 	"allowed-tools": true,
+	"roles":         true,
 }
 
 // Load reads and parses a SKILL.md file from the given directory.
