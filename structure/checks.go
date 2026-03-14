@@ -40,7 +40,7 @@ var knownExtraneousFiles = map[string]string{
 // CheckStructure validates the directory layout of a skill package. It checks
 // for the required SKILL.md file, flags unrecognized directories and extraneous
 // root files, and warns about deep nesting in recognized directories.
-func CheckStructure(dir string) []types.Result {
+func CheckStructure(dir string, opts Options) []types.Result {
 	ctx := types.ResultContext{Category: "Structure"}
 	var results []types.Result
 
@@ -65,7 +65,7 @@ func CheckStructure(dir string) []types.Result {
 			continue // skip hidden files/dirs
 		}
 		if !entry.IsDir() {
-			if name != "SKILL.md" {
+			if name != "SKILL.md" && !opts.AllowFlatLayouts {
 				results = append(results, extraneousFileResult(ctx, name))
 			}
 			continue

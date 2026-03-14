@@ -115,6 +115,49 @@ func TestValidate(t *testing.T) {
 		requireNoResultContaining(t, report.Results, types.Error, "doesn't appear to be structured as a skill")
 	})
 
+	t.Run("flat layout no warnings for root files", func(t *testing.T) {
+		dir := t.TempDir()
+		writeSkill(t, dir, "---\nname: "+dirName(dir)+"\ndescription: A flat skill\n---\n# Body\nSee guide.md for details.\n")
+		writeFile(t, dir, "guide.md", "Guide content.")
+		report := Validate(dir, Options{AllowFlatLayouts: true})
+		if report.Errors != 0 {
+			t.Errorf("expected 0 errors, got %d", report.Errors)
+			for _, r := range report.Results {
+				if r.Level == types.Error {
+					t.Logf("  error: %s: %s", r.Category, r.Message)
+				}
+			}
+		}
+		if report.Warnings != 0 {
+			t.Errorf("expected 0 warnings, got %d", report.Warnings)
+			for _, r := range report.Results {
+				if r.Level == types.Warning {
+					t.Logf("  warning: %s: %s", r.Category, r.Message)
+				}
+			}
+		}
+		// Root file should be in standard counts, not other
+		if len(report.OtherTokenCounts) != 0 {
+			t.Errorf("expected 0 other token counts, got %d", len(report.OtherTokenCounts))
+		}
+	})
+
+	t.Run("flat layout warns on unreferenced root files", func(t *testing.T) {
+		dir := t.TempDir()
+		writeSkill(t, dir, "---\nname: "+dirName(dir)+"\ndescription: A flat skill\n---\n# Body\n")
+		writeFile(t, dir, "orphan.md", "Nobody references me.")
+		report := Validate(dir, Options{AllowFlatLayouts: true})
+		requireResultContaining(t, report.Results, types.Warning, "potentially unreferenced file: orphan.md")
+	})
+
+	t.Run("flat layout large content not flagged as non-skill", func(t *testing.T) {
+		dir := t.TempDir()
+		writeSkill(t, dir, "---\nname: "+dirName(dir)+"\ndescription: desc\n---\n# Body\nSee big-ref.md.\n")
+		writeFile(t, dir, "big-ref.md", generateContent(30_000))
+		report := Validate(dir, Options{AllowFlatLayouts: true})
+		requireNoResultContaining(t, report.Results, types.Error, "doesn't appear to be structured as a skill")
+	})
+
 	t.Run("unparseable frontmatter", func(t *testing.T) {
 		dir := t.TempDir()
 		writeSkill(t, dir, "---\n: invalid: yaml: [broken\n---\nBody\n")

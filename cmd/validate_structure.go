@@ -8,8 +8,10 @@ import (
 )
 
 var (
-	skipOrphans     bool
-	strictStructure bool
+	skipOrphans                 bool
+	strictStructure             bool
+	structAllowExtraFrontmatter bool
+	structAllowFlatLayouts      bool
 )
 
 var validateStructureCmd = &cobra.Command{
@@ -24,6 +26,10 @@ func init() {
 	validateStructureCmd.Flags().BoolVar(&skipOrphans, "skip-orphans", false,
 		"skip orphan file detection (unreferenced files in scripts/, references/, assets/)")
 	validateStructureCmd.Flags().BoolVar(&strictStructure, "strict", false, "treat warnings as errors (exit 1 instead of 2)")
+	validateStructureCmd.Flags().BoolVar(&structAllowExtraFrontmatter, "allow-extra-frontmatter", false,
+		"suppress warnings for non-spec frontmatter fields")
+	validateStructureCmd.Flags().BoolVar(&structAllowFlatLayouts, "allow-flat-layouts", false,
+		"allow files at the skill root without warnings and treat them as standard content for token counting")
 	validateCmd.AddCommand(validateStructureCmd)
 }
 
@@ -33,7 +39,11 @@ func runValidateStructure(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	opts := structure.Options{SkipOrphans: skipOrphans}
+	opts := structure.Options{
+		SkipOrphans:           skipOrphans,
+		AllowExtraFrontmatter: structAllowExtraFrontmatter,
+		AllowFlatLayouts:      structAllowFlatLayouts,
+	}
 	eopts := exitOpts{strict: strictStructure}
 
 	switch mode {

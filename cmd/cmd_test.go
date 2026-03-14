@@ -434,6 +434,123 @@ func TestDetectAndResolve_MultiSkill(t *testing.T) {
 	}
 }
 
+func TestValidateCommand_FlatSkill_WithoutFlag(t *testing.T) {
+	dir := fixtureDir(t, "flat-skill")
+
+	r := structure.Validate(dir, structure.Options{})
+	// Without the flag, root files should produce warnings
+	if r.Warnings == 0 {
+		t.Error("expected warnings for root-level files without --allow-flat-layouts")
+	}
+
+	// Should warn about each non-SKILL.md root file
+	hasExtraneousWarning := false
+	for _, res := range r.Results {
+		if res.Level == types.Warning && res.Category == "Structure" &&
+			strings.Contains(res.Message, "unexpected file at root") {
+			hasExtraneousWarning = true
+			break
+		}
+	}
+	if !hasExtraneousWarning {
+		t.Error("expected extraneous file warning without --allow-flat-layouts")
+	}
+
+	// Root files should be counted as "other" tokens
+	if len(r.OtherTokenCounts) == 0 {
+		t.Error("expected root files in other token counts without --allow-flat-layouts")
+	}
+}
+
+func TestValidateCommand_FlatSkill_WithFlag(t *testing.T) {
+	dir := fixtureDir(t, "flat-skill")
+
+	r := structure.Validate(dir, structure.Options{AllowFlatLayouts: true})
+
+	// Should pass with no errors
+	if r.Errors != 0 {
+		t.Errorf("expected 0 errors, got %d", r.Errors)
+		for _, res := range r.Results {
+			if res.Level == types.Error {
+				t.Logf("  error: %s: %s", res.Category, res.Message)
+			}
+		}
+	}
+
+	// Should have no warnings (all files are referenced in SKILL.md)
+	if r.Warnings != 0 {
+		t.Errorf("expected 0 warnings, got %d", r.Warnings)
+		for _, res := range r.Results {
+			if res.Level == types.Warning {
+				t.Logf("  warning: %s: %s", res.Category, res.Message)
+			}
+		}
+	}
+
+	// No extraneous file warnings
+	for _, res := range r.Results {
+		if res.Level == types.Warning && strings.Contains(res.Message, "unexpected file at root") {
+			t.Errorf("unexpected extraneous file warning with --allow-flat-layouts: %s", res.Message)
+		}
+	}
+
+	// Root files should be in standard token counts, not other
+	if len(r.OtherTokenCounts) != 0 {
+		t.Errorf("expected 0 other token counts with --allow-flat-layouts, got %d", len(r.OtherTokenCounts))
+		for _, c := range r.OtherTokenCounts {
+			t.Logf("  other: %s (%d tokens)", c.File, c.Tokens)
+		}
+	}
+
+	// Standard token counts should include SKILL.md body + 3 root files = 4
+	if len(r.TokenCounts) != 4 {
+		t.Errorf("expected 4 standard token counts (SKILL.md body + 3 root files), got %d", len(r.TokenCounts))
+		for _, c := range r.TokenCounts {
+			t.Logf("  standard: %s (%d tokens)", c.File, c.Tokens)
+		}
+	}
+
+	// Should have an orphan pass result for root files
+	hasOrphanPass := false
+	for _, res := range r.Results {
+		if res.Level == types.Pass && strings.Contains(res.Message, "all root-level files are referenced") {
+			hasOrphanPass = true
+			break
+		}
+	}
+	if !hasOrphanPass {
+		t.Error("expected pass result confirming all root-level files are referenced")
+	}
+}
+
+func TestValidateCommand_FlatSkill_OrphanDetection(t *testing.T) {
+	dir := fixtureDir(t, "flat-skill")
+
+	// Temporarily add an unreferenced file
+	tmpFile := filepath.Join(dir, "orphan.md")
+	if err := os.WriteFile(tmpFile, []byte("Nobody references me."), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = os.Remove(tmpFile) }()
+
+	r := structure.Validate(dir, structure.Options{AllowFlatLayouts: true})
+
+	// Should detect the orphan
+	hasOrphanWarning := false
+	for _, res := range r.Results {
+		if res.Level == types.Warning && strings.Contains(res.Message, "potentially unreferenced file: orphan.md") {
+			hasOrphanWarning = true
+			break
+		}
+	}
+	if !hasOrphanWarning {
+		t.Error("expected orphan warning for unreferenced orphan.md")
+		for _, res := range r.Results {
+			t.Logf("  level=%d category=%s message=%q", res.Level, res.Category, res.Message)
+		}
+	}
+}
+
 func TestDetectAndResolve_NoSkill(t *testing.T) {
 	dir := t.TempDir()
 	_, _, _, err := detectAndResolve([]string{dir})

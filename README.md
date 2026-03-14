@@ -183,9 +183,11 @@ For more details about how the commands are implemented and what they provide, r
 skill-validator validate structure <path>
 skill-validator validate structure --skip-orphans <path>
 skill-validator validate structure --strict <path>
+skill-validator validate structure --allow-extra-frontmatter <path>
+skill-validator validate structure --allow-flat-layouts <path>
 ```
 
-Checks spec compliance: directory structure, frontmatter fields, token limits, skill ratio, code fence integrity, internal link validity, and orphan file detection. Use `--skip-orphans` to suppress warnings about unreferenced files in `scripts/`, `references/`, and `assets/`. Use `--strict` to treat warnings as errors (exit 1 instead of 2).
+Checks spec compliance: directory structure, frontmatter fields, token limits, skill ratio, code fence integrity, internal link validity, and orphan file detection. Use `--skip-orphans` to suppress warnings about unreferenced files in `scripts/`, `references/`, and `assets/`. Use `--strict` to treat warnings as errors (exit 1 instead of 2). Use `--allow-extra-frontmatter` to suppress warnings for frontmatter fields not defined in the spec (e.g. `user-invokable`). Standard frontmatter fields are still fully validated. Use `--allow-flat-layouts` to allow supplemental files alongside SKILL.md at the skill root without warnings (see [Flat skill layouts](#flat-skill-layouts)).
 
 ```
 Validating skill: my-skill/
@@ -280,9 +282,11 @@ skill-validator check --skip contamination <path>
 skill-validator check --per-file <path>
 skill-validator check --skip-orphans <path>
 skill-validator check --strict <path>
+skill-validator check --allow-extra-frontmatter <path>
+skill-validator check --allow-flat-layouts <path>
 ```
 
-Runs all checks (structure + links + content + contamination). Use `--only` or `--skip` to select specific check groups. The flags are mutually exclusive. Use `--per-file` to see per-file reference analysis alongside the aggregate. Use `--skip-orphans` to suppress orphan file warnings in the structure check. Use `--strict` to treat warnings as errors (exit 1 instead of 2).
+Runs all checks (structure + links + content + contamination). Use `--only` or `--skip` to select specific check groups. The flags are mutually exclusive. Use `--per-file` to see per-file reference analysis alongside the aggregate. Use `--skip-orphans` to suppress orphan file warnings in the structure check. Use `--strict` to treat warnings as errors (exit 1 instead of 2). Use `--allow-extra-frontmatter` to suppress warnings for non-spec frontmatter fields. Use `--allow-flat-layouts` to allow supplemental files at the skill root without warnings (see [Flat skill layouts](#flat-skill-layouts)).
 
 Valid check groups: `structure`, `links`, `content`, `contamination`.
 
@@ -676,6 +680,34 @@ These checks validate conformance with the [Agent Skills specification](https://
   - **Pass**: all files in a directory are referenced
   - **Warning**: file is unreferenced (potential orphan) or referenced without its file extension
 - Root-level files are not checked for orphan status since they already get non-standard structure warnings from the extraneous file check
+
+**Flat skill layouts**
+
+The spec recommends organizing supplemental files into `scripts/`, `references/`, and `assets/` directories. By default, the validator warns about files placed at the skill root alongside SKILL.md and counts them as non-standard content for token limits.
+
+The `--allow-flat-layouts` flag relaxes these rules for skill authors who prefer a flat directory structure:
+
+```
+my-skill/
+├── SKILL.md
+├── guide.md
+├── extract.py
+└── template.txt
+```
+
+When enabled, the flag changes three behaviors:
+
+1. **Structure warnings suppressed**: root-level files no longer trigger extraneous file warnings. Unknown directories still produce warnings since a flat layout means no directories, not non-standard directories.
+2. **Token reclassification**: root-level text files are counted as standard content (subject to the same per-file and aggregate thresholds as `references/` files) instead of "other" files. This also prevents the holistic "not structured as a skill" error from triggering on flat layouts with substantial content.
+3. **Orphan detection**: root-level files are checked for references in SKILL.md, just like files in recognized directories. Unreferenced root files are flagged as potential orphans.
+
+```
+skill-validator validate structure --allow-flat-layouts my-skill/
+skill-validator check --allow-flat-layouts my-skill/
+```
+
+> [!NOTE]
+> The standard directory structure remains the recommended approach for maximum portability across agent platforms. Use `--allow-flat-layouts` when a flat layout better fits your workflow, with the understanding that some platforms may not discover files outside the recognized directories.
 
 ### Link validation (`validate links`)
 

@@ -14,7 +14,7 @@ var namePattern = regexp.MustCompile(`^[a-z0-9]+(-[a-z0-9]+)*$`)
 // CheckFrontmatter validates the YAML frontmatter of a parsed skill. It checks
 // required fields (name, description), enforces format and length constraints,
 // validates optional fields, and warns about unrecognized or keyword-stuffed fields.
-func CheckFrontmatter(s *skill.Skill) []types.Result {
+func CheckFrontmatter(s *skill.Skill, opts Options) []types.Result {
 	ctx := types.ResultContext{Category: "Frontmatter", File: "SKILL.md"}
 	var results []types.Result
 
@@ -93,9 +93,11 @@ func CheckFrontmatter(s *skill.Skill) []types.Result {
 		}
 	}
 
-	// Warn on unrecognized fields
-	for _, field := range s.UnrecognizedFields() {
-		results = append(results, ctx.Warnf("unrecognized field: %q", field))
+	// Warn on unrecognized fields (unless extra frontmatter is allowed)
+	if !opts.AllowExtraFrontmatter {
+		for _, field := range s.UnrecognizedFields() {
+			results = append(results, ctx.Warnf("unrecognized field: %q", field))
+		}
 	}
 
 	return results

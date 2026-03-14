@@ -315,3 +315,61 @@ func TestCheckOrphanFiles(t *testing.T) {
 		requireResultContaining(t, results, types.Warning, "potentially unreferenced file: assets/unused3.png")
 	})
 }
+
+func TestCheckFlatOrphanFiles(t *testing.T) {
+	t.Run("all root files referenced", func(t *testing.T) {
+		dir := t.TempDir()
+		writeFile(t, dir, "guide.md", "guide content")
+		writeFile(t, dir, "notes.txt", "notes")
+		body := "See guide.md for details and notes.txt for notes."
+		results := CheckFlatOrphanFiles(dir, body)
+		requireResult(t, results, types.Pass, "all root-level files are referenced from SKILL.md")
+		requireNoLevel(t, results, types.Warning)
+	})
+
+	t.Run("unreferenced root file", func(t *testing.T) {
+		dir := t.TempDir()
+		writeFile(t, dir, "guide.md", "guide content")
+		writeFile(t, dir, "orphan.txt", "orphan")
+		body := "See guide.md for details."
+		results := CheckFlatOrphanFiles(dir, body)
+		requireResultContaining(t, results, types.Warning, "potentially unreferenced file: orphan.txt")
+		requireNoResultContaining(t, results, types.Warning, "guide.md")
+	})
+
+	t.Run("no root files besides SKILL.md", func(t *testing.T) {
+		dir := t.TempDir()
+		writeFile(t, dir, "SKILL.md", "content")
+		results := CheckFlatOrphanFiles(dir, "body")
+		if len(results) != 0 {
+			t.Errorf("expected no results, got %d", len(results))
+		}
+	})
+
+	t.Run("extensionless reference still matches", func(t *testing.T) {
+		dir := t.TempDir()
+		writeFile(t, dir, "helper.py", "def help(): pass")
+		body := "Use helper to do things."
+		results := CheckFlatOrphanFiles(dir, body)
+		requireNoLevel(t, results, types.Warning)
+	})
+
+	t.Run("hidden files are skipped", func(t *testing.T) {
+		dir := t.TempDir()
+		writeFile(t, dir, ".hidden", "secret")
+		writeFile(t, dir, "visible.md", "content")
+		body := "See visible.md."
+		results := CheckFlatOrphanFiles(dir, body)
+		requireNoResultContaining(t, results, types.Warning, ".hidden")
+	})
+
+	t.Run("directories are skipped", func(t *testing.T) {
+		dir := t.TempDir()
+		writeFile(t, dir, "scripts/run.sh", "#!/bin/bash")
+		writeFile(t, dir, "guide.md", "guide")
+		body := "See guide.md."
+		results := CheckFlatOrphanFiles(dir, body)
+		// Should only report on root files, not dir contents
+		requireNoResultContaining(t, results, types.Warning, "scripts")
+	})
+}

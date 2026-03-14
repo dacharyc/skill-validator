@@ -347,6 +347,51 @@ func pythonPackageInits(text, source, dir string) []string {
 	return inits
 }
 
+// CheckFlatOrphanFiles checks root-level non-SKILL.md files for references in
+// the SKILL.md body. Files not referenced are reported as potentially orphaned.
+// This is a simpler check than CheckOrphanFiles since all files are at the root.
+func CheckFlatOrphanFiles(dir, body string) []types.Result {
+	ctx := types.ResultContext{Category: "Structure"}
+
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return nil
+	}
+
+	var rootFiles []string
+	for _, entry := range entries {
+		name := entry.Name()
+		if entry.IsDir() || strings.HasPrefix(name, ".") {
+			continue
+		}
+		if strings.EqualFold(name, "SKILL.md") {
+			continue
+		}
+		rootFiles = append(rootFiles, name)
+	}
+
+	if len(rootFiles) == 0 {
+		return nil
+	}
+
+	var results []types.Result
+	hasOrphans := false
+	for _, name := range rootFiles {
+		if !containsReference(body, "", name) &&
+			!containsReferenceWithoutExtension(body, "", name) {
+			hasOrphans = true
+			results = append(results, ctx.WarnFile(name,
+				fmt.Sprintf("potentially unreferenced file: %s — agents may not discover this file without an explicit reference in SKILL.md", name)))
+		}
+	}
+
+	if !hasOrphans {
+		results = append(results, ctx.Pass("all root-level files are referenced from SKILL.md"))
+	}
+
+	return results
+}
+
 // isTextFile checks whether the file extension indicates a scannable text file.
 // Anything not in the binary extension list is assumed to be text.
 func isTextFile(relPath string) bool {

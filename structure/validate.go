@@ -11,7 +11,9 @@ import (
 
 // Options configures which checks Validate runs.
 type Options struct {
-	SkipOrphans bool
+	SkipOrphans           bool
+	AllowExtraFrontmatter bool
+	AllowFlatLayouts      bool
 }
 
 // ValidateMulti validates each directory and returns an aggregated report.
@@ -31,7 +33,7 @@ func Validate(dir string, opts Options) *types.Report {
 	report := &types.Report{SkillDir: dir}
 
 	// Structure checks
-	structResults := CheckStructure(dir)
+	structResults := CheckStructure(dir, opts)
 	report.Results = append(report.Results, structResults...)
 
 	// Check if SKILL.md was found; if not, skip further checks
@@ -57,10 +59,10 @@ func Validate(dir string, opts Options) *types.Report {
 	}
 
 	// Frontmatter checks
-	report.Results = append(report.Results, CheckFrontmatter(s)...)
+	report.Results = append(report.Results, CheckFrontmatter(s, opts)...)
 
 	// Token checks
-	tokenResults, tokenCounts, otherCounts := CheckTokens(dir, s.Body)
+	tokenResults, tokenCounts, otherCounts := CheckTokens(dir, s.Body, opts)
 	report.Results = append(report.Results, tokenResults...)
 	report.TokenCounts = tokenCounts
 	report.OtherTokenCounts = otherCounts
@@ -77,6 +79,9 @@ func Validate(dir string, opts Options) *types.Report {
 	// Orphan file checks (files in recognized dirs that are never referenced)
 	if !opts.SkipOrphans {
 		report.Results = append(report.Results, CheckOrphanFiles(dir, s.Body)...)
+		if opts.AllowFlatLayouts {
+			report.Results = append(report.Results, CheckFlatOrphanFiles(dir, s.Body)...)
+		}
 	}
 
 	report.Tally()

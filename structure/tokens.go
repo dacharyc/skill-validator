@@ -29,7 +29,7 @@ const (
 // CheckTokens counts tokens for the SKILL.md body, reference files, asset files,
 // and non-standard files. It returns validation results, standard token counts,
 // and non-standard ("other") token counts.
-func CheckTokens(dir, body string) ([]types.Result, []types.TokenCount, []types.TokenCount) {
+func CheckTokens(dir, body string, opts Options) ([]types.Result, []types.TokenCount, []types.TokenCount) {
 	ctx := types.ResultContext{Category: "Tokens"}
 	var results []types.Result
 	var counts []types.TokenCount
@@ -97,7 +97,31 @@ func CheckTokens(dir, body string) ([]types.Result, []types.TokenCount, []types.
 		}
 	}
 
-	// Aggregate reference limits
+	// When flat layouts are allowed, root-level text files are treated as
+	// standard content (like references/) rather than "other" files.
+	if opts.AllowFlatLayouts {
+		rootCounts := countRootFiles(dir, enc)
+		for _, rc := range rootCounts {
+			counts = append(counts, rc)
+			refTotal += rc.Tokens
+
+			if rc.Tokens > refFileHardLimit {
+				results = append(results, ctx.ErrorFilef(rc.File,
+					"%s is %d tokens — this will consume 12-20%% of a typical context window "+
+						"and meaningfully degrade agent performance; split into smaller focused files",
+					rc.File, rc.Tokens,
+				))
+			} else if rc.Tokens > refFileSoftLimit {
+				results = append(results, ctx.WarnFilef(rc.File,
+					"%s is %d tokens — consider splitting into smaller focused files "+
+						"so agents load only what they need",
+					rc.File, rc.Tokens,
+				))
+			}
+		}
+	}
+
+	// Aggregate reference limits (includes root files when flat layouts accepted)
 	if refTotal > refTotalHardLimit {
 		results = append(results, ctx.Errorf(
 			"total reference files: %d tokens — this will consume 25-40%% of a typical "+
@@ -113,7 +137,7 @@ func CheckTokens(dir, body string) ([]types.Result, []types.TokenCount, []types.
 	}
 
 	// Count tokens in non-standard files
-	otherCounts := countOtherFiles(dir, enc)
+	otherCounts := countOtherFiles(dir, enc, opts)
 
 	// Check other-files aggregate limits
 	otherTotal := 0
@@ -220,7 +244,7 @@ func countAssetFiles(dir string, enc tokenizer.Codec) []types.TokenCount {
 	return counts
 }
 
-func countOtherFiles(dir string, enc tokenizer.Codec) []types.TokenCount {
+func countOtherFiles(dir string, enc tokenizer.Codec, opts Options) []types.TokenCount {
 	var counts []types.TokenCount
 
 	entries, err := os.ReadDir(dir)
@@ -241,7 +265,7 @@ func countOtherFiles(dir string, enc tokenizer.Codec) []types.TokenCount {
 			// Walk files in unknown directory
 			counts = append(counts, countFilesInDir(dir, name, enc)...)
 		} else {
-			if standardRootFiles[strings.ToLower(name)] {
+			if standardRootFiles[strings.ToLower(name)] || opts.AllowFlatLayouts {
 				continue
 			}
 			if binaryExtensions[strings.ToLower(filepath.Ext(name))] {
@@ -289,5 +313,34 @@ func countFilesInDir(rootDir, dirName string, enc tokenizer.Codec) []types.Token
 		return nil
 	})
 
+	return counts
+}
+
+// countRootFiles counts tokens in non-SKILL.md text files at the skill root.
+// Used when flat layouts are allowed to treat these as standard content.
+func countRootFiles(dir string, enc tokenizer.Codec) []types.TokenCount {
+	var counts []types.TokenCount
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return counts
+	}
+	for _, entry := range entries {
+		name := entry.Name()
+		if entry.IsDir() || strings.HasPrefix(name, ".") {
+			continue
+		}
+		if standardRootFiles[strings.ToLower(name)] {
+			continue
+		}
+		if binaryExtensions[strings.ToLower(filepath.Ext(name))] {
+			continue
+		}
+		data, err := os.ReadFile(filepath.Join(dir, name))
+		if err != nil {
+			continue
+		}
+		tokens, _, _ := enc.Encode(string(data))
+		counts = append(counts, types.TokenCount{File: name, Tokens: len(tokens)})
+	}
 	return counts
 }

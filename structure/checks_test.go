@@ -11,14 +11,14 @@ import (
 func TestCheckStructure(t *testing.T) {
 	t.Run("missing SKILL.md", func(t *testing.T) {
 		dir := t.TempDir()
-		results := CheckStructure(dir)
+		results := CheckStructure(dir, Options{})
 		requireResult(t, results, types.Error, "SKILL.md not found")
 	})
 
 	t.Run("only SKILL.md", func(t *testing.T) {
 		dir := t.TempDir()
 		writeFile(t, dir, "SKILL.md", "---\nname: test\n---\n")
-		results := CheckStructure(dir)
+		results := CheckStructure(dir, Options{})
 		requireResult(t, results, types.Pass, "SKILL.md found")
 		requireNoLevel(t, results, types.Error)
 		requireNoLevel(t, results, types.Warning)
@@ -36,7 +36,7 @@ func TestCheckStructure(t *testing.T) {
 		if err := os.MkdirAll(filepath.Join(dir, "assets"), 0o755); err != nil {
 			t.Fatal(err)
 		}
-		results := CheckStructure(dir)
+		results := CheckStructure(dir, Options{})
 		requireResult(t, results, types.Pass, "SKILL.md found")
 		requireNoLevel(t, results, types.Warning)
 	})
@@ -47,7 +47,7 @@ func TestCheckStructure(t *testing.T) {
 		if err := os.MkdirAll(filepath.Join(dir, "extras"), 0o755); err != nil {
 			t.Fatal(err)
 		}
-		results := CheckStructure(dir)
+		results := CheckStructure(dir, Options{})
 		requireResult(t, results, types.Warning, "unknown directory: extras/")
 	})
 
@@ -57,7 +57,7 @@ func TestCheckStructure(t *testing.T) {
 		writeFile(t, dir, "rules/rule1.md", "rule one")
 		writeFile(t, dir, "rules/rule2.md", "rule two")
 		writeFile(t, dir, "rules/rule3.md", "rule three")
-		results := CheckStructure(dir)
+		results := CheckStructure(dir, Options{})
 		requireResultContaining(t, results, types.Warning, "unknown directory: rules/ (contains 3 files)")
 		requireResultContaining(t, results, types.Warning, "won't discover these files")
 		requireResultContaining(t, results, types.Warning, "should this be references/ or assets/?")
@@ -70,7 +70,7 @@ func TestCheckStructure(t *testing.T) {
 			t.Fatal(err)
 		}
 		writeFile(t, dir, "extras/file.md", "content")
-		results := CheckStructure(dir)
+		results := CheckStructure(dir, Options{})
 		requireResultContaining(t, results, types.Warning, "should this be assets/?")
 		requireNoResultContaining(t, results, types.Warning, "references/")
 	})
@@ -82,7 +82,7 @@ func TestCheckStructure(t *testing.T) {
 			t.Fatal(err)
 		}
 		writeFile(t, dir, "extras/file.md", "content")
-		results := CheckStructure(dir)
+		results := CheckStructure(dir, Options{})
 		requireResultContaining(t, results, types.Warning, "should this be references/?")
 		requireNoResultContaining(t, results, types.Warning, "assets/")
 	})
@@ -97,7 +97,7 @@ func TestCheckStructure(t *testing.T) {
 			t.Fatal(err)
 		}
 		writeFile(t, dir, "extras/file.md", "content")
-		results := CheckStructure(dir)
+		results := CheckStructure(dir, Options{})
 		requireResultContaining(t, results, types.Warning, "won't discover these files")
 		requireNoResultContaining(t, results, types.Warning, "should this be")
 	})
@@ -107,7 +107,7 @@ func TestCheckStructure(t *testing.T) {
 		writeFile(t, dir, "SKILL.md", "content")
 		writeFile(t, dir, "extras/visible.md", "content")
 		writeFile(t, dir, "extras/.hidden", "secret")
-		results := CheckStructure(dir)
+		results := CheckStructure(dir, Options{})
 		requireResultContaining(t, results, types.Warning, "unknown directory: extras/ (contains 1 file)")
 	})
 
@@ -115,7 +115,7 @@ func TestCheckStructure(t *testing.T) {
 		dir := t.TempDir()
 		writeFile(t, dir, "SKILL.md", "content")
 		writeFile(t, dir, "AGENTS.md", "agent config")
-		results := CheckStructure(dir)
+		results := CheckStructure(dir, Options{})
 		requireResultContaining(t, results, types.Warning, "repo-level agent configuration")
 		requireResultContaining(t, results, types.Warning, "move it outside the skill directory")
 	})
@@ -124,7 +124,7 @@ func TestCheckStructure(t *testing.T) {
 		dir := t.TempDir()
 		writeFile(t, dir, "SKILL.md", "content")
 		writeFile(t, dir, "README.md", "readme")
-		results := CheckStructure(dir)
+		results := CheckStructure(dir, Options{})
 		requireResultContaining(t, results, types.Warning, "README.md is not needed in a skill")
 		requireResultContaining(t, results, types.Warning, "Anthropic best practices")
 	})
@@ -133,7 +133,7 @@ func TestCheckStructure(t *testing.T) {
 		dir := t.TempDir()
 		writeFile(t, dir, "SKILL.md", "content")
 		writeFile(t, dir, "CHANGELOG.md", "changes")
-		results := CheckStructure(dir)
+		results := CheckStructure(dir, Options{})
 		requireResultContaining(t, results, types.Warning, "CHANGELOG.md is not needed in a skill")
 	})
 
@@ -141,7 +141,7 @@ func TestCheckStructure(t *testing.T) {
 		dir := t.TempDir()
 		writeFile(t, dir, "SKILL.md", "content")
 		writeFile(t, dir, "LICENSE", "mit")
-		results := CheckStructure(dir)
+		results := CheckStructure(dir, Options{})
 		requireResultContaining(t, results, types.Warning, "LICENSE is not needed in a skill")
 	})
 
@@ -149,7 +149,7 @@ func TestCheckStructure(t *testing.T) {
 		dir := t.TempDir()
 		writeFile(t, dir, "SKILL.md", "content")
 		writeFile(t, dir, "notes.txt", "some notes")
-		results := CheckStructure(dir)
+		results := CheckStructure(dir, Options{})
 		requireResultContaining(t, results, types.Warning, "unexpected file at root: notes.txt")
 		requireResultContaining(t, results, types.Warning, "move it into references/ or assets/")
 		requireResultContaining(t, results, types.Warning, "otherwise remove it")
@@ -161,7 +161,7 @@ func TestCheckStructure(t *testing.T) {
 		if err := os.MkdirAll(filepath.Join(dir, "references", "subdir"), 0o755); err != nil {
 			t.Fatal(err)
 		}
-		results := CheckStructure(dir)
+		results := CheckStructure(dir, Options{})
 		requireResult(t, results, types.Warning, "deep nesting detected: references/subdir/")
 	})
 
@@ -172,7 +172,7 @@ func TestCheckStructure(t *testing.T) {
 		if err := os.MkdirAll(filepath.Join(dir, ".git"), 0o755); err != nil {
 			t.Fatal(err)
 		}
-		results := CheckStructure(dir)
+		results := CheckStructure(dir, Options{})
 		requireResult(t, results, types.Pass, "SKILL.md found")
 		requireNoLevel(t, results, types.Warning)
 	})
@@ -183,7 +183,26 @@ func TestCheckStructure(t *testing.T) {
 		if err := os.MkdirAll(filepath.Join(dir, "references", ".hidden"), 0o755); err != nil {
 			t.Fatal(err)
 		}
-		results := CheckStructure(dir)
+		results := CheckStructure(dir, Options{})
 		requireNoLevel(t, results, types.Warning)
+	})
+
+	t.Run("allow-flat-layouts suppresses root file warnings", func(t *testing.T) {
+		dir := t.TempDir()
+		writeFile(t, dir, "SKILL.md", "content")
+		writeFile(t, dir, "README.md", "readme")
+		writeFile(t, dir, "notes.txt", "notes")
+		writeFile(t, dir, "AGENTS.md", "agent config")
+		results := CheckStructure(dir, Options{AllowFlatLayouts: true})
+		requireResult(t, results, types.Pass, "SKILL.md found")
+		requireNoLevel(t, results, types.Warning)
+	})
+
+	t.Run("allow-flat-layouts still warns on unknown directories", func(t *testing.T) {
+		dir := t.TempDir()
+		writeFile(t, dir, "SKILL.md", "content")
+		writeFile(t, dir, "extras/file.md", "content")
+		results := CheckStructure(dir, Options{AllowFlatLayouts: true})
+		requireResultContaining(t, results, types.Warning, "unknown directory: extras/")
 	})
 }
