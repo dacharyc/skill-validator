@@ -6,6 +6,8 @@ package links
 import (
 	"regexp"
 	"strings"
+
+	"github.com/agent-ecosystem/skill-validator/util"
 )
 
 var (
@@ -13,10 +15,6 @@ var (
 	mdLinkPattern = regexp.MustCompile(`\[([^\]]*)\]\(([^)]+)\)`)
 	// bareURLPattern matches bare URLs starting with http:// or https://.
 	bareURLPattern = regexp.MustCompile("(?:^|\\s)(https?://[^\\s<>\\)`]+)")
-	// codeBlockStrip removes fenced code blocks before link extraction.
-	codeBlockStrip = regexp.MustCompile("(?s)(?:```|~~~)[\\w]*\\n.*?(?:```|~~~)")
-	// inlineCodeStrip removes inline code spans before link extraction.
-	inlineCodeStrip = regexp.MustCompile("`[^`]+`")
 )
 
 // ExtractLinks extracts all unique links from a markdown body.
@@ -25,8 +23,8 @@ func ExtractLinks(body string) []string {
 	var links []string
 
 	// Strip code fences and inline code spans so URLs in code are not extracted.
-	cleaned := codeBlockStrip.ReplaceAllString(body, "")
-	cleaned = inlineCodeStrip.ReplaceAllString(cleaned, "")
+	cleaned := util.CodeBlockStrip.ReplaceAllString(body, "")
+	cleaned = util.InlineCodeStrip.ReplaceAllString(cleaned, "")
 
 	// Markdown links
 	for _, match := range mdLinkPattern.FindAllStringSubmatch(cleaned, -1) {
