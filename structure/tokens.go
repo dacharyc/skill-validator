@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/agent-ecosystem/skill-validator/types"
 	"github.com/tiktoken-go/tokenizer"
@@ -26,6 +27,19 @@ const (
 	otherTotalHardLimit = 100_000
 )
 
+var (
+	encoderOnce sync.Once
+	cachedEnc   tokenizer.Codec
+	encoderErr  error
+)
+
+func getEncoder() (tokenizer.Codec, error) {
+	encoderOnce.Do(func() {
+		cachedEnc, encoderErr = tokenizer.Get(tokenizer.O200kBase)
+	})
+	return cachedEnc, encoderErr
+}
+
 // CheckTokens counts tokens for the SKILL.md body, reference files, asset files,
 // and non-standard files. It returns validation results, standard token counts,
 // and non-standard ("other") token counts.
@@ -34,7 +48,7 @@ func CheckTokens(dir, body string, opts Options) ([]types.Result, []types.TokenC
 	var results []types.Result
 	var counts []types.TokenCount
 
-	enc, err := tokenizer.Get(tokenizer.O200kBase)
+	enc, err := getEncoder()
 	if err != nil {
 		results = append(results, ctx.Errorf("failed to initialize tokenizer: %v", err))
 		return results, counts, nil
