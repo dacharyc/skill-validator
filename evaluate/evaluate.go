@@ -47,6 +47,7 @@ type Options struct {
 	MaxLen    int
 	CacheDir  string       // Override cache directory; defaults to judge.CacheDir(skillDir) when empty
 	Progress  ProgressFunc // Optional progress callback; nil means no output
+	RateLimit int          // Max LLM API requests per second; 0 means unlimited
 }
 
 // progress calls the progress callback if set.
@@ -65,6 +66,17 @@ func resolveCacheDir(opts Options, skillDir string) string {
 	return judge.CacheDir(skillDir)
 }
 
+// newThrottle returns a function that blocks until the next request is allowed.
+// If rps is 0 or negative, the returned function is a no-op.
+// The caller must call the returned stop function when done.
+func newThrottle(rps int) (wait func(), stop func()) {
+	if rps <= 0 {
+		return func() {}, func() {}
+	}
+	ticker := time.NewTicker(time.Second / time.Duration(rps))
+	return func() { <-ticker.C }, ticker.Stop
+}
+
 // EvaluateSkill scores a skill directory (SKILL.md and/or reference files).
 func EvaluateSkill(ctx context.Context, dir string, client judge.LLMClient, opts Options) (*Result, error) {
 	result := &Result{SkillDir: dir}
@@ -76,6 +88,9 @@ func EvaluateSkill(ctx context.Context, dir string, client judge.LLMClient, opts
 	if err != nil {
 		return nil, fmt.Errorf("loading skill: %w", err)
 	}
+
+	wait, stop := newThrottle(opts.RateLimit)
+	defer stop()
 
 	// Score SKILL.md
 	if !opts.RefsOnly {
@@ -94,6 +109,7 @@ func EvaluateSkill(ctx context.Context, dir string, client judge.LLMClient, opts
 		}
 
 		if result.SkillScores == nil {
+			wait()
 			scores, err := judge.ScoreSkill(ctx, s.RawContent, client, opts.MaxLen)
 			if err != nil {
 				return nil, fmt.Errorf("scoring SKILL.md: %w", err)
@@ -148,6 +164,7 @@ func EvaluateSkill(ctx context.Context, dir string, client judge.LLMClient, opts
 				}
 
 				if refScores == nil {
+					wait()
 					scores, err := judge.ScoreReference(ctx, content, s.Frontmatter.Name, skillDesc, client, opts.MaxLen)
 					if err != nil {
 						progress(opts, "error", fmt.Sprintf("scoring %s: %v", name, err))
@@ -235,6 +252,10 @@ func EvaluateSingleFile(ctx context.Context, absPath string, client judge.LLMCli
 		}
 	}
 
+	wait, stop := newThrottle(opts.RateLimit)
+	defer stop()
+
+	wait()
 	scores, err := judge.ScoreReference(ctx, string(content), skillName, s.Frontmatter.Description, client, opts.MaxLen)
 	if err != nil {
 		return nil, fmt.Errorf("scoring %s: %w", fileName, err)

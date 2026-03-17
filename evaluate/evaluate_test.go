@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/agent-ecosystem/skill-validator/judge"
 )
@@ -490,5 +491,45 @@ func TestEvaluateSingleFile_LLMError(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "scoring ref.md") {
 		t.Errorf("unexpected error: %v", err)
+	}
+}
+
+func TestEvaluateSkill_RateLimiting(t *testing.T) {
+	dir := makeSkillDir(t, map[string]string{
+		"a.md": "# A",
+		"b.md": "# B",
+		"c.md": "# C",
+	})
+	client := &mockLLMClient{responses: []string{skillJSON, refJSON, refJSON, refJSON}}
+
+	// 5 req/s = 200ms between calls. 4 calls (1 skill + 3 refs) = at least 600ms.
+	start := time.Now()
+	_, err := EvaluateSkill(context.Background(), dir, client, Options{
+		MaxLen:    8000,
+		RateLimit: 5,
+	})
+	elapsed := time.Since(start)
+	if err != nil {
+		t.Fatalf("EvaluateSkill error = %v", err)
+	}
+	// 4 API calls at 5/s means 3 intervals of 200ms = 600ms minimum
+	if elapsed < 500*time.Millisecond {
+		t.Errorf("expected >= 500ms for rate-limited calls, got %v", elapsed)
+	}
+}
+
+func TestEvaluateSkill_RateLimitZeroDisabled(t *testing.T) {
+	dir := makeSkillDir(t, map[string]string{"a.md": "# A"})
+	client := &mockLLMClient{responses: []string{skillJSON, refJSON}}
+
+	start := time.Now()
+	_, err := EvaluateSkill(context.Background(), dir, client, Options{MaxLen: 8000})
+	elapsed := time.Since(start)
+	if err != nil {
+		t.Fatalf("EvaluateSkill error = %v", err)
+	}
+	// With no rate limit (default 0), should complete quickly
+	if elapsed > 2*time.Second {
+		t.Errorf("expected fast completion without rate limit, got %v", elapsed)
 	}
 }
