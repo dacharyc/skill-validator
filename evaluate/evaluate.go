@@ -23,7 +23,7 @@ import (
 // ProgressFunc receives progress events during evaluation.
 // event identifies the kind of event (e.g. "scoring", "cached", "warning", "error").
 // detail provides human-readable context.
-type ProgressFunc func(event string, detail string)
+type ProgressFunc func(event, detail string)
 
 // Result holds the complete scoring output for one skill.
 type Result struct {
@@ -69,7 +69,7 @@ func resolveCacheDir(opts Options, skillDir string) string {
 // newThrottle returns a function that blocks until the next request is allowed.
 // If rps is 0 or negative, the returned function is a no-op.
 // The caller must call the returned stop function when done.
-func newThrottle(rps int) (wait func(), stop func()) {
+func newThrottle(rps int) (wait, stop func()) {
 	if rps <= 0 {
 		return func() {}, func() {}
 	}

@@ -606,8 +606,8 @@ func TestRunAllChecks_JSONOutput(t *testing.T) {
 	enc.SetIndent("", "  ")
 
 	type jsonCheck struct {
-		ContentAnalysis       interface{} `json:"content_analysis,omitempty"`
-		ContaminationAnalysis interface{} `json:"contamination_analysis,omitempty"`
+		ContentAnalysis       any `json:"content_analysis,omitempty"`
+		ContaminationAnalysis any `json:"contamination_analysis,omitempty"`
 	}
 
 	out := jsonCheck{

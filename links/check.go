@@ -16,6 +16,23 @@ type linkResult struct {
 	result types.Result
 }
 
+// linkClient is a shared HTTP client for link checking, initialized once.
+// The transport is cloned from DefaultTransport with tuned connection pooling.
+var linkClient = func() *http.Client {
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	transport.MaxIdleConnsPerHost = 10
+	return &http.Client{
+		Timeout:   10 * time.Second,
+		Transport: transport,
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			if len(via) >= 10 {
+				return fmt.Errorf("too many redirects")
+			}
+			return nil
+		},
+	}
+}()
+
 // CheckLinks validates external (HTTP/HTTPS) links in the skill body.
 func CheckLinks(ctx context.Context, dir, body string) []types.Result {
 	rctx := types.ResultContext{Category: "Links", File: "SKILL.md"}
@@ -46,27 +63,13 @@ func CheckLinks(ctx context.Context, dir, body string) []types.Result {
 		return nil
 	}
 
-	// Shared client for connection reuse across concurrent checks.
-	transport := http.DefaultTransport.(*http.Transport).Clone()
-	transport.MaxIdleConnsPerHost = 10
-	client := &http.Client{
-		Timeout:   10 * time.Second,
-		Transport: transport,
-		CheckRedirect: func(req *http.Request, via []*http.Request) error {
-			if len(via) >= 10 {
-				return fmt.Errorf("too many redirects")
-			}
-			return nil
-		},
-	}
-
 	// Check HTTP links concurrently
 	httpResults := make([]linkResult, len(httpLinks))
 	for i, link := range httpLinks {
 		wg.Add(1)
 		go func(idx int, url string) {
 			defer wg.Done()
-			r := checkHTTPLink(rctx, client, url)
+			r := checkHTTPLink(rctx, linkClient, url)
 			mu.Lock()
 			httpResults[idx] = linkResult{url: url, result: r}
 			mu.Unlock()
