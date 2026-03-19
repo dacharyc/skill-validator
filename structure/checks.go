@@ -17,6 +17,15 @@ var recognizedDirs = map[string]bool{
 	"assets":     true,
 }
 
+// recognizedDevDirs lists development directories that are recognized but
+// not part of the bundled skill resources. These directories are exempt from
+// the deep-nesting check because subdirectories are part of their expected
+// structure (e.g. evals/files/).
+// See: agentskills.io/skill-creation/evaluating-skills
+var recognizedDevDirs = map[string]bool{
+	"evals": true,
+}
+
 // Files commonly found in repos but not intended for agent consumption.
 // Per Anthropic best practices: "A skill should only contain essential files
 // that directly support its functionality."
@@ -70,7 +79,7 @@ func CheckStructure(dir string, opts Options) []types.Result {
 			}
 			continue
 		}
-		if !recognizedDirs[name] {
+		if !recognizedDirs[name] && !recognizedDevDirs[name] {
 			msg := fmt.Sprintf("unknown directory: %s/", name)
 			if subEntries, err := os.ReadDir(filepath.Join(dir, name)); err == nil {
 				fileCount := 0

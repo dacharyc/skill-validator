@@ -36,6 +36,19 @@ func TestCheckStructure(t *testing.T) {
 		if err := os.MkdirAll(filepath.Join(dir, "assets"), 0o755); err != nil {
 			t.Fatal(err)
 		}
+		if err := os.MkdirAll(filepath.Join(dir, "evals"), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		results := CheckStructure(dir, Options{})
+		requireResult(t, results, types.Pass, "SKILL.md found")
+		requireNoLevel(t, results, types.Warning)
+	})
+
+	t.Run("evals directory with files produces no warning", func(t *testing.T) {
+		dir := t.TempDir()
+		writeFile(t, dir, "SKILL.md", "content")
+		writeFile(t, dir, "evals/evals.json", `{"skill_name":"test","evals":[]}`)
+		writeFile(t, dir, "evals/files/sample.csv", "a,b,c")
 		results := CheckStructure(dir, Options{})
 		requireResult(t, results, types.Pass, "SKILL.md found")
 		requireNoLevel(t, results, types.Warning)
