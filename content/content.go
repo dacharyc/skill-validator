@@ -52,10 +52,7 @@ var imperativeVerbs = map[string]bool{
 }
 
 var (
-	codeBlockPattern = regexp.MustCompile("(?s)```[\\w]*\\n(.*?)```")
-	codeLangPattern  = regexp.MustCompile("```(\\w+)")
-	codeBlockStrip   = regexp.MustCompile("(?s)```[\\w]*\\n.*?```")
-	inlineCodeStrip  = regexp.MustCompile("`[^`]+`")
+	codeLangPattern  = regexp.MustCompile("(?:```|~~~)(\\w+)")
 	sentenceSplitPat = regexp.MustCompile(`[.!?]\s+|[.!?]$|\n\n+`)
 	leadingFormatPat = regexp.MustCompile(`^[#*\->\s]+`)
 	sectionPattern   = regexp.MustCompile(`(?m)^#{2,}\s+`)
@@ -72,7 +69,7 @@ func Analyze(content string) *types.ContentReport {
 	wordCount := len(words)
 
 	// Code block analysis
-	codeBlocks := codeBlockPattern.FindAllStringSubmatch(content, -1)
+	codeBlocks := util.CodeBlockPattern.FindAllStringSubmatch(content, -1)
 	codeBlockCount := len(codeBlocks)
 	codeBlockWords := 0
 	for _, match := range codeBlocks {
@@ -141,9 +138,9 @@ func Analyze(content string) *types.ContentReport {
 
 func countSentences(text string) []string {
 	// Remove code blocks first
-	text = codeBlockStrip.ReplaceAllString(text, "")
+	text = util.CodeBlockStrip.ReplaceAllString(text, "")
 	// Remove inline code
-	text = inlineCodeStrip.ReplaceAllString(text, "")
+	text = util.InlineCodeStrip.ReplaceAllString(text, "")
 	// Split on sentence boundaries
 	parts := sentenceSplitPat.Split(text, -1)
 	var sentences []string
