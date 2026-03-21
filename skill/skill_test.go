@@ -237,6 +237,28 @@ func TestLoad(t *testing.T) {
 		}
 	})
 
+	t.Run("metadata with sequence value parses without error", func(t *testing.T) {
+		dir := t.TempDir()
+		content := "---\nname: test\ndescription: desc\nmetadata:\n  author: alice\n  tags: [foo, bar, baz]\n---\nBody\n"
+		if err := os.WriteFile(filepath.Join(dir, "SKILL.md"), []byte(content), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		s, err := Load(dir)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if s.Frontmatter.Metadata["author"] != "alice" {
+			t.Errorf("metadata[author] = %v, want %q", s.Frontmatter.Metadata["author"], "alice")
+		}
+		tags, ok := s.Frontmatter.Metadata["tags"].([]any)
+		if !ok {
+			t.Fatalf("metadata[tags] = %T, want []any", s.Frontmatter.Metadata["tags"])
+		}
+		if len(tags) != 3 {
+			t.Errorf("metadata[tags] len = %d, want 3", len(tags))
+		}
+	})
+
 	t.Run("metadata parsing", func(t *testing.T) {
 		dir := t.TempDir()
 		content := "---\nname: test\ndescription: desc\nmetadata:\n  author: alice\n  version: \"1.0\"\n---\nBody\n"
@@ -248,10 +270,10 @@ func TestLoad(t *testing.T) {
 			t.Fatalf("unexpected error: %v", err)
 		}
 		if s.Frontmatter.Metadata["author"] != "alice" {
-			t.Errorf("metadata[author] = %q, want %q", s.Frontmatter.Metadata["author"], "alice")
+			t.Errorf("metadata[author] = %v, want %q", s.Frontmatter.Metadata["author"], "alice")
 		}
 		if s.Frontmatter.Metadata["version"] != "1.0" {
-			t.Errorf("metadata[version] = %q, want %q", s.Frontmatter.Metadata["version"], "1.0")
+			t.Errorf("metadata[version] = %v, want %q", s.Frontmatter.Metadata["version"], "1.0")
 		}
 	})
 }

@@ -68,20 +68,23 @@ func CheckFrontmatter(s *skill.Skill, opts Options) []types.Result {
 
 	// Check optional metadata
 	if s.RawFrontmatter["metadata"] != nil {
-		// Verify it's a map[string]string
+		// Verify it's a map whose values are non-nil, non-empty
 		if m, ok := s.RawFrontmatter["metadata"].(map[string]any); ok {
-			allStrings := true
+			valid := true
 			for k, v := range m {
-				if _, ok := v.(string); !ok {
-					results = append(results, ctx.Errorf("metadata[%q] value must be a string", k))
-					allStrings = false
+				if v == nil {
+					results = append(results, ctx.Errorf("metadata[%q] value must not be null", k))
+					valid = false
+				} else if s, ok := v.(string); ok && s == "" {
+					results = append(results, ctx.Errorf("metadata[%q] value must not be empty", k))
+					valid = false
 				}
 			}
-			if allStrings {
+			if valid {
 				results = append(results, ctx.Passf("metadata: (%d entries)", len(m)))
 			}
 		} else {
-			results = append(results, ctx.Error("metadata must be a map of string keys to string values"))
+			results = append(results, ctx.Error("metadata must be a map"))
 		}
 	}
 

@@ -16,12 +16,12 @@ var _ yaml.Unmarshaler = (*AllowedTools)(nil)
 
 // Frontmatter represents the parsed YAML frontmatter of a SKILL.md file.
 type Frontmatter struct {
-	Name          string            `yaml:"name"`
-	Description   string            `yaml:"description"`
-	License       string            `yaml:"license"`
-	Compatibility string            `yaml:"compatibility"`
-	Metadata      map[string]string `yaml:"metadata"`
-	AllowedTools  AllowedTools      `yaml:"allowed-tools"`
+	Name          string         `yaml:"name"`
+	Description   string         `yaml:"description"`
+	License       string         `yaml:"license"`
+	Compatibility string         `yaml:"compatibility"`
+	Metadata      map[string]any `yaml:"metadata"`
+	AllowedTools  AllowedTools   `yaml:"allowed-tools"`
 }
 
 // AllowedTools handles the type ambiguity in the allowed-tools field.

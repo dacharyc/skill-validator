@@ -373,20 +373,47 @@ func TestCheckFrontmatter_Metadata(t *testing.T) {
 		requireResultContaining(t, results, types.Pass, "metadata: (2 entries)")
 	})
 
-	t.Run("metadata with non-string value", func(t *testing.T) {
+	t.Run("metadata with numeric value", func(t *testing.T) {
 		s := makeSkill("/tmp/my-skill", "my-skill", "desc")
 		s.RawFrontmatter["metadata"] = map[string]any{
 			"count": 42,
 		}
 		results := CheckFrontmatter(s, Options{})
-		requireResultContaining(t, results, types.Error, "metadata[\"count\"] value must be a string")
+		requireResultContaining(t, results, types.Pass, "metadata: (1 entries)")
+	})
+
+	t.Run("metadata with sequence value", func(t *testing.T) {
+		s := makeSkill("/tmp/my-skill", "my-skill", "desc")
+		s.RawFrontmatter["metadata"] = map[string]any{
+			"tags": []any{"foo", "bar"},
+		}
+		results := CheckFrontmatter(s, Options{})
+		requireResultContaining(t, results, types.Pass, "metadata: (1 entries)")
+	})
+
+	t.Run("metadata with null value", func(t *testing.T) {
+		s := makeSkill("/tmp/my-skill", "my-skill", "desc")
+		s.RawFrontmatter["metadata"] = map[string]any{
+			"key": nil,
+		}
+		results := CheckFrontmatter(s, Options{})
+		requireResultContaining(t, results, types.Error, "metadata[\"key\"] value must not be null")
+	})
+
+	t.Run("metadata with empty string value", func(t *testing.T) {
+		s := makeSkill("/tmp/my-skill", "my-skill", "desc")
+		s.RawFrontmatter["metadata"] = map[string]any{
+			"key": "",
+		}
+		results := CheckFrontmatter(s, Options{})
+		requireResultContaining(t, results, types.Error, "metadata[\"key\"] value must not be empty")
 	})
 
 	t.Run("metadata not a map", func(t *testing.T) {
 		s := makeSkill("/tmp/my-skill", "my-skill", "desc")
 		s.RawFrontmatter["metadata"] = "not a map"
 		results := CheckFrontmatter(s, Options{})
-		requireResult(t, results, types.Error, "metadata must be a map of string keys to string values")
+		requireResult(t, results, types.Error, "metadata must be a map")
 	})
 }
 
