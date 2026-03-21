@@ -373,10 +373,19 @@ func TestCheckFrontmatter_Metadata(t *testing.T) {
 		requireResultContaining(t, results, types.Pass, "metadata: (2 entries)")
 	})
 
-	t.Run("metadata with numeric value", func(t *testing.T) {
+	t.Run("metadata with integer value", func(t *testing.T) {
 		s := makeSkill("/tmp/my-skill", "my-skill", "desc")
 		s.RawFrontmatter["metadata"] = map[string]any{
 			"count": 42,
+		}
+		results := CheckFrontmatter(s, Options{})
+		requireResultContaining(t, results, types.Pass, "metadata: (1 entries)")
+	})
+
+	t.Run("metadata with float value", func(t *testing.T) {
+		s := makeSkill("/tmp/my-skill", "my-skill", "desc")
+		s.RawFrontmatter["metadata"] = map[string]any{
+			"score": 3.14,
 		}
 		results := CheckFrontmatter(s, Options{})
 		requireResultContaining(t, results, types.Pass, "metadata: (1 entries)")
