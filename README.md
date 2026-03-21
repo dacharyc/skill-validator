@@ -796,6 +796,12 @@ This project follows [semantic versioning](https://semver.org/) starting at v1.0
 
 Deprecated symbols are annotated with `// Deprecated:` comments following [Go convention](https://go.dev/wiki/Deprecated). Deprecated symbols are kept for at least one minor release after their replacement ships, giving consumers time to migrate before removal.
 
+## Related: Cross-Platform Skill Loading Research
+
+`skill-validator` checks that your skill is well-structured. But structure is only half the story. How platforms actually *load* your skill (what they read, when they read it, what they show the model) varies across the 25+ platforms that support Agent Skills, and no one has systematically tested it.
+
+The [Agent Skill Implementation](https://github.com/agent-ecosystem/agent-skill-implementation) project is building empirical data about platform loading behavior through community testing. If you're distributing skills that need to work across platforms, your observations are valuable. See [agentskillimplementation.com](https://agentskillimplementation.com) for details.
+
 ## Development
 
 Run lint and tests locally before pushing:
