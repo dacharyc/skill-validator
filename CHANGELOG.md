@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0]
+
+### Added
+
+- Add `--allow-dirs` flag to accept specific non-standard directories without
+  warnings ([#39]). Allowed directories are exempt from deep-nesting checks
+  and skipped for orphan detection (with an informational note). Useful for
+  development directories like `evals/` or `testing/` that aren't part of the
+  spec but are needed during skill development.
+
+### Changed
+
+- Refactor `--only` and `--skip` flags from manual comma-separated string
+  parsing to `StringSliceVar`, matching the `--allow-dirs` flag style. Both
+  comma-separated (`--only=structure,links`) and repeated
+  (`--only=structure --only=links`) syntax are now supported. Existing
+  comma-separated usage is unaffected.
+- Restructure `validate structure` and `check` flag documentation in the
+  README from dense prose paragraphs into scannable tables.
+
 ## [1.3.1]
 
 ### Added
@@ -103,6 +123,7 @@ First stable release. Includes the complete CLI and importable library packages.
 - `types` — shared data types (`Report`, `Result`, `Level`, etc.)
 - `judge.LLMClient` interface for custom LLM providers
 
+[1.4.0]: https://github.com/agent-ecosystem/skill-validator/compare/v1.3.1...v1.4.0
 [1.3.1]: https://github.com/agent-ecosystem/skill-validator/compare/v1.3.0...v1.3.1
 [1.3.0]: https://github.com/agent-ecosystem/skill-validator/compare/v1.2.1...v1.3.0
 [1.2.1]: https://github.com/agent-ecosystem/skill-validator/compare/v1.2.0...v1.2.1
@@ -115,3 +136,4 @@ First stable release. Includes the complete CLI and importable library packages.
 [#26]: https://github.com/agent-ecosystem/skill-validator/issues/26
 [#23]: https://github.com/agent-ecosystem/skill-validator/issues/23
 [#27]: https://github.com/agent-ecosystem/skill-validator/issues/27
+[#39]: https://github.com/agent-ecosystem/skill-validator/issues/39
