@@ -13,8 +13,8 @@ import (
 )
 
 var (
-	checkOnly                  string
-	checkSkip                  string
+	checkOnly                  []string
+	checkSkip                  []string
 	perFileCheck               bool
 	checkSkipOrphans           bool
 	strictCheck                bool
@@ -32,8 +32,8 @@ var checkCmd = &cobra.Command{
 }
 
 func init() {
-	checkCmd.Flags().StringVar(&checkOnly, "only", "", "comma-separated list of check groups to run: structure,links,content,contamination")
-	checkCmd.Flags().StringVar(&checkSkip, "skip", "", "comma-separated list of check groups to skip: structure,links,content,contamination")
+	checkCmd.Flags().StringSliceVar(&checkOnly, "only", nil, "check groups to run: structure,links,content,contamination (comma-separated or repeatable)")
+	checkCmd.Flags().StringSliceVar(&checkSkip, "skip", nil, "check groups to skip: structure,links,content,contamination (comma-separated or repeatable)")
 	checkCmd.Flags().BoolVar(&perFileCheck, "per-file", false, "show per-file reference analysis")
 	checkCmd.Flags().BoolVar(&checkSkipOrphans, "skip-orphans", false,
 		"skip orphan file detection (unreferenced files in scripts/, references/, assets/)")
@@ -55,7 +55,7 @@ var validGroups = map[orchestrate.CheckGroup]bool{
 }
 
 func runCheck(cmd *cobra.Command, args []string) error {
-	if checkOnly != "" && checkSkip != "" {
+	if len(checkOnly) > 0 && len(checkSkip) > 0 {
 		return fmt.Errorf("--only and --skip are mutually exclusive")
 	}
 
@@ -98,15 +98,15 @@ func runCheck(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func resolveCheckGroups(only, skip string) (map[orchestrate.CheckGroup]bool, error) {
+func resolveCheckGroups(only, skip []string) (map[orchestrate.CheckGroup]bool, error) {
 	enabled := orchestrate.AllGroups()
 
-	if only != "" {
+	if len(only) > 0 {
 		// Reset all to false, enable only specified
 		for k := range enabled {
 			enabled[k] = false
 		}
-		for g := range strings.SplitSeq(only, ",") {
+		for _, g := range only {
 			g = strings.TrimSpace(g)
 			cg := orchestrate.CheckGroup(g)
 			if !validGroups[cg] {
@@ -116,8 +116,8 @@ func resolveCheckGroups(only, skip string) (map[orchestrate.CheckGroup]bool, err
 		}
 	}
 
-	if skip != "" {
-		for g := range strings.SplitSeq(skip, ",") {
+	if len(skip) > 0 {
+		for _, g := range skip {
 			g = strings.TrimSpace(g)
 			cg := orchestrate.CheckGroup(g)
 			if !validGroups[cg] {

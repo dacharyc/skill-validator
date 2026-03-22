@@ -5,6 +5,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 )
 
@@ -100,6 +101,96 @@ func TestExitCodes(t *testing.T) {
 			got := cmd.ProcessState.ExitCode()
 			if got != tt.wantCode {
 				t.Errorf("exit code = %d, want %d (args: %v)", got, tt.wantCode, tt.args)
+			}
+		})
+	}
+}
+
+func TestSliceFlags(t *testing.T) {
+	bin := buildBinary(t)
+
+	tests := []struct {
+		name       string
+		args       []string
+		wantCode   int
+		wantStdout string // substring that must appear in combined output
+		noStdout   string // substring that must NOT appear in combined output
+	}{
+		// --only: comma-separated
+		{
+			name:       "only comma-separated runs selected groups",
+			args:       []string{"check", "--only=structure,content", fixture(t, "valid-skill")},
+			wantCode:   0,
+			wantStdout: "SKILL.md found",
+		},
+		// --only: repeated flag
+		{
+			name:       "only repeated flag runs selected groups",
+			args:       []string{"check", "--only=structure", "--only=content", fixture(t, "valid-skill")},
+			wantCode:   0,
+			wantStdout: "SKILL.md found",
+		},
+		// --skip: comma-separated
+		{
+			name:       "skip comma-separated excludes groups",
+			args:       []string{"check", "--skip=links,content,contamination", fixture(t, "valid-skill")},
+			wantCode:   0,
+			wantStdout: "SKILL.md found",
+		},
+		// --skip: repeated flag
+		{
+			name:       "skip repeated flag excludes groups",
+			args:       []string{"check", "--skip=links", "--skip=content", "--skip=contamination", fixture(t, "valid-skill")},
+			wantCode:   0,
+			wantStdout: "SKILL.md found",
+		},
+		// --only and --skip mutual exclusion
+		{
+			name:     "only and skip mutual exclusion",
+			args:     []string{"check", "--only=structure", "--skip=links", fixture(t, "valid-skill")},
+			wantCode: 3,
+		},
+		// --allow-dirs: comma-separated
+		{
+			name:     "allow-dirs comma-separated suppresses warnings",
+			args:     []string{"check", "--only=structure", "--allow-dirs=evals,testing", fixture(t, "allowed-dirs-skill")},
+			wantCode: 0,
+			noStdout: "unknown directory",
+		},
+		// --allow-dirs: repeated flag
+		{
+			name:     "allow-dirs repeated flag suppresses warnings",
+			args:     []string{"check", "--only=structure", "--allow-dirs=evals", "--allow-dirs=testing", fixture(t, "allowed-dirs-skill")},
+			wantCode: 0,
+			noStdout: "unknown directory",
+		},
+		// --allow-dirs: partial (only one of two unknown dirs)
+		{
+			name:       "allow-dirs partial still warns for non-allowed",
+			args:       []string{"check", "--only=structure", "--allow-dirs=evals", fixture(t, "allowed-dirs-skill")},
+			wantCode:   2,
+			wantStdout: "unknown directory: testing/",
+			noStdout:   "unknown directory: evals/",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cmd := exec.Command(bin, tt.args...)
+			out, _ := cmd.CombinedOutput()
+			got := cmd.ProcessState.ExitCode()
+			if got != tt.wantCode {
+				t.Errorf("exit code = %d, want %d (args: %v)\noutput: %s", got, tt.wantCode, tt.args, out)
+			}
+			if tt.wantStdout != "" {
+				if !strings.Contains(string(out), tt.wantStdout) {
+					t.Errorf("expected output to contain %q, got:\n%s", tt.wantStdout, out)
+				}
+			}
+			if tt.noStdout != "" {
+				if strings.Contains(string(out), tt.noStdout) {
+					t.Errorf("expected output NOT to contain %q, got:\n%s", tt.noStdout, out)
+				}
 			}
 		})
 	}
