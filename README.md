@@ -33,6 +33,8 @@ Spec compliance is table stakes. `skill-validator` goes further: it checks that 
 - [Examples](#examples)
 - [What it checks & why](#what-it-checks)
   - [Structure validation](#structure-validation-validate-structure)
+    - [Flat skill layouts](#flat-skill-layouts)
+    - [Allowing non-standard directories](#allowing-non-standard-directories)
   - [Link validation](#link-validation-validate-links)
   - [Content analysis](#content-analysis-analyze-content)
   - [Contamination analysis](#contamination-analysis-analyze-contamination)
@@ -185,9 +187,18 @@ skill-validator validate structure --skip-orphans <path>
 skill-validator validate structure --strict <path>
 skill-validator validate structure --allow-extra-frontmatter <path>
 skill-validator validate structure --allow-flat-layouts <path>
+skill-validator validate structure --allow-dirs=evals,testing <path>
 ```
 
-Checks spec compliance: directory structure, frontmatter fields, token limits, skill ratio, code fence integrity, internal link validity, and orphan file detection. Use `--skip-orphans` to suppress warnings about unreferenced files in `scripts/`, `references/`, and `assets/`. Use `--strict` to treat warnings as errors (exit 1 instead of 2). Use `--allow-extra-frontmatter` to suppress warnings for frontmatter fields not defined in the spec (e.g. `user-invokable`). Standard frontmatter fields are still fully validated. Use `--allow-flat-layouts` to allow supplemental files alongside SKILL.md at the skill root without warnings (see [Flat skill layouts](#flat-skill-layouts)).
+Checks spec compliance: directory structure, frontmatter fields, token limits, skill ratio, code fence integrity, internal link validity, and orphan file detection.
+
+| Flag | Effect |
+|---|---|
+| `--strict` | Treat warnings as errors (exit 1 instead of 2) |
+| `--skip-orphans` | Suppress warnings about unreferenced files in `scripts/`, `references/`, and `assets/` |
+| `--allow-extra-frontmatter` | Suppress warnings for non-spec frontmatter fields (e.g. `user-invokable`). Standard fields are still fully validated |
+| `--allow-flat-layouts` | Allow files at the skill root without warnings (see [Flat skill layouts](#flat-skill-layouts)) |
+| `--allow-dirs=evals,testing` | Accept specific non-standard directories without warnings (see [Allowing non-standard directories](#allowing-non-standard-directories)) |
 
 ```
 Validating skill: my-skill/
@@ -284,9 +295,21 @@ skill-validator check --skip-orphans <path>
 skill-validator check --strict <path>
 skill-validator check --allow-extra-frontmatter <path>
 skill-validator check --allow-flat-layouts <path>
+skill-validator check --allow-dirs=evals,testing <path>
 ```
 
-Runs all checks (structure + links + content + contamination). Use `--only` or `--skip` to select specific check groups. The flags are mutually exclusive. Use `--per-file` to see per-file reference analysis alongside the aggregate. Use `--skip-orphans` to suppress orphan file warnings in the structure check. Use `--strict` to treat warnings as errors (exit 1 instead of 2). Use `--allow-extra-frontmatter` to suppress warnings for non-spec frontmatter fields. Use `--allow-flat-layouts` to allow supplemental files at the skill root without warnings (see [Flat skill layouts](#flat-skill-layouts)).
+Runs all checks (structure + links + content + contamination).
+
+| Flag | Effect |
+|---|---|
+| `--only` | Comma-separated list of check groups to run (mutually exclusive with `--skip`) |
+| `--skip` | Comma-separated list of check groups to skip (mutually exclusive with `--only`) |
+| `--per-file` | Show per-file reference analysis alongside the aggregate |
+| `--strict` | Treat warnings as errors (exit 1 instead of 2) |
+| `--skip-orphans` | Suppress orphan file warnings in the structure check |
+| `--allow-extra-frontmatter` | Suppress warnings for non-spec frontmatter fields |
+| `--allow-flat-layouts` | Allow files at the skill root without warnings (see [Flat skill layouts](#flat-skill-layouts)) |
+| `--allow-dirs=evals,testing` | Accept specific non-standard directories without warnings (see [Allowing non-standard directories](#allowing-non-standard-directories)) |
 
 Valid check groups: `structure`, `links`, `content`, `contamination`.
 
@@ -708,6 +731,27 @@ skill-validator check --allow-flat-layouts my-skill/
 
 > [!NOTE]
 > The standard directory structure remains the recommended approach for maximum portability across agent platforms. Use `--allow-flat-layouts` when a flat layout better fits your workflow, with the understanding that some platforms may not discover files outside the recognized directories.
+
+**Allowing non-standard directories**
+
+The spec defines three recognized directories (`scripts/`, `references/`, `assets/`). Any other directory at the skill root produces a warning. This relates to cross-platform skill file loading considerations described in [agent-ecosystem/agent-skill-implementation](https://github.com/agent-ecosystem/agent-skill-implementation).
+
+Some development workflows use additional directories that may produce unexpected behavior across agent platforms. For example, the [evaluating-skills guide](https://agentskills.io/skill-creation/evaluating-skills) recommends an `evals/` directory for evaluation test cases, and teams may keep integration test fixtures in a `testing/` directory. If you are not distributing cross-platform skills and want to suppress warnings for specific directories that you know your preferred agent platform supports, use the `--allow-dirs` flag to suppress warnings for specific directories by name:
+
+```
+skill-validator validate structure --allow-dirs=evals my-skill/
+skill-validator check --allow-dirs=evals,testing my-skill/
+```
+
+The flag accepts a comma-separated list or can be repeated (`--allow-dirs=evals --allow-dirs=testing`). Allowed directories differ from recognized directories in two ways:
+
+1. **Exempt from deep-nesting checks**: The validator can't know the expected internal structure of arbitrary directories, so subdirectories like `evals/files/` won't trigger nesting warnings.
+2. **Skipped for orphan detection**: Since the validator doesn't know how these directories are used, it skips orphan file checks for them and emits an informational note instead.
+
+Directories not in the allow list still produce the standard warning with file counts and suggestions. If an allowed directory name matches a recognized directory (e.g., `--allow-dirs=scripts`), it's silently accepted with no change in behavior.
+
+> [!NOTE]
+> Allowing a directory suppresses validator warnings but does not change how agent platforms handle the directory. Files in non-standard directories may not be discovered during skill activation, or may load into agent context unexpectedly. If you're distributing skills across platforms, consider whether those files belong in `references/` or `assets/` instead.
 
 ### Link validation (`validate links`)
 
