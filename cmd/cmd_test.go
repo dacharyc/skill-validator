@@ -315,7 +315,7 @@ func TestReadSkillRaw_MissingFile(t *testing.T) {
 
 func TestResolveCheckGroups(t *testing.T) {
 	t.Run("default all enabled", func(t *testing.T) {
-		enabled, err := resolveCheckGroups("", "")
+		enabled, err := resolveCheckGroups(nil, nil)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -330,7 +330,7 @@ func TestResolveCheckGroups(t *testing.T) {
 	})
 
 	t.Run("only structure,links", func(t *testing.T) {
-		enabled, err := resolveCheckGroups("structure,links", "")
+		enabled, err := resolveCheckGroups([]string{"structure", "links"}, nil)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -343,7 +343,7 @@ func TestResolveCheckGroups(t *testing.T) {
 	})
 
 	t.Run("skip contamination", func(t *testing.T) {
-		enabled, err := resolveCheckGroups("", "contamination")
+		enabled, err := resolveCheckGroups(nil, []string{"contamination"})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -356,7 +356,7 @@ func TestResolveCheckGroups(t *testing.T) {
 	})
 
 	t.Run("invalid group", func(t *testing.T) {
-		_, err := resolveCheckGroups("structure,bogus", "")
+		_, err := resolveCheckGroups([]string{"structure", "bogus"}, nil)
 		if err == nil {
 			t.Error("expected error for invalid group")
 		}
