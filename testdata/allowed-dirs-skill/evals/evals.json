@@ -1,0 +1,9 @@
+{
+  "tests": [
+    {
+      "name": "basic_usage",
+      "prompt": "Show me how to use this skill",
+      "expected": "Follow the reference guide"
+    }
+  ]
+}

@@ -12,6 +12,7 @@ var (
 	strictStructure             bool
 	structAllowExtraFrontmatter bool
 	structAllowFlatLayouts      bool
+	structAllowDirs             []string
 )
 
 var validateStructureCmd = &cobra.Command{
@@ -30,6 +31,8 @@ func init() {
 		"suppress warnings for non-spec frontmatter fields")
 	validateStructureCmd.Flags().BoolVar(&structAllowFlatLayouts, "allow-flat-layouts", false,
 		"allow files at the skill root without warnings and treat them as standard content for token counting")
+	validateStructureCmd.Flags().StringSliceVar(&structAllowDirs, "allow-dirs", nil,
+		"comma-separated list of directory names to accept without warnings (e.g. --allow-dirs=evals,testing)")
 	validateCmd.AddCommand(validateStructureCmd)
 }
 
@@ -43,6 +46,7 @@ func runValidateStructure(cmd *cobra.Command, args []string) error {
 		SkipOrphans:           skipOrphans,
 		AllowExtraFrontmatter: structAllowExtraFrontmatter,
 		AllowFlatLayouts:      structAllowFlatLayouts,
+		AllowDirs:             structAllowDirs,
 	}
 	eopts := exitOpts{strict: strictStructure}
 

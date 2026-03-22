@@ -205,4 +205,96 @@ func TestCheckStructure(t *testing.T) {
 		results := CheckStructure(dir, Options{AllowFlatLayouts: true})
 		requireResultContaining(t, results, types.Warning, "unknown directory: extras/")
 	})
+
+	t.Run("allow-dirs suppresses warning for allowed directory", func(t *testing.T) {
+		dir := t.TempDir()
+		writeFile(t, dir, "SKILL.md", "content")
+		writeFile(t, dir, "evals/evals.json", `{"tests": []}`)
+		results := CheckStructure(dir, Options{AllowDirs: []string{"evals"}})
+		requireResult(t, results, types.Pass, "SKILL.md found")
+		requireNoLevel(t, results, types.Warning)
+	})
+
+	t.Run("allow-dirs with multiple directories", func(t *testing.T) {
+		dir := t.TempDir()
+		writeFile(t, dir, "SKILL.md", "content")
+		writeFile(t, dir, "evals/evals.json", `{"tests": []}`)
+		writeFile(t, dir, "testing/test1.md", "test content")
+		results := CheckStructure(dir, Options{AllowDirs: []string{"evals", "testing"}})
+		requireResult(t, results, types.Pass, "SKILL.md found")
+		requireNoLevel(t, results, types.Warning)
+	})
+
+	t.Run("allow-dirs partial allows still warn for non-allowed dirs", func(t *testing.T) {
+		dir := t.TempDir()
+		writeFile(t, dir, "SKILL.md", "content")
+		writeFile(t, dir, "evals/evals.json", `{"tests": []}`)
+		writeFile(t, dir, "extras/file.md", "content")
+		results := CheckStructure(dir, Options{AllowDirs: []string{"evals"}})
+		requireNoResultContaining(t, results, types.Warning, "evals/")
+		requireResultContaining(t, results, types.Warning, "unknown directory: extras/")
+	})
+
+	t.Run("allow-dirs silently accepts already-recognized directory", func(t *testing.T) {
+		dir := t.TempDir()
+		writeFile(t, dir, "SKILL.md", "content")
+		writeFile(t, dir, "scripts/setup.sh", "#!/bin/bash")
+		results := CheckStructure(dir, Options{AllowDirs: []string{"scripts"}})
+		requireResult(t, results, types.Pass, "SKILL.md found")
+		requireNoLevel(t, results, types.Warning)
+	})
+
+	t.Run("allow-dirs exempt from deep nesting checks", func(t *testing.T) {
+		dir := t.TempDir()
+		writeFile(t, dir, "SKILL.md", "content")
+		writeFile(t, dir, "evals/files/test1.txt", "test input")
+		results := CheckStructure(dir, Options{AllowDirs: []string{"evals"}})
+		requireResult(t, results, types.Pass, "SKILL.md found")
+		requireNoResultContaining(t, results, types.Warning, "deep nesting")
+	})
+
+	t.Run("allow-dirs does not exempt recognized dirs from deep nesting", func(t *testing.T) {
+		dir := t.TempDir()
+		writeFile(t, dir, "SKILL.md", "content")
+		writeFile(t, dir, "evals/files/test1.txt", "test input")
+		if err := os.MkdirAll(filepath.Join(dir, "references", "subdir"), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		results := CheckStructure(dir, Options{AllowDirs: []string{"evals"}})
+		requireNoResultContaining(t, results, types.Warning, "evals/")
+		requireResult(t, results, types.Warning, "deep nesting detected: references/subdir/")
+	})
+
+	t.Run("allow-dirs with allow-flat-layouts", func(t *testing.T) {
+		dir := t.TempDir()
+		writeFile(t, dir, "SKILL.md", "content")
+		writeFile(t, dir, "README.md", "readme")
+		writeFile(t, dir, "notes.txt", "notes")
+		writeFile(t, dir, "evals/evals.json", `{"tests": []}`)
+		results := CheckStructure(dir, Options{AllowFlatLayouts: true, AllowDirs: []string{"evals"}})
+		requireResult(t, results, types.Pass, "SKILL.md found")
+		requireNoLevel(t, results, types.Warning)
+	})
+
+	t.Run("allow-dirs with allow-flat-layouts still warns on non-allowed dirs", func(t *testing.T) {
+		dir := t.TempDir()
+		writeFile(t, dir, "SKILL.md", "content")
+		writeFile(t, dir, "README.md", "readme")
+		writeFile(t, dir, "extras/file.md", "content")
+		writeFile(t, dir, "evals/evals.json", `{"tests": []}`)
+		results := CheckStructure(dir, Options{AllowFlatLayouts: true, AllowDirs: []string{"evals"}})
+		requireNoLevel(t, results, types.Error)
+		requireNoResultContaining(t, results, types.Warning, "README.md")
+		requireNoResultContaining(t, results, types.Warning, "evals/")
+		requireResultContaining(t, results, types.Warning, "unknown directory: extras/")
+	})
+
+	t.Run("allow-dirs hint still shown for non-allowed unknown dirs", func(t *testing.T) {
+		dir := t.TempDir()
+		writeFile(t, dir, "SKILL.md", "content")
+		writeFile(t, dir, "evals/evals.json", `{"tests": []}`)
+		writeFile(t, dir, "extras/file.md", "content")
+		results := CheckStructure(dir, Options{AllowDirs: []string{"evals"}})
+		requireResultContaining(t, results, types.Warning, "should this be references/ or assets/?")
+	})
 }

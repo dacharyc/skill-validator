@@ -42,9 +42,17 @@ var knownExtraneousFiles = map[string]string{
 // CheckStructure validates the directory layout of a skill package. It checks
 // for the required SKILL.md file, flags unrecognized directories and extraneous
 // root files, and warns about deep nesting in recognized directories.
+// Directories listed in opts.AllowDirs are accepted without warning and are
+// exempt from deep-nesting checks.
 func CheckStructure(dir string, opts Options) []types.Result {
 	ctx := types.ResultContext{Category: "Structure"}
 	var results []types.Result
+
+	// Build a set of user-allowed directories.
+	allowedDirs := make(map[string]bool, len(opts.AllowDirs))
+	for _, d := range opts.AllowDirs {
+		allowedDirs[d] = true
+	}
 
 	// Check SKILL.md exists
 	skillPath := filepath.Join(dir, "SKILL.md")
@@ -72,7 +80,7 @@ func CheckStructure(dir string, opts Options) []types.Result {
 			}
 			continue
 		}
-		if !recognizedDirs[name] {
+		if !recognizedDirs[name] && !allowedDirs[name] {
 			msg := fmt.Sprintf("unknown directory: %s/", name)
 			if subEntries, err := os.ReadDir(filepath.Join(dir, name)); err == nil {
 				fileCount := 0
@@ -93,7 +101,9 @@ func CheckStructure(dir string, opts Options) []types.Result {
 		}
 	}
 
-	// Check for deep nesting in recognized directories
+	// Check for deep nesting in recognized directories only.
+	// Allowed directories are exempt because the validator cannot know
+	// their expected internal structure.
 	for dirName := range recognizedDirs {
 		subdir := filepath.Join(dir, dirName)
 		if _, err := os.Stat(subdir); os.IsNotExist(err) {

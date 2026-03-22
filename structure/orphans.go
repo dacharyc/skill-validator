@@ -22,13 +22,29 @@ type queueItem struct {
 
 // CheckOrphanFiles walks scripts/, references/, and assets/ to find files
 // that are never referenced (directly or transitively) from SKILL.md.
-func CheckOrphanFiles(dir, body string) []types.Result {
+// Directories listed in opts.AllowDirs are skipped with an informational note,
+// since the validator cannot know their expected reference patterns.
+func CheckOrphanFiles(dir, body string, opts Options) []types.Result {
 	ctx := types.ResultContext{Category: "Structure"}
+	var results []types.Result
+
+	// Emit informational notes for allowed directories that exist on disk.
+	// These are skipped for orphan detection because the validator cannot
+	// know their expected reference patterns.
+	for _, ad := range opts.AllowDirs {
+		if recognizedDirs[ad] {
+			continue // already covered by normal orphan detection
+		}
+		if _, err := os.Stat(filepath.Join(dir, ad)); err == nil {
+			results = append(results, ctx.Infof(
+				"%s/ skipped for orphan detection (allowed via --allow-dirs)", ad))
+		}
+	}
 
 	// Inventory: collect all files in recognized directories.
 	inventory := inventoryFiles(dir)
 	if len(inventory) == 0 {
-		return nil
+		return results
 	}
 
 	// Collect root-level text files (excluding SKILL.md) that can serve as
@@ -115,8 +131,6 @@ func CheckOrphanFiles(dir, body string) []types.Result {
 	}
 
 	// Build results per directory.
-	var results []types.Result
-
 	for _, d := range orderedRecognizedDirs {
 		dirFiles := filesInDir(inventory, d)
 		if len(dirFiles) == 0 {

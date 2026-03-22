@@ -14,7 +14,7 @@ func TestCheckOrphanFiles(t *testing.T) {
 		writeFile(t, dir, "assets/logo.png", "fake image")
 
 		body := "See references/guide.md and scripts/setup.sh and assets/logo.png"
-		results := CheckOrphanFiles(dir, body)
+		results := CheckOrphanFiles(dir, body, Options{})
 
 		requireResult(t, results, types.Pass, "all files in scripts/ are referenced")
 		requireResult(t, results, types.Pass, "all files in references/ are referenced")
@@ -28,7 +28,7 @@ func TestCheckOrphanFiles(t *testing.T) {
 		writeFile(t, dir, "references/unused.md", "unused content")
 
 		body := "See references/guide.md for details."
-		results := CheckOrphanFiles(dir, body)
+		results := CheckOrphanFiles(dir, body, Options{})
 
 		requireResultContaining(t, results, types.Warning, "potentially unreferenced file: references/unused.md")
 	})
@@ -38,7 +38,7 @@ func TestCheckOrphanFiles(t *testing.T) {
 		writeFile(t, dir, "scripts/setup.sh", "#!/bin/bash")
 
 		body := "No references to scripts here."
-		results := CheckOrphanFiles(dir, body)
+		results := CheckOrphanFiles(dir, body, Options{})
 
 		requireResultContaining(t, results, types.Warning, "potentially unreferenced file: scripts/setup.sh")
 	})
@@ -46,7 +46,7 @@ func TestCheckOrphanFiles(t *testing.T) {
 	t.Run("empty directories produce no results", func(t *testing.T) {
 		dir := t.TempDir()
 		// No files at all
-		results := CheckOrphanFiles(dir, "some body")
+		results := CheckOrphanFiles(dir, "some body", Options{})
 		if len(results) != 0 {
 			t.Errorf("expected 0 results for empty dirs, got %d", len(results))
 		}
@@ -56,7 +56,7 @@ func TestCheckOrphanFiles(t *testing.T) {
 		dir := t.TempDir()
 		writeFile(t, dir, "other/file.md", "content")
 
-		results := CheckOrphanFiles(dir, "some body")
+		results := CheckOrphanFiles(dir, "some body", Options{})
 		if len(results) != 0 {
 			t.Errorf("expected 0 results for unrecognized dirs, got %d", len(results))
 		}
@@ -68,7 +68,7 @@ func TestCheckOrphanFiles(t *testing.T) {
 		writeFile(t, dir, "references/secret.md", "secret content")
 
 		body := "See assets/logo.png for the logo."
-		results := CheckOrphanFiles(dir, body)
+		results := CheckOrphanFiles(dir, body, Options{})
 
 		// logo.png is reached (referenced from body) but not scanned for further refs
 		// so references/secret.md should be an orphan
@@ -84,7 +84,7 @@ func TestCheckOrphanFiles(t *testing.T) {
 		writeFile(t, dir, "references/images/diagram.png", "fake image")
 
 		body := "Read the [guide](references/guide.md)."
-		results := CheckOrphanFiles(dir, body)
+		results := CheckOrphanFiles(dir, body, Options{})
 
 		// The image should be reached (indirectly via guide.md), not flagged as orphan
 		requireNoResultContaining(t, results, types.Warning, "references/images/diagram.png")
@@ -98,7 +98,7 @@ func TestCheckOrphanFiles(t *testing.T) {
 		writeFile(t, dir, "scripts/fill_form.py", "#!/usr/bin/env python3")
 
 		body := "For form filling, read FORMS.md and follow its instructions."
-		results := CheckOrphanFiles(dir, body)
+		results := CheckOrphanFiles(dir, body, Options{})
 
 		requireNoResultContaining(t, results, types.Warning, "scripts/fill_form.py")
 		requireResult(t, results, types.Pass, "all files in scripts/ are referenced")
@@ -111,7 +111,7 @@ func TestCheckOrphanFiles(t *testing.T) {
 		writeFile(t, dir, "scripts/validate.js", "// validator")
 
 		body := "See package.json for available commands. Run `npm run validate` to check."
-		results := CheckOrphanFiles(dir, body)
+		results := CheckOrphanFiles(dir, body, Options{})
 
 		// package.json is mentioned so it gets scanned, finding scripts/validate.js
 		requireNoResultContaining(t, results, types.Warning, "scripts/validate.js")
@@ -124,7 +124,7 @@ func TestCheckOrphanFiles(t *testing.T) {
 		writeFile(t, dir, "scripts/validate.js", "// validator")
 
 		body := "Run `npm run validate` to check your component."
-		results := CheckOrphanFiles(dir, body)
+		results := CheckOrphanFiles(dir, body, Options{})
 
 		// package.json is not mentioned, so scripts/validate.js stays orphaned
 		requireResultContaining(t, results, types.Warning, "potentially unreferenced file: scripts/validate.js")
@@ -137,7 +137,7 @@ func TestCheckOrphanFiles(t *testing.T) {
 		writeFile(t, dir, "scripts/fill_form.py", "#!/usr/bin/env python3")
 
 		body := "For form filling, read FORMS.md and follow its instructions."
-		results := CheckOrphanFiles(dir, body)
+		results := CheckOrphanFiles(dir, body, Options{})
 
 		requireNoResultContaining(t, results, types.Warning, "scripts/fill_form.py")
 		requireResult(t, results, types.Pass, "all files in scripts/ are referenced")
@@ -148,7 +148,7 @@ func TestCheckOrphanFiles(t *testing.T) {
 		writeFile(t, dir, "scripts/check_fields.py", "#!/usr/bin/env python3")
 
 		body := "Run `python scripts/check_fields <file.pdf>` to check."
-		results := CheckOrphanFiles(dir, body)
+		results := CheckOrphanFiles(dir, body, Options{})
 
 		requireResultContaining(t, results, types.Warning,
 			"file scripts/check_fields.py is referenced without its extension (as scripts/check_fields in SKILL.md) — include the .py extension so agents can reliably locate the file")
@@ -162,7 +162,7 @@ func TestCheckOrphanFiles(t *testing.T) {
 		writeFile(t, dir, "scripts/check_fields.py", "#!/usr/bin/env python3")
 
 		body := "For form filling, read forms.md."
-		results := CheckOrphanFiles(dir, body)
+		results := CheckOrphanFiles(dir, body, Options{})
 
 		requireResultContaining(t, results, types.Warning,
 			"file scripts/check_fields.py is referenced without its extension (as scripts/check_fields in forms.md)")
@@ -174,7 +174,7 @@ func TestCheckOrphanFiles(t *testing.T) {
 		writeFile(t, dir, "scripts/run.py", "#!/usr/bin/env python3")
 
 		body := "Run scripts/run.py to start."
-		results := CheckOrphanFiles(dir, body)
+		results := CheckOrphanFiles(dir, body, Options{})
 
 		requireNoResultContaining(t, results, types.Warning, "__init__.py")
 		requireNoResultContaining(t, results, types.Info, "__init__.py")
@@ -187,7 +187,7 @@ func TestCheckOrphanFiles(t *testing.T) {
 		writeFile(t, dir, "scripts/run.py", "#!/usr/bin/env python3")
 
 		body := "No references here."
-		results := CheckOrphanFiles(dir, body)
+		results := CheckOrphanFiles(dir, body, Options{})
 
 		requireNoResultContaining(t, results, types.Warning, "__init__.py")
 		requireResultContaining(t, results, types.Warning, "potentially unreferenced file: scripts/run.py")
@@ -199,7 +199,7 @@ func TestCheckOrphanFiles(t *testing.T) {
 		writeFile(t, dir, "scripts/pkg/helpers.py", "# helpers")
 
 		body := "No references here."
-		results := CheckOrphanFiles(dir, body)
+		results := CheckOrphanFiles(dir, body, Options{})
 
 		requireNoResultContaining(t, results, types.Warning, "__init__.py")
 		requireResultContaining(t, results, types.Warning, "scripts/pkg/helpers.py")
@@ -211,7 +211,7 @@ func TestCheckOrphanFiles(t *testing.T) {
 
 		// Body references with full extension — should get normal treatment, not the extension warning
 		body := "Run scripts/setup.sh to configure."
-		results := CheckOrphanFiles(dir, body)
+		results := CheckOrphanFiles(dir, body, Options{})
 
 		requireResult(t, results, types.Pass, "all files in scripts/ are referenced")
 		requireNoResultContaining(t, results, types.Warning, "referenced without its extension")
@@ -224,7 +224,7 @@ func TestCheckOrphanFiles(t *testing.T) {
 		writeFile(t, dir, "scripts/secret.sh", "#!/bin/bash")
 
 		body := "This skill has no special setup."
-		results := CheckOrphanFiles(dir, body)
+		results := CheckOrphanFiles(dir, body, Options{})
 
 		// notes.md is never mentioned, so it shouldn't be scanned, and the script stays orphaned
 		requireResultContaining(t, results, types.Warning, "potentially unreferenced file: scripts/secret.sh")
@@ -237,7 +237,7 @@ func TestCheckOrphanFiles(t *testing.T) {
 		writeFile(t, dir, "scripts/helpers.py", "def merge(): pass")
 
 		body := "Run scripts/main.py to start."
-		results := CheckOrphanFiles(dir, body)
+		results := CheckOrphanFiles(dir, body, Options{})
 
 		requireNoResultContaining(t, results, types.Warning, "scripts/helpers.py")
 		requireResult(t, results, types.Pass, "all files in scripts/ are referenced")
@@ -250,7 +250,7 @@ func TestCheckOrphanFiles(t *testing.T) {
 		writeFile(t, dir, "scripts/helpers/merge_runs.py", "def merge(): pass")
 
 		body := "Run scripts/main.py to start."
-		results := CheckOrphanFiles(dir, body)
+		results := CheckOrphanFiles(dir, body, Options{})
 
 		requireNoResultContaining(t, results, types.Warning, "scripts/helpers/merge_runs.py")
 		requireResult(t, results, types.Pass, "all files in scripts/ are referenced")
@@ -263,7 +263,7 @@ func TestCheckOrphanFiles(t *testing.T) {
 		writeFile(t, dir, "scripts/pkg/utils.py", "def helper(): pass")
 
 		body := "Run scripts/pkg/main.py to start."
-		results := CheckOrphanFiles(dir, body)
+		results := CheckOrphanFiles(dir, body, Options{})
 
 		requireNoResultContaining(t, results, types.Warning, "scripts/pkg/utils.py")
 		requireResult(t, results, types.Pass, "all files in scripts/ are referenced")
@@ -275,7 +275,7 @@ func TestCheckOrphanFiles(t *testing.T) {
 		writeFile(t, dir, "scripts/data_loader.sh", "#!/bin/bash")
 
 		body := "Run scripts/main.py to start."
-		results := CheckOrphanFiles(dir, body)
+		results := CheckOrphanFiles(dir, body, Options{})
 
 		// .sh file should not be resolved by Python imports; it's matched
 		// via the extensionless fallback since "data_loader" appears in the text
@@ -293,7 +293,7 @@ func TestCheckOrphanFiles(t *testing.T) {
 		writeFile(t, dir, "scripts/validators/extra.py", "class ExtraValidator: pass")
 
 		body := "Run scripts/pack.py to package."
-		results := CheckOrphanFiles(dir, body)
+		results := CheckOrphanFiles(dir, body, Options{})
 
 		// base.py should be reached via: pack.py → __init__.py → .base
 		requireNoResultContaining(t, results, types.Warning, "scripts/validators/base.py")
@@ -308,11 +308,73 @@ func TestCheckOrphanFiles(t *testing.T) {
 		writeFile(t, dir, "assets/unused3.png", "content")
 
 		body := "No references to any files."
-		results := CheckOrphanFiles(dir, body)
+		results := CheckOrphanFiles(dir, body, Options{})
 
 		requireResultContaining(t, results, types.Warning, "potentially unreferenced file: references/unused1.md")
 		requireResultContaining(t, results, types.Warning, "potentially unreferenced file: scripts/unused2.sh")
 		requireResultContaining(t, results, types.Warning, "potentially unreferenced file: assets/unused3.png")
+	})
+
+	t.Run("allow-dirs emits info note for existing allowed directory", func(t *testing.T) {
+		dir := t.TempDir()
+		writeFile(t, dir, "references/guide.md", "guide content")
+		writeFile(t, dir, "evals/evals.json", `{"tests": []}`)
+
+		body := "See references/guide.md for details."
+		results := CheckOrphanFiles(dir, body, Options{AllowDirs: []string{"evals"}})
+
+		requireResultContaining(t, results, types.Info, "evals/ skipped for orphan detection (allowed via --allow-dirs)")
+		requireResult(t, results, types.Pass, "all files in references/ are referenced")
+	})
+
+	t.Run("allow-dirs no info note for nonexistent allowed directory", func(t *testing.T) {
+		dir := t.TempDir()
+		writeFile(t, dir, "references/guide.md", "guide content")
+
+		body := "See references/guide.md for details."
+		results := CheckOrphanFiles(dir, body, Options{AllowDirs: []string{"evals"}})
+
+		requireNoResultContaining(t, results, types.Info, "evals/")
+	})
+
+	t.Run("allow-dirs skips recognized dir in info notes", func(t *testing.T) {
+		dir := t.TempDir()
+		writeFile(t, dir, "references/guide.md", "guide content")
+
+		body := "See references/guide.md for details."
+		results := CheckOrphanFiles(dir, body, Options{AllowDirs: []string{"references"}})
+
+		// "references" is already a recognized dir, so no info note
+		requireNoResultContaining(t, results, types.Info, "references/")
+		requireResult(t, results, types.Pass, "all files in references/ are referenced")
+	})
+
+	t.Run("allow-dirs with skip-orphans does not conflict", func(t *testing.T) {
+		dir := t.TempDir()
+		writeFile(t, dir, "SKILL.md", "---\nname: test\n---\nbody")
+		writeFile(t, dir, "references/guide.md", "guide content")
+		writeFile(t, dir, "evals/evals.json", `{"tests": []}`)
+
+		// When SkipOrphans is true, CheckOrphanFiles is never called (handled in Validate).
+		// But if called directly, it should still work.
+		results := CheckOrphanFiles(dir, "body", Options{
+			AllowDirs: []string{"evals"},
+		})
+		requireResultContaining(t, results, types.Info, "evals/ skipped for orphan detection")
+	})
+
+	t.Run("allow-dirs with multiple allowed dirs", func(t *testing.T) {
+		dir := t.TempDir()
+		writeFile(t, dir, "references/guide.md", "guide content")
+		writeFile(t, dir, "evals/evals.json", `{"tests": []}`)
+		writeFile(t, dir, "testing/test1.md", "test content")
+
+		body := "See references/guide.md for details."
+		results := CheckOrphanFiles(dir, body, Options{AllowDirs: []string{"evals", "testing"}})
+
+		requireResultContaining(t, results, types.Info, "evals/ skipped for orphan detection")
+		requireResultContaining(t, results, types.Info, "testing/ skipped for orphan detection")
+		requireResult(t, results, types.Pass, "all files in references/ are referenced")
 	})
 }
 

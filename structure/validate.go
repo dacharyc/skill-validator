@@ -14,6 +14,7 @@ type Options struct {
 	SkipOrphans           bool
 	AllowExtraFrontmatter bool
 	AllowFlatLayouts      bool
+	AllowDirs             []string
 }
 
 // ValidateMulti validates each directory and returns an aggregated report.
@@ -78,7 +79,7 @@ func Validate(dir string, opts Options) *types.Report {
 
 	// Orphan file checks (files in recognized dirs that are never referenced)
 	if !opts.SkipOrphans {
-		report.Results = append(report.Results, CheckOrphanFiles(dir, s.Body)...)
+		report.Results = append(report.Results, CheckOrphanFiles(dir, s.Body, opts)...)
 		if opts.AllowFlatLayouts {
 			report.Results = append(report.Results, CheckFlatOrphanFiles(dir, s.Body)...)
 		}

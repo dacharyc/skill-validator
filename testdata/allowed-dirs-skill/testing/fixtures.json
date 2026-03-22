@@ -1,0 +1,5 @@
+{
+  "fixtures": [
+    {"name": "happy_path", "input": "valid input", "expected_output": "success"}
+  ]
+}

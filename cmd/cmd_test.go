@@ -551,6 +551,121 @@ func TestValidateCommand_FlatSkill_OrphanDetection(t *testing.T) {
 	}
 }
 
+func TestValidateCommand_AllowedDirsSkill_WithoutFlag(t *testing.T) {
+	dir := fixtureDir(t, "allowed-dirs-skill")
+
+	r := structure.Validate(dir, structure.Options{})
+	// Without --allow-dirs, evals/ and testing/ should produce warnings
+	hasEvalsWarning := false
+	hasTestingWarning := false
+	for _, res := range r.Results {
+		if res.Level == types.Warning && strings.Contains(res.Message, "unknown directory: evals/") {
+			hasEvalsWarning = true
+		}
+		if res.Level == types.Warning && strings.Contains(res.Message, "unknown directory: testing/") {
+			hasTestingWarning = true
+		}
+	}
+	if !hasEvalsWarning {
+		t.Error("expected warning for evals/ without --allow-dirs")
+	}
+	if !hasTestingWarning {
+		t.Error("expected warning for testing/ without --allow-dirs")
+	}
+}
+
+func TestValidateCommand_AllowedDirsSkill_WithFlag(t *testing.T) {
+	dir := fixtureDir(t, "allowed-dirs-skill")
+
+	r := structure.Validate(dir, structure.Options{AllowDirs: []string{"evals", "testing"}})
+
+	// Should pass with no errors
+	if r.Errors != 0 {
+		t.Errorf("expected 0 errors, got %d", r.Errors)
+		for _, res := range r.Results {
+			if res.Level == types.Error {
+				t.Logf("  error: %s: %s", res.Category, res.Message)
+			}
+		}
+	}
+
+	// No warnings about evals/ or testing/
+	for _, res := range r.Results {
+		if res.Level == types.Warning &&
+			(strings.Contains(res.Message, "evals/") || strings.Contains(res.Message, "testing/")) {
+			t.Errorf("unexpected warning with --allow-dirs: %s", res.Message)
+		}
+	}
+
+	// No deep nesting warning for evals/files/
+	for _, res := range r.Results {
+		if res.Level == types.Warning && strings.Contains(res.Message, "deep nesting") {
+			t.Errorf("unexpected deep nesting warning for allowed dir: %s", res.Message)
+		}
+	}
+
+	// Should have info notes for orphan detection skipping
+	hasEvalsInfo := false
+	hasTestingInfo := false
+	for _, res := range r.Results {
+		if res.Level == types.Info && strings.Contains(res.Message, "evals/ skipped for orphan detection") {
+			hasEvalsInfo = true
+		}
+		if res.Level == types.Info && strings.Contains(res.Message, "testing/ skipped for orphan detection") {
+			hasTestingInfo = true
+		}
+	}
+	if !hasEvalsInfo {
+		t.Error("expected info note about evals/ being skipped for orphan detection")
+	}
+	if !hasTestingInfo {
+		t.Error("expected info note about testing/ being skipped for orphan detection")
+	}
+
+	// Recognized dirs should still have orphan pass results
+	hasReferencesPass := false
+	hasScriptsPass := false
+	for _, res := range r.Results {
+		if res.Level == types.Pass && strings.Contains(res.Message, "all files in references/ are referenced") {
+			hasReferencesPass = true
+		}
+		if res.Level == types.Pass && strings.Contains(res.Message, "all files in scripts/ are referenced") {
+			hasScriptsPass = true
+		}
+	}
+	if !hasReferencesPass {
+		t.Error("expected pass for references/ orphan check")
+	}
+	if !hasScriptsPass {
+		t.Error("expected pass for scripts/ orphan check")
+	}
+}
+
+func TestValidateCommand_AllowedDirsSkill_PartialAllow(t *testing.T) {
+	dir := fixtureDir(t, "allowed-dirs-skill")
+
+	// Only allow evals, not testing
+	r := structure.Validate(dir, structure.Options{AllowDirs: []string{"evals"}})
+
+	// evals/ should not warn
+	for _, res := range r.Results {
+		if res.Level == types.Warning && strings.Contains(res.Message, "unknown directory: evals/") {
+			t.Error("unexpected warning for evals/ with --allow-dirs=evals")
+		}
+	}
+
+	// testing/ should still warn
+	hasTestingWarning := false
+	for _, res := range r.Results {
+		if res.Level == types.Warning && strings.Contains(res.Message, "unknown directory: testing/") {
+			hasTestingWarning = true
+		}
+	}
+	if !hasTestingWarning {
+		t.Error("expected warning for testing/ when not in --allow-dirs")
+	}
+}
+
 func TestDetectAndResolve_NoSkill(t *testing.T) {
 	dir := t.TempDir()
 	_, _, _, err := detectAndResolve([]string{dir})

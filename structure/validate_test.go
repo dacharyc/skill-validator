@@ -167,6 +167,110 @@ func TestValidate(t *testing.T) {
 		}
 		requireResultContaining(t, report.Results, types.Error, "parsing frontmatter YAML")
 	})
+
+	t.Run("allow-dirs suppresses unknown dir warning in full validation", func(t *testing.T) {
+		dir := t.TempDir()
+		writeSkill(t, dir, "---\nname: "+dirName(dir)+"\ndescription: A valid skill\n---\n# Body\n")
+		writeFile(t, dir, "evals/evals.json", `{"tests": []}`)
+		report := Validate(dir, Options{AllowDirs: []string{"evals"}})
+		if report.Errors != 0 {
+			t.Errorf("expected 0 errors, got %d", report.Errors)
+		}
+		requireNoResultContaining(t, report.Results, types.Warning, "evals/")
+	})
+
+	t.Run("allow-dirs with skip-orphans", func(t *testing.T) {
+		dir := t.TempDir()
+		writeSkill(t, dir, "---\nname: "+dirName(dir)+"\ndescription: A valid skill\n---\n# Body\n")
+		writeFile(t, dir, "evals/evals.json", `{"tests": []}`)
+		writeFile(t, dir, "references/unused.md", "unused content")
+		report := Validate(dir, Options{AllowDirs: []string{"evals"}, SkipOrphans: true})
+		if report.Errors != 0 {
+			t.Errorf("expected 0 errors, got %d", report.Errors)
+		}
+		// No unknown dir warning for evals
+		requireNoResultContaining(t, report.Results, types.Warning, "evals/")
+		// Orphan check skipped entirely, so no orphan warning for unused.md
+		requireNoResultContaining(t, report.Results, types.Warning, "unreferenced")
+		// No info note about allowed dirs since orphan detection was skipped
+		requireNoResultContaining(t, report.Results, types.Info, "skipped for orphan detection")
+	})
+
+	t.Run("allow-dirs with allow-extra-frontmatter", func(t *testing.T) {
+		dir := t.TempDir()
+		writeSkill(t, dir, "---\nname: "+dirName(dir)+"\ndescription: desc\ncustom_field: value\n---\n# Body\n")
+		writeFile(t, dir, "evals/evals.json", `{"tests": []}`)
+		report := Validate(dir, Options{
+			AllowDirs:             []string{"evals"},
+			AllowExtraFrontmatter: true,
+		})
+		if report.Errors != 0 {
+			t.Errorf("expected 0 errors, got %d", report.Errors)
+		}
+		requireNoResultContaining(t, report.Results, types.Warning, "evals/")
+		requireNoResultContaining(t, report.Results, types.Warning, "custom_field")
+	})
+
+	t.Run("allow-dirs with allow-flat-layouts full integration", func(t *testing.T) {
+		dir := t.TempDir()
+		writeSkill(t, dir, "---\nname: "+dirName(dir)+"\ndescription: desc\n---\n# Body\nSee guide.md.\n")
+		writeFile(t, dir, "guide.md", "Guide content.")
+		writeFile(t, dir, "evals/evals.json", `{"tests": []}`)
+		report := Validate(dir, Options{
+			AllowDirs:        []string{"evals"},
+			AllowFlatLayouts: true,
+		})
+		if report.Errors != 0 {
+			t.Errorf("expected 0 errors, got %d", report.Errors)
+		}
+		if report.Warnings != 0 {
+			t.Errorf("expected 0 warnings, got %d", report.Warnings)
+			for _, r := range report.Results {
+				if r.Level == types.Warning {
+					t.Logf("  warning: %s: %s", r.Category, r.Message)
+				}
+			}
+		}
+	})
+
+	t.Run("allow-dirs emits info note during orphan detection", func(t *testing.T) {
+		dir := t.TempDir()
+		writeSkill(t, dir, "---\nname: "+dirName(dir)+"\ndescription: desc\n---\n# Body\nSee references/guide.md.\n")
+		writeFile(t, dir, "references/guide.md", "guide content")
+		writeFile(t, dir, "evals/evals.json", `{"tests": []}`)
+		report := Validate(dir, Options{AllowDirs: []string{"evals"}})
+		requireResultContaining(t, report.Results, types.Info, "evals/ skipped for orphan detection")
+	})
+
+	t.Run("allow-dirs with all flags combined", func(t *testing.T) {
+		dir := t.TempDir()
+		writeSkill(t, dir, "---\nname: "+dirName(dir)+"\ndescription: desc\ncustom: val\n---\n# Body\nSee helper.md.\n")
+		writeFile(t, dir, "helper.md", "Helper content.")
+		writeFile(t, dir, "evals/evals.json", `{"tests": []}`)
+		writeFile(t, dir, "testing/test1.md", "test content")
+		report := Validate(dir, Options{
+			AllowDirs:             []string{"evals", "testing"},
+			AllowExtraFrontmatter: true,
+			AllowFlatLayouts:      true,
+			SkipOrphans:           true,
+		})
+		if report.Errors != 0 {
+			t.Errorf("expected 0 errors, got %d", report.Errors)
+			for _, r := range report.Results {
+				if r.Level == types.Error {
+					t.Logf("  error: %s: %s", r.Category, r.Message)
+				}
+			}
+		}
+		if report.Warnings != 0 {
+			t.Errorf("expected 0 warnings, got %d", report.Warnings)
+			for _, r := range report.Results {
+				if r.Level == types.Warning {
+					t.Logf("  warning: %s: %s", r.Category, r.Message)
+				}
+			}
+		}
+	})
 }
 
 func TestValidateMulti(t *testing.T) {
