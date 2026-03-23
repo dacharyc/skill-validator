@@ -23,6 +23,20 @@ func ExampleNewClient() {
 	// Provider: anthropic, Model: claude-sonnet-4-5-20250929
 }
 
+func ExampleNewClient_claudeCLI() {
+	client, err := judge.NewClient(judge.ClientOptions{
+		Provider: "claude-cli",
+		// Model defaults to "sonnet"; no API key needed
+	})
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Printf("Provider: %s, Model: %s\n", client.Provider(), client.ModelName())
+	// Output:
+	// Provider: claude-cli, Model: sonnet
+}
+
 func ExampleNewClient_openai() {
 	client, err := judge.NewClient(judge.ClientOptions{
 		Provider: "openai",

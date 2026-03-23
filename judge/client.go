@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os/exec"
 	"strings"
 	"time"
 )
@@ -27,8 +28,8 @@ type LLMClient interface {
 
 // ClientOptions holds configuration for creating an LLM client.
 type ClientOptions struct {
-	Provider          string // "anthropic" or "openai"
-	APIKey            string // Required
+	Provider          string // "anthropic", "openai", or "claude-cli"
+	APIKey            string // Required for anthropic and openai; unused for claude-cli
 	BaseURL           string // Optional; defaults per provider
 	Model             string // Optional; defaults per provider
 	MaxTokensStyle    string // "auto", "max_tokens", or "max_completion_tokens"
@@ -38,8 +39,9 @@ type ClientOptions struct {
 // NewClient creates an LLMClient for the given options.
 // If Model is empty, a default is chosen per provider.
 // For the openai provider, BaseURL defaults to "https://api.openai.com/v1" if empty.
+// The claude-cli provider shells out to the "claude" CLI and does not require an API key.
 func NewClient(opts ClientOptions) (LLMClient, error) {
-	if opts.APIKey == "" {
+	if strings.ToLower(opts.Provider) != "claude-cli" && opts.APIKey == "" {
 		return nil, fmt.Errorf("API key is required")
 	}
 
@@ -49,6 +51,12 @@ func NewClient(opts ClientOptions) (LLMClient, error) {
 	}
 
 	switch strings.ToLower(opts.Provider) {
+	case "claude-cli":
+		model := opts.Model
+		if model == "" {
+			model = "sonnet"
+		}
+		return &claudeCLIClient{model: model}, nil
 	case "anthropic":
 		model := opts.Model
 		if model == "" {
@@ -71,7 +79,7 @@ func NewClient(opts ClientOptions) (LLMClient, error) {
 		baseURL = strings.TrimRight(baseURL, "/")
 		return &openaiClient{apiKey: opts.APIKey, baseURL: baseURL, model: model, maxTokensStyle: opts.MaxTokensStyle, maxTokens: maxResp}, nil
 	default:
-		return nil, fmt.Errorf("unsupported provider %q (use \"anthropic\" or \"openai\")", opts.Provider)
+		return nil, fmt.Errorf("unsupported provider %q (use \"anthropic\", \"openai\", or \"claude-cli\")", opts.Provider)
 	}
 }
 
@@ -280,4 +288,39 @@ func (c *openaiClient) Complete(ctx context.Context, systemPrompt, userContent s
 	}
 
 	return result.Choices[0].Message.Content, nil
+}
+
+// --- Claude CLI client ---
+
+// claudeCLIClient invokes the "claude" CLI for completions.
+// This is useful when the CLI is already authenticated (e.g. via a company
+// subscription) and no explicit API key is needed.
+type claudeCLIClient struct {
+	model string
+}
+
+func (c *claudeCLIClient) Provider() string  { return "claude-cli" }
+func (c *claudeCLIClient) ModelName() string { return c.model }
+
+func (c *claudeCLIClient) Complete(ctx context.Context, systemPrompt, userContent string) (string, error) {
+	args := []string{
+		"-p",
+		"--output-format", "text",
+		"--model", c.model,
+	}
+	if systemPrompt != "" {
+		args = append(args, "--system-prompt", systemPrompt)
+	}
+	args = append(args, userContent)
+
+	cmd := exec.CommandContext(ctx, "claude", args...)
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	if err := cmd.Run(); err != nil {
+		return "", fmt.Errorf("claude CLI failed: %w: %s", err, stderr.String())
+	}
+
+	return strings.TrimSpace(stdout.String()), nil
 }

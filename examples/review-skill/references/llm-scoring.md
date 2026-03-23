@@ -3,7 +3,7 @@
 Provider-specific prerequisites and LLM scoring steps. Only follow this if the
 user selected an LLM provider in Step 0.
 
-## API Key Prerequisites
+## Provider Prerequisites
 
 Complete after Step 1a (binary check) passes.
 
@@ -41,6 +41,24 @@ export OPENAI_API_KEY=sk-...
 The default model is `gpt-5.2`. The user can specify a different model with the
 `--model` flag. For applications where a frontier model is more appropriate,
 the user can specify `--model gpt-5.4`, but this will increase scoring cost.
+
+### Claude CLI provider
+
+The Claude CLI provider shells out to the locally installed `claude` binary.
+No API key is needed — it uses the CLI's existing authentication (e.g. a
+company or team subscription).
+
+Verify the CLI is available:
+
+```bash
+claude --version
+```
+
+If not found, see https://docs.anthropic.com/en/docs/claude-code for
+installation instructions.
+
+The default model is `sonnet`. The user can specify a different model with the
+`--model` flag (e.g. `--model opus`).
 
 ### OpenAI-compatible provider
 
@@ -131,6 +149,28 @@ skill-validator score evaluate <path> --provider openai --full-content --display
 ```
 
 Add `--model <name>` if the user specified a model other than gpt-5.2.
+
+### Claude CLI
+
+Check for cached scores:
+
+```bash
+skill-validator score report <path> -o json 2>/dev/null
+```
+
+If scored output exists, use `--rescore` to generate fresh scores:
+
+```bash
+skill-validator score evaluate <path> --provider claude-cli --full-content --display files -o json --rescore
+```
+
+If no cached scores exist, run without `--rescore`:
+
+```bash
+skill-validator score evaluate <path> --provider claude-cli --full-content --display files -o json
+```
+
+Add `--model <name>` if the user specified a model other than sonnet.
 
 ### OpenAI-compatible
 
