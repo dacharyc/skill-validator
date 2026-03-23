@@ -111,7 +111,7 @@ API documentation and runnable examples are on [pkg.go.dev](https://pkg.go.dev/g
 
 #### Custom LLM providers
 
-The built-in clients cover Anthropic and OpenAI-compatible APIs. For other providers, implement the `judge.LLMClient` interface:
+The built-in clients cover Anthropic, OpenAI-compatible APIs, and the Claude CLI. For other providers, implement the `judge.LLMClient` interface:
 
 ```go
 type LLMClient interface {
@@ -324,14 +324,18 @@ skill-validator score evaluate --skill-only <path>
 skill-validator score evaluate --refs-only <path>
 skill-validator score evaluate --display files <path>
 skill-validator score evaluate path/to/references/api-guide.md
+
+# Or use the Claude CLI (no API key needed if already authenticated)
+skill-validator score evaluate --provider claude-cli <path>
 ```
 
-**Provider support**: Requires an API key via environment variable. Use `--provider` to select the backend:
+**Provider support**: Use `--provider` to select the backend:
 
 | Provider | Env var | Default model | Covers |
 |---|---|---|---|
 | `anthropic` (default) | `ANTHROPIC_API_KEY` | `claude-sonnet-4-5-20250929` | Anthropic |
 | `openai` | `OPENAI_API_KEY` | `gpt-5.2` | OpenAI, Ollama, Together, Groq, Azure, etc. |
+| `claude-cli` | _(none)_ | `sonnet` | Claude CLI (uses locally authenticated `claude` binary) |
 
 Use `--model` to override the default model and `--base-url` to point at any OpenAI-compatible endpoint (e.g. `http://localhost:11434/v1` for Ollama). If the endpoint requires a specific token limit parameter, use `--max-tokens-style` to override auto-detection:
 
@@ -633,7 +637,7 @@ If no `SKILL.md` is found at the root or in any immediate subdirectory, the vali
 
 The [`examples/`](examples/) directory contains ready-to-use workflows that extend skill-validator:
 
-- **[review-skill](examples/review-skill/)** — An Agent Skill that walks a coding agent through a full skill review (structural validation, content checks, LLM scoring with Anthropic or OpenAI). Copy it into your agent's skill directory to iterate on skills during local development before requesting a human review.
+- **[review-skill](examples/review-skill/)** — An Agent Skill that walks a coding agent through a full skill review (structural validation, content checks, LLM scoring with Anthropic, OpenAI, or Claude CLI). Copy it into your agent's skill directory to iterate on skills during local development before requesting a human review.
 - **[ci](examples/ci/)** — A GitHub Actions workflow and companion script that validate changed skills on every pull request. Copy into your repo's `.github/` directory to enforce a minimum quality bar before merging.
 
 See the [examples README](examples/README.md) for setup instructions.

@@ -39,14 +39,18 @@ The path can be:
 
 Requires an API key via environment variable:
   ANTHROPIC_API_KEY (for --provider anthropic, the default)
-  OPENAI_API_KEY    (for --provider openai)`,
+  OPENAI_API_KEY    (for --provider openai)
+
+The claude-cli provider uses the locally installed "claude" CLI and does not
+require an API key. This is useful when the CLI is already authenticated
+(e.g. via a company or team subscription).`,
 	Args: cobra.ExactArgs(1),
 	RunE: runScoreEvaluate,
 }
 
 func init() {
-	scoreEvaluateCmd.Flags().StringVar(&evalProvider, "provider", "anthropic", "LLM provider: anthropic or openai")
-	scoreEvaluateCmd.Flags().StringVar(&evalModel, "model", "", "model name (default: claude-sonnet-4-5-20250929 for anthropic, gpt-5.2 for openai)")
+	scoreEvaluateCmd.Flags().StringVar(&evalProvider, "provider", "anthropic", "LLM provider: anthropic, openai, or claude-cli")
+	scoreEvaluateCmd.Flags().StringVar(&evalModel, "model", "", "model name (default: claude-sonnet-4-5-20250929 for anthropic, gpt-5.2 for openai, sonnet for claude-cli)")
 	scoreEvaluateCmd.Flags().StringVar(&evalBaseURL, "base-url", "", "API base URL (for openai-compatible endpoints)")
 	scoreEvaluateCmd.Flags().BoolVar(&evalRescore, "rescore", false, "re-score and overwrite cached results")
 	scoreEvaluateCmd.Flags().BoolVar(&evalSkillOnly, "skill-only", false, "score only SKILL.md, skip reference files")
@@ -74,10 +78,14 @@ func runScoreEvaluate(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("--max-tokens-style must be \"auto\", \"max_tokens\", or \"max_completion_tokens\"")
 	}
 
-	// Resolve API key
-	apiKey, err := resolveAPIKey(evalProvider)
-	if err != nil {
-		return err
+	// Resolve API key (not needed for claude-cli)
+	var apiKey string
+	if strings.ToLower(evalProvider) != "claude-cli" {
+		var err error
+		apiKey, err = resolveAPIKey(evalProvider)
+		if err != nil {
+			return err
+		}
 	}
 
 	client, err := judge.NewClient(judge.ClientOptions{

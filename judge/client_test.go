@@ -7,6 +7,43 @@ import (
 	"testing"
 )
 
+func TestClaudeCLIClientDefaults(t *testing.T) {
+	client, err := NewClient(ClientOptions{Provider: "claude-cli"})
+	if err != nil {
+		t.Fatalf("NewClient: %v", err)
+	}
+	if client.Provider() != "claude-cli" {
+		t.Errorf("Provider() = %q, want %q", client.Provider(), "claude-cli")
+	}
+	if client.ModelName() != "sonnet" {
+		t.Errorf("ModelName() = %q, want %q", client.ModelName(), "sonnet")
+	}
+}
+
+func TestClaudeCLIClientCustomModel(t *testing.T) {
+	client, err := NewClient(ClientOptions{Provider: "claude-cli", Model: "opus"})
+	if err != nil {
+		t.Fatalf("NewClient: %v", err)
+	}
+	if client.ModelName() != "opus" {
+		t.Errorf("ModelName() = %q, want %q", client.ModelName(), "opus")
+	}
+}
+
+func TestClaudeCLINoAPIKeyRequired(t *testing.T) {
+	// claude-cli should not require an API key
+	_, err := NewClient(ClientOptions{Provider: "claude-cli"})
+	if err != nil {
+		t.Fatalf("expected no error without API key for claude-cli, got: %v", err)
+	}
+
+	// Other providers still require it
+	_, err = NewClient(ClientOptions{Provider: "anthropic"})
+	if err == nil {
+		t.Fatal("expected error without API key for anthropic")
+	}
+}
+
 func TestUseMaxCompletionTokens(t *testing.T) {
 	tests := []struct {
 		model string

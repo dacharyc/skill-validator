@@ -6,7 +6,7 @@ description: >-
   structural issues, scores the skill with an LLM judge, and interprets results
   to advise authors on what to address. Use when a user wants to review,
   validate, or quality-check an Agent Skill.
-compatibility: Requires skill-validator CLI. LLM scoring requires an Anthropic or OpenAI API key, OR can be skipped for structural-only review.
+compatibility: Requires skill-validator CLI. LLM scoring requires an Anthropic or OpenAI API key, the Claude CLI, OR can be skipped for structural-only review.
 metadata:
   author: agent-ecosystem
   version: "1.0"
@@ -41,16 +41,17 @@ Options 2-3: continue below.
 
 **If no state file exists**, or the user chose to re-check/change, ask:
 
-> LLM scoring uses an Anthropic or OpenAI-compatible API. Without an API key,
-> we run structural validation only.
+> LLM scoring uses an Anthropic or OpenAI-compatible API, or the Claude CLI.
+> Without an API key or CLI, we run structural validation only.
 >
 > 1. **Anthropic** — use Claude via the Anthropic API (requires `ANTHROPIC_API_KEY`)
 > 2. **OpenAI** — use GPT via the OpenAI API (requires `OPENAI_API_KEY`)
 > 3. **OpenAI-compatible** — use a custom endpoint (Ollama, Groq, Azure, Together, etc.)
-> 4. **Skip LLM scoring** — structural validation only
+> 4. **Claude CLI** — use the locally authenticated `claude` binary (no API key needed)
+> 5. **Skip LLM scoring** — structural validation only
 
-Options 1-3: set `LLM_SCORING=true` and record the provider choice.
-Option 4: set `LLM_SCORING=false`. Run Step 1a only, then jump to Step 2.
+Options 1-4: set `LLM_SCORING=true` and record the provider choice.
+Option 5: set `LLM_SCORING=false`. Run Step 1a only, then jump to Step 2.
 
 **If the user chose option 1 or 2**, ask about cross-model comparison:
 
@@ -63,8 +64,9 @@ Option 4: set `LLM_SCORING=false`. Run Step 1a only, then jump to Step 2.
 
 Option 1: set `CROSS_MODEL=true`. Option 2: set `CROSS_MODEL=false`.
 
-Do not offer cross-model comparison for option 3 (OpenAI-compatible), since the
-second provider would need a standard Anthropic or OpenAI key.
+Do not offer cross-model comparison for option 3 (OpenAI-compatible) or option 4
+(Claude CLI), since the second provider would need a standard Anthropic or
+OpenAI key.
 
 After Step 1a, follow
 [references/llm-scoring.md](references/llm-scoring.md) for API key checks
@@ -84,7 +86,7 @@ follow [references/install-skill-validator.md](references/install-skill-validato
 
 Do NOT proceed until this succeeds.
 
-If `LLM_SCORING=true`, complete the API key checks in
+If `LLM_SCORING=true`, complete the provider checks in
 [references/llm-scoring.md](references/llm-scoring.md) before continuing.
 
 ### Save state after prerequisites pass
@@ -97,7 +99,7 @@ mkdir -p ~/.config/skill-validator
 cat > ~/.config/skill-validator/review-state.yaml << 'EOF'
 prereqs_passed: true
 llm_scoring: <true or false>
-provider: <anthropic, openai, or openai-compatible>
+provider: <anthropic, openai, openai-compatible, or claude-cli>
 model: <model name if specified, or "default">
 base_url: <custom base URL if openai-compatible, or omit>
 cross_model: <true or false>

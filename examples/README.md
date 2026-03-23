@@ -22,8 +22,8 @@ improve the skill content before requesting a human review.
 1. Checks prerequisites (skill-validator binary, API keys)
 2. Runs `skill-validator check` for structural validation
 3. Reviews content for examples, edge cases, and scope-gating
-4. Optionally scores the skill with an LLM judge (Anthropic, OpenAI, or any
-   OpenAI-compatible endpoint)
+4. Optionally scores the skill with an LLM judge (Anthropic, OpenAI, any
+   OpenAI-compatible endpoint, or the Claude CLI)
 5. Supports cross-model comparison to validate scores across model families
 6. Presents a summary with prioritized action items and a publish recommendation
 
@@ -40,6 +40,8 @@ improve the skill content before requesting a human review.
    - OpenAI: `export OPENAI_API_KEY=sk-...`
    - OpenAI-compatible: `export OPENAI_API_KEY=...` (some endpoints accept a
      placeholder) and provide the `--base-url` when prompted.
+   - Claude CLI: No API key needed — uses the locally authenticated `claude`
+     binary (e.g. via a company or team subscription).
 4. Add `.score_cache/` to your `.gitignore`. LLM scoring caches results inside
    each skill directory, and these should not be committed.
 5. Ask your agent to review a skill. The skill stores configuration in

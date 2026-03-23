@@ -40,3 +40,4 @@ LLM scoring requires one of:
 - **Anthropic API key** — set `ANTHROPIC_API_KEY` environment variable
 - **OpenAI API key** — set `OPENAI_API_KEY` environment variable
 - **OpenAI-compatible endpoint** — set `OPENAI_API_KEY` and provide a `--base-url`
+- **Claude CLI** — use `--provider claude-cli` (no API key needed; uses the locally authenticated `claude` binary)
