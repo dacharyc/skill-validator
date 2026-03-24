@@ -312,7 +312,6 @@ func (c *claudeCLIClient) ModelName() string { return c.model }
 // buildArgs returns the CLI arguments for a claude invocation.
 func (c *claudeCLIClient) buildArgs(systemPrompt, userContent string) []string {
 	args := []string{
-		"--bare",
 		"-p",
 		"--output-format", "text",
 		"--model", c.model,

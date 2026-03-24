@@ -78,16 +78,9 @@ func TestClaudeCLIMissingBinary(t *testing.T) {
 func TestClaudeCLIBuildArgs(t *testing.T) {
 	c := &claudeCLIClient{model: "sonnet"}
 
-	t.Run("bare flag is first", func(t *testing.T) {
-		args := c.buildArgs("system prompt", "user content")
-		if args[0] != "--bare" {
-			t.Errorf("first arg = %q, want %q", args[0], "--bare")
-		}
-	})
-
 	t.Run("with system prompt", func(t *testing.T) {
 		args := c.buildArgs("you are a judge", "score this")
-		want := []string{"--bare", "-p", "--output-format", "text", "--model", "sonnet", "--system-prompt", "you are a judge", "score this"}
+		want := []string{"-p", "--output-format", "text", "--model", "sonnet", "--system-prompt", "you are a judge", "score this"}
 		if len(args) != len(want) {
 			t.Fatalf("got %d args, want %d: %v", len(args), len(want), args)
 		}

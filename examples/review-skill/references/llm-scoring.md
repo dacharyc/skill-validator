@@ -60,6 +60,12 @@ installation instructions.
 The default model is `sonnet`. The user can specify a different model with the
 `--model` flag (e.g. `--model opus`).
 
+**Accuracy note:** The Claude CLI loads local context (CLAUDE.md files, project
+memory, rules) into each scoring call. This extra context may influence scores,
+making them less reproducible across environments compared to the API-based
+providers. For the most consistent results, use the `anthropic` or `openai`
+providers with an API key.
+
 ### OpenAI-compatible provider
 
 This uses the OpenAI provider with a custom `--base-url`. It supports any
