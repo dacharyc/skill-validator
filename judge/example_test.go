@@ -23,6 +23,8 @@ func ExampleNewClient() {
 	// Provider: anthropic, Model: claude-sonnet-4-5-20250929
 }
 
+// ExampleNewClient_claudeCLI demonstrates creating a claude-cli client.
+// This example is not executed as a test because it requires the claude binary.
 func ExampleNewClient_claudeCLI() {
 	client, err := judge.NewClient(judge.ClientOptions{
 		Provider: "claude-cli",
@@ -33,8 +35,6 @@ func ExampleNewClient_claudeCLI() {
 	}
 
 	fmt.Printf("Provider: %s, Model: %s\n", client.Provider(), client.ModelName())
-	// Output:
-	// Provider: claude-cli, Model: sonnet
 }
 
 func ExampleNewClient_openai() {
