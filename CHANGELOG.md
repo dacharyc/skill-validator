@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.0]
+
+### Added
+
+- Add `claude-cli` LLM provider for scoring without API keys ([#43], [#44]). Uses the
+  locally authenticated `claude` binary, making LLM scoring accessible to users
+  with team or company subscriptions who don't have an explicit API key. Default
+  model is `sonnet`.
+- Preflight check for the `claude` binary at client creation time, giving a
+  clear error when the CLI is not installed.
+
+### Fixed
+
+- Documentation notes that `claude-cli` scores may be less consistent than
+  API-based providers because the CLI loads local context (CLAUDE.md, memory,
+  rules) into each scoring call.
+
 ## [1.4.0]
 
 ### Added
