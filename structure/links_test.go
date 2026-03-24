@@ -57,6 +57,13 @@ func TestCheckInternalLinks(t *testing.T) {
 		requireResult(t, results, types.Pass, "internal link: references/guide.md (exists)")
 	})
 
+	t.Run("path traversal is blocked", func(t *testing.T) {
+		dir := t.TempDir()
+		body := "See [escape](../../../../../../etc/passwd)."
+		results := CheckInternalLinks(dir, body)
+		requireResult(t, results, types.Error, "internal link escapes skill directory: ../../../../../../etc/passwd")
+	})
+
 	t.Run("no links returns nil", func(t *testing.T) {
 		dir := t.TempDir()
 		body := "No links here."

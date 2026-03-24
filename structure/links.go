@@ -40,7 +40,12 @@ func CheckInternalLinks(dir, body string) []types.Result {
 			continue
 		}
 		// Relative link — check file existence
-		resolved := filepath.Join(dir, link)
+		resolved := filepath.Clean(filepath.Join(dir, link))
+		// Block path traversal: the resolved path must stay inside the skill directory.
+		if !strings.HasPrefix(resolved, filepath.Clean(dir)+string(filepath.Separator)) {
+			results = append(results, ctx.Errorf("internal link escapes skill directory: %s", link))
+			continue
+		}
 		if _, err := os.Stat(resolved); os.IsNotExist(err) {
 			results = append(results, ctx.Errorf("broken internal link: %s (file not found)", link))
 		} else {
