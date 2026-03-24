@@ -2,12 +2,28 @@ package judge
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 )
 
+// stubLookPath replaces the lookPath variable for the duration of a test,
+// restoring the original when the test completes.
+func stubLookPath(t *testing.T, found bool) {
+	t.Helper()
+	orig := lookPath
+	t.Cleanup(func() { lookPath = orig })
+	if found {
+		lookPath = func(file string) (string, error) { return "/usr/bin/" + file, nil }
+	} else {
+		lookPath = func(file string) (string, error) { return "", fmt.Errorf("not found: %s", file) }
+	}
+}
+
 func TestClaudeCLIClientDefaults(t *testing.T) {
+	stubLookPath(t, true)
 	client, err := NewClient(ClientOptions{Provider: "claude-cli"})
 	if err != nil {
 		t.Fatalf("NewClient: %v", err)
@@ -21,6 +37,7 @@ func TestClaudeCLIClientDefaults(t *testing.T) {
 }
 
 func TestClaudeCLIClientCustomModel(t *testing.T) {
+	stubLookPath(t, true)
 	client, err := NewClient(ClientOptions{Provider: "claude-cli", Model: "opus"})
 	if err != nil {
 		t.Fatalf("NewClient: %v", err)
@@ -31,6 +48,8 @@ func TestClaudeCLIClientCustomModel(t *testing.T) {
 }
 
 func TestClaudeCLINoAPIKeyRequired(t *testing.T) {
+	stubLookPath(t, true)
+
 	// claude-cli should not require an API key
 	_, err := NewClient(ClientOptions{Provider: "claude-cli"})
 	if err != nil {
@@ -42,6 +61,48 @@ func TestClaudeCLINoAPIKeyRequired(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error without API key for anthropic")
 	}
+}
+
+func TestClaudeCLIMissingBinary(t *testing.T) {
+	stubLookPath(t, false)
+
+	_, err := NewClient(ClientOptions{Provider: "claude-cli"})
+	if err == nil {
+		t.Fatal("expected error when claude binary is not found")
+	}
+	if got := err.Error(); !strings.Contains(got, "claude-cli provider requires") {
+		t.Errorf("unexpected error message: %s", got)
+	}
+}
+
+func TestClaudeCLIBuildArgs(t *testing.T) {
+	c := &claudeCLIClient{model: "sonnet"}
+
+	t.Run("with system prompt", func(t *testing.T) {
+		args := c.buildArgs("you are a judge", "score this")
+		want := []string{"-p", "--output-format", "text", "--model", "sonnet", "--system-prompt", "you are a judge", "score this"}
+		if len(args) != len(want) {
+			t.Fatalf("got %d args, want %d: %v", len(args), len(want), args)
+		}
+		for i := range want {
+			if args[i] != want[i] {
+				t.Errorf("args[%d] = %q, want %q", i, args[i], want[i])
+			}
+		}
+	})
+
+	t.Run("without system prompt", func(t *testing.T) {
+		args := c.buildArgs("", "score this")
+		for _, a := range args {
+			if a == "--system-prompt" {
+				t.Error("--system-prompt should not be present when system prompt is empty")
+			}
+		}
+		// Last arg should be the user content
+		if args[len(args)-1] != "score this" {
+			t.Errorf("last arg = %q, want %q", args[len(args)-1], "score this")
+		}
+	})
 }
 
 func TestUseMaxCompletionTokens(t *testing.T) {

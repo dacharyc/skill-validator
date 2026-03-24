@@ -16,6 +16,10 @@ import (
 // that a hanging upstream doesn't block the caller indefinitely.
 var defaultHTTPClient = &http.Client{Timeout: 30 * time.Second}
 
+// lookPath is used to locate the claude binary. It is a variable so tests
+// can substitute a stub when the real binary is not installed.
+var lookPath = exec.LookPath
+
 // LLMClient is the interface for making LLM API calls.
 type LLMClient interface {
 	// Complete sends a system prompt and user content to the LLM and returns the text response.
@@ -52,6 +56,9 @@ func NewClient(opts ClientOptions) (LLMClient, error) {
 
 	switch strings.ToLower(opts.Provider) {
 	case "claude-cli":
+		if _, err := lookPath("claude"); err != nil {
+			return nil, fmt.Errorf("claude-cli provider requires the \"claude\" binary: %w", err)
+		}
 		model := opts.Model
 		if model == "" {
 			model = "sonnet"
@@ -302,7 +309,8 @@ type claudeCLIClient struct {
 func (c *claudeCLIClient) Provider() string  { return "claude-cli" }
 func (c *claudeCLIClient) ModelName() string { return c.model }
 
-func (c *claudeCLIClient) Complete(ctx context.Context, systemPrompt, userContent string) (string, error) {
+// buildArgs returns the CLI arguments for a claude invocation.
+func (c *claudeCLIClient) buildArgs(systemPrompt, userContent string) []string {
 	args := []string{
 		"-p",
 		"--output-format", "text",
@@ -312,6 +320,11 @@ func (c *claudeCLIClient) Complete(ctx context.Context, systemPrompt, userConten
 		args = append(args, "--system-prompt", systemPrompt)
 	}
 	args = append(args, userContent)
+	return args
+}
+
+func (c *claudeCLIClient) Complete(ctx context.Context, systemPrompt, userContent string) (string, error) {
+	args := c.buildArgs(systemPrompt, userContent)
 
 	cmd := exec.CommandContext(ctx, "claude", args...)
 	var stdout, stderr bytes.Buffer

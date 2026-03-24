@@ -41,7 +41,9 @@ improve the skill content before requesting a human review.
    - OpenAI-compatible: `export OPENAI_API_KEY=...` (some endpoints accept a
      placeholder) and provide the `--base-url` when prompted.
    - Claude CLI: No API key needed — uses the locally authenticated `claude`
-     binary (e.g. via a company or team subscription).
+     binary (e.g. via a company or team subscription). Note: scores may be less
+     consistent than API-based providers because the CLI loads local context
+     (CLAUDE.md, memory) into each call.
 4. Add `.score_cache/` to your `.gitignore`. LLM scoring caches results inside
    each skill directory, and these should not be committed.
 5. Ask your agent to review a skill. The skill stores configuration in
