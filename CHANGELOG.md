@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.1]
+
+### Fixed
+
+- Block SSRF in link validation: the HTTP client now refuses to connect to
+  private/reserved IP addresses (loopback, RFC 1918, link-local, cloud metadata
+  endpoints). Each hop in a redirect chain is checked independently, preventing
+  redirects to internal addresses.
+- Block path traversal in internal link checks: relative links that resolve
+  outside the skill directory (e.g., `../../etc/passwd`) are now rejected
+  instead of being passed to `os.Stat`.
+
+### Added
+
+- SECURITY.md with reporting instructions and scope.
+- CONTRIBUTING.md, CODE_OF_CONDUCT.md, PR template, and issue templates.
+
 ## [1.5.0]
 
 ### Added
