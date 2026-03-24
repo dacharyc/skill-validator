@@ -85,6 +85,12 @@ func TestCheckLinks_SkipsRelative(t *testing.T) {
 }
 
 func TestCheckLinks_HTTP(t *testing.T) {
+	// httptest servers listen on 127.0.0.1, which the safe transport blocks.
+	// Swap in an unrestricted client for these integration tests.
+	orig := newHTTPClient
+	newHTTPClient = func() *http.Client { return testHTTPClient() }
+	t.Cleanup(func() { newHTTPClient = orig })
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("/ok", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)

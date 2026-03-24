@@ -2,11 +2,9 @@ package links
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/agent-ecosystem/skill-validator/types"
 )
@@ -47,15 +45,8 @@ func CheckLinks(ctx context.Context, dir, body string) []types.Result {
 	}
 
 	// Shared client for connection reuse across concurrent checks.
-	client := &http.Client{
-		Timeout: 10 * time.Second,
-		CheckRedirect: func(req *http.Request, via []*http.Request) error {
-			if len(via) >= 10 {
-				return fmt.Errorf("too many redirects")
-			}
-			return nil
-		},
-	}
+	// The client uses a safe transport that blocks requests to private IPs.
+	client := newHTTPClient()
 
 	// Check HTTP links concurrently
 	httpResults := make([]linkResult, len(httpLinks))
