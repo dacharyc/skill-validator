@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.2]
+
+### Fixed
+
+- Link checker now falls back to GET when HEAD returns 404 or 405, matching
+  the standard approach used by lychee and other link validators. Fixes false
+  positives on sites that don't handle HEAD correctly ([#45]).
+- Link checker now sends `Accept: text/html` header, fixing false positives
+  on SPAs like crates.io that require content negotiation to serve pages.
+
 ## [1.5.1]
 
 ### Fixed
