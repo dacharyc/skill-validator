@@ -75,6 +75,7 @@ func checkHTTPLink(rctx types.ResultContext, client *http.Client, url string) ty
 		return rctx.Errorf("%s (invalid URL: %v)", url, err)
 	}
 	req.Header.Set("User-Agent", "skill-validator/1.0")
+	req.Header.Set("Accept", "text/html, */*;q=0.1")
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -82,14 +83,43 @@ func checkHTTPLink(rctx types.ResultContext, client *http.Client, url string) ty
 	}
 	defer func() { _ = resp.Body.Close() }()
 
-	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
-		return rctx.Passf("%s (HTTP %d)", url, resp.StatusCode)
+	// Some sites don't handle HEAD correctly (e.g. SPAs like crates.io return
+	// 404 for HEAD even though the page exists). Fall back to GET when HEAD
+	// returns 404 or 405, which is the standard approach used by lychee,
+	// markdown-link-check, and other link validators.
+	if resp.StatusCode == http.StatusNotFound || resp.StatusCode == http.StatusMethodNotAllowed {
+		return checkHTTPLinkGET(rctx, client, url)
 	}
-	if resp.StatusCode >= 300 && resp.StatusCode < 400 {
-		return rctx.Passf("%s (HTTP %d redirect)", url, resp.StatusCode)
+
+	return classifyResponse(rctx, url, resp.StatusCode)
+}
+
+func checkHTTPLinkGET(rctx types.ResultContext, client *http.Client, url string) types.Result {
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return rctx.Errorf("%s (invalid URL: %v)", url, err)
 	}
-	if resp.StatusCode == http.StatusForbidden {
+	req.Header.Set("User-Agent", "skill-validator/1.0")
+	req.Header.Set("Accept", "text/html, */*;q=0.1")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return rctx.Errorf("%s (request failed: %v)", url, err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	return classifyResponse(rctx, url, resp.StatusCode)
+}
+
+func classifyResponse(rctx types.ResultContext, url string, statusCode int) types.Result {
+	if statusCode >= 200 && statusCode < 300 {
+		return rctx.Passf("%s (HTTP %d)", url, statusCode)
+	}
+	if statusCode >= 300 && statusCode < 400 {
+		return rctx.Passf("%s (HTTP %d redirect)", url, statusCode)
+	}
+	if statusCode == http.StatusForbidden {
 		return rctx.Infof("%s (HTTP 403 — may block automated requests)", url)
 	}
-	return rctx.Errorf("%s (HTTP %d)", url, resp.StatusCode)
+	return rctx.Errorf("%s (HTTP %d)", url, statusCode)
 }

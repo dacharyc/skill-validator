@@ -98,6 +98,20 @@ func TestCheckLinks_HTTP(t *testing.T) {
 	mux.HandleFunc("/not-found", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
 	})
+	mux.HandleFunc("/head-404-get-200", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodHead {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+	})
+	mux.HandleFunc("/head-405-get-200", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodHead {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+	})
 	mux.HandleFunc("/forbidden", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusForbidden)
 	})
@@ -133,6 +147,20 @@ func TestCheckLinks_HTTP(t *testing.T) {
 		body := "[error](" + server.URL + "/server-error)"
 		results := CheckLinks(t.Context(), dir, body)
 		requireResultContaining(t, results, types.Error, "HTTP 500")
+	})
+
+	t.Run("HEAD 404 falls back to GET 200", func(t *testing.T) {
+		dir := t.TempDir()
+		body := "[spa](" + server.URL + "/head-404-get-200)"
+		results := CheckLinks(t.Context(), dir, body)
+		requireResultContaining(t, results, types.Pass, "HTTP 200")
+	})
+
+	t.Run("HEAD 405 falls back to GET 200", func(t *testing.T) {
+		dir := t.TempDir()
+		body := "[nohead](" + server.URL + "/head-405-get-200)"
+		results := CheckLinks(t.Context(), dir, body)
+		requireResultContaining(t, results, types.Pass, "HTTP 200")
 	})
 
 	t.Run("mixed relative and HTTP only checks HTTP", func(t *testing.T) {
@@ -223,6 +251,70 @@ func TestCheckHTTPLink(t *testing.T) {
 			t.Errorf("expected Info level for 403, got %d", result.Level)
 		}
 		requireContains(t, result.Message, "HTTP 403")
+	})
+
+	t.Run("HEAD 404 retries with GET", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.Method == http.MethodHead {
+				w.WriteHeader(http.StatusNotFound)
+				return
+			}
+			w.WriteHeader(http.StatusOK)
+		}))
+		defer server.Close()
+
+		result := checkHTTPLink(types.ResultContext{Category: "Links", File: "SKILL.md"}, client, server.URL)
+		if result.Level != types.Pass {
+			t.Errorf("expected Pass after GET fallback, got level=%d message=%q", result.Level, result.Message)
+		}
+	})
+
+	t.Run("HEAD 405 retries with GET", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.Method == http.MethodHead {
+				w.WriteHeader(http.StatusMethodNotAllowed)
+				return
+			}
+			w.WriteHeader(http.StatusOK)
+		}))
+		defer server.Close()
+
+		result := checkHTTPLink(types.ResultContext{Category: "Links", File: "SKILL.md"}, client, server.URL)
+		if result.Level != types.Pass {
+			t.Errorf("expected Pass after GET fallback, got level=%d message=%q", result.Level, result.Message)
+		}
+	})
+
+	t.Run("SPA requiring Accept text/html resolves via GET fallback", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.Header.Get("Accept") == "" || r.Method == http.MethodHead {
+				w.WriteHeader(http.StatusNotFound)
+				return
+			}
+			if strings.Contains(r.Header.Get("Accept"), "text/html") {
+				w.WriteHeader(http.StatusOK)
+				return
+			}
+			w.WriteHeader(http.StatusNotFound)
+		}))
+		defer server.Close()
+
+		result := checkHTTPLink(types.ResultContext{Category: "Links", File: "SKILL.md"}, client, server.URL)
+		if result.Level != types.Pass {
+			t.Errorf("expected Pass for SPA with Accept header, got level=%d message=%q", result.Level, result.Message)
+		}
+	})
+
+	t.Run("genuine 404 still errors after GET fallback", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusNotFound)
+		}))
+		defer server.Close()
+
+		result := checkHTTPLink(types.ResultContext{Category: "Links", File: "SKILL.md"}, client, server.URL)
+		if result.Level != types.Error {
+			t.Errorf("expected Error for genuine 404, got level=%d message=%q", result.Level, result.Message)
+		}
 	})
 
 	t.Run("invalid URL", func(t *testing.T) {
